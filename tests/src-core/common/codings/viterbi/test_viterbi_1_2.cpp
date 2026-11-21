@@ -174,10 +174,10 @@ TEST_CASE("Viterbi1_2 does not lock on noise and loses lock after max_outsync ba
     CHECK(vit.getState() == 0);
 }
 
-// Bug: the BER re-encoder (cc_encoder_ber, frame = 1024 bits) keeps its register state from the
-// previous re-encode, which is the state 1024 bits into the previous buffer rather than at its end,
-// so ber() is non-zero on a perfectly clean stream (viterbi_1_2.cpp:101).
-TEST_CASE("Viterbi1_2 ber() is zero on a clean locked stream", "[common][codings][viterbi][!shouldfail]")
+// The BER re-encoder cannot know the encoder state at the start of a buffer (it used to chain the
+// state from 1024 bits into the previous buffer), so the symbols of the first 6 bits must be left
+// out of the comparison for ber() to be zero on a clean stream.
+TEST_CASE("Viterbi1_2 ber() is zero on a clean locked stream", "[common][codings][viterbi]")
 {
     const int buffers = 3;
     std::vector<uint8_t> bits = randomBits(BUFFER / 2 * buffers + 64, 8);

@@ -73,9 +73,11 @@ TEST_CASE("Viterbi27 ber() is 4x the channel symbol error rate over the first 10
     std::vector<uint8_t> syms = encode(bits);
     std::vector<int8_t> soft = toSigned(syms, 0, frame * 2);
 
-    // 16 isolated flips inside the BER window, plus some outside it which must not count
+    // 16 isolated flips inside the BER window (symbols 12 to 1023, as the first 6 bits are left
+    // out), plus some outside it which must not count
+    const int windowStart = 12;
     int flipsInWindow = 0;
-    for (int i = 10; i < 1024; i += 64)
+    for (int i = 20; i < 1024; i += 64)
     {
         soft[i] = -soft[i];
         flipsInWindow++;
@@ -88,7 +90,8 @@ TEST_CASE("Viterbi27 ber() is 4x the channel symbol error rate over the first 10
     vit.work(soft.data(), out.data());
 
     CHECK(out == packMsbFirst(bits.data(), frame));
-    CHECK(vit.ber() == Catch::Approx(4.0 * flipsInWindow / 1024.0));
+    CHECK(flipsInWindow == 16);
+    CHECK(vit.ber() == Catch::Approx(4.0 * flipsInWindow / (1024.0 - windowStart)));
 }
 
 TEST_CASE("Viterbi27 ber() on a clean first frame is zero, on random data it is high", "[common][codings][viterbi]")
@@ -110,11 +113,10 @@ TEST_CASE("Viterbi27 ber() on a clean first frame is zero, on random data it is 
     CHECK(b.ber() > 0.5f);
 }
 
-// Bug: the BER re-encoder (cc_encoder_in, frame = ber_test_size/2) keeps its shift register from the
-// previous call, i.e. the state after bit 511 of the previous frame rather than the end of it.
-// The first re-encoded symbols of every frame after the first are therefore wrong and ber() is
-// non-zero on a perfectly clean stream (viterbi27.cpp:58).
-TEST_CASE("Viterbi27 ber() stays zero on consecutive clean frames", "[common][codings][viterbi][!shouldfail]")
+// The BER re-encoder cannot know the encoder state at the start of a frame (it used to chain the
+// state after bit 511 of the previous frame), so the symbols of the first 6 bits must be left out
+// of the comparison for ber() to stay zero on consecutive clean frames.
+TEST_CASE("Viterbi27 ber() stays zero on consecutive clean frames", "[common][codings][viterbi]")
 {
     const int frame = 2048, frames = 3;
     std::vector<uint8_t> bits = randomBits(frame * frames, 6);

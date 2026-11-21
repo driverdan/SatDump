@@ -57,12 +57,15 @@ namespace viterbi
         // Compute BER
         cc_encoder_in.work(buffer_deco, buffer_enco);
 
+        // The re-encoder does not know the K-1 = 6 bits sent before this frame, so the symbols of the
+        // first 6 decoded bits are left out. From bit 6 on, the encoder register only holds decoded bits.
+        const int skip = 2 * (7 - 1);
         float errors = 0;
-        for (int i = 0; i < d_ber_test_size; i++)
+        for (int i = skip; i < d_ber_test_size; i++)
             if (hard_buffer[i] != 128)
                 errors += (hard_buffer[i] > 127) != buffer_enco[i];
 
-        d_ber = (errors / float(d_ber_test_size)) * 4.0f;
+        d_ber = (errors / float(d_ber_test_size - skip)) * 4.0f;
     }
 
     float Viterbi27::ber()

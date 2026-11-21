@@ -5,6 +5,11 @@
 #define ST_IDLE 0
 #define ST_SYNCED 1
 
+// The re-encoder does not know the K-1 = 6 bits sent before the buffer, so the symbols of the first
+// 6 decoded bits are left out of the BER check. From bit 6 on, the encoder register only holds
+// decoded bits, whatever the start state it chained from its previous call.
+#define BER_SKIP_SYMBOLS (2 * (7 - 1))
+
 namespace viterbi
 {
     Viterbi1_2::Viterbi1_2(float ber_threshold, int max_outsync, int buffer_size, std::vector<phase_t> phases, bool check_iq_swap)
@@ -68,7 +73,7 @@ namespace viterbi
                         cc_decoder_ber.work(ber_soft_buffer + shift, ber_decoded_buffer); // Decode....
                         cc_encoder_ber.work(ber_decoded_buffer, ber_encoded_buffer);      // ....then reencode for comparison
 
-                        d_bers[s][phase][shift] = get_ber(ber_soft_buffer + shift, ber_encoded_buffer, TEST_BITS_LENGTH); // Compute BER between initial buffer and re-encoded
+                        d_bers[s][phase][shift] = get_ber(ber_soft_buffer + shift + BER_SKIP_SYMBOLS, ber_encoded_buffer + BER_SKIP_SYMBOLS, TEST_BITS_LENGTH - BER_SKIP_SYMBOLS); // Compute BER between initial buffer and re-encoded
 
                         if ((d_ber == 10 && d_bers[s][phase][shift] < d_ber_thresold) || // Check for a lock initially
                             (d_ber < 10 && d_bers[s][phase][shift] < d_ber))             // And if we find a lower BER, prefer it
@@ -99,7 +104,7 @@ namespace viterbi
             out_n = size / 2;
 
             cc_encoder_ber.work(output, ber_encoded_buffer);                              // Re-encoded for a BER check
-            d_ber = get_ber(soft_buffer + d_shift, ber_encoded_buffer, TEST_BITS_LENGTH); // Compute BER
+            d_ber = get_ber(soft_buffer + d_shift + BER_SKIP_SYMBOLS, ber_encoded_buffer + BER_SKIP_SYMBOLS, TEST_BITS_LENGTH - BER_SKIP_SYMBOLS); // Compute BER
 
             if (d_ber > d_ber_thresold) // Check current BER
             {
