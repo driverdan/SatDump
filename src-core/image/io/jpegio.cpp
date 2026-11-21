@@ -146,7 +146,7 @@ namespace satdump
             if (!fp)
                 throw satdump_exception("cannot open " + file + ": " + strerror(errno));
 
-            unsigned char *jpeg_decomp = NULL;
+            unsigned char *volatile jpeg_decomp = NULL; // Set after setjmp() and read on its error path, so volatile
             jpeg_error_struct_l jerr;
             jpeg_compress_struct cinfo;
 
@@ -158,6 +158,7 @@ namespace satdump
             if (setjmp(jerr.setjmp_buffer))
             {
                 // Free memory
+                jpeg_destroy_compress(&cinfo);
                 delete[] jpeg_decomp;
                 fclose(fp);
                 throw satdump_exception("cannot write " + file);

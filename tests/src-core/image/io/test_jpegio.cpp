@@ -3,7 +3,10 @@
 #include "image/jpeg_utils.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+#include <filesystem>
 
+using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
@@ -105,6 +108,37 @@ TEST_CASE("image::save_jpeg refuses empty images", "[image][io][jpeg]")
     img::save_jpeg(empty, dir.file("empty.jpg"));
     CHECK_FALSE(std::filesystem::exists(dir.file("empty.jpg")));
 }
+
+TEST_CASE("image::save_jpeg throws when the file cannot be opened", "[image][io][jpeg]")
+{
+    image_test::TempDir dir;
+    std::string path = dir.file("dir.jpg");
+    std::filesystem::create_directories(path); // A directory where the file goes
+    Image in = image_test::makeGradient(8, 4, 4, 1);
+    CHECK_THROWS_WITH(img::save_jpeg(in, path), ContainsSubstring("cannot open " + path));
+}
+
+#ifdef __linux__
+TEST_CASE("image::save_jpeg throws when the file cannot be written", "[image][io][jpeg]")
+{
+    if (!std::filesystem::exists("/dev/full"))
+        SKIP("No /dev/full");
+
+    // libjpeg finds the error while writing a large image, and when it flushes a small one
+    auto size = GENERATE(4, 512);
+    INFO("size " << size);
+    Image in = image_test::makePattern(8, size, size, 3);
+    CHECK_THROWS_WITH(img::save_jpeg(in, "/dev/full"), ContainsSubstring("cannot write /dev/full"));
+
+    // Nothing is left in a bad state for the next save
+    image_test::TempDir dir;
+    std::string path = dir.file("after.jpg");
+    img::save_jpeg(in, path);
+    Image out;
+    img::load_jpeg(out, path);
+    CHECK(image_test::sameShape(out, in));
+}
+#endif
 
 TEST_CASE("image::save_jpeg_mem and decompress_jpeg round-trip grayscale", "[image][jpeg_utils]")
 {

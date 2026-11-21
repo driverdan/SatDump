@@ -2,9 +2,12 @@
 #include "image/io.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <cstdio>
+#include <filesystem>
 #include <png.h>
 
+using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
@@ -151,6 +154,37 @@ TEST_CASE("image::save_png refuses empty images", "[image][io][png]")
     img::save_png(empty, path);
     CHECK_FALSE(std::filesystem::exists(path));
 }
+
+TEST_CASE("image::save_png throws when the file cannot be opened", "[image][io][png]")
+{
+    image_test::TempDir dir;
+    std::string path = dir.file("dir.png");
+    std::filesystem::create_directories(path); // A directory where the file goes
+    Image in = image_test::makeGradient(8, 4, 4, 1);
+    CHECK_THROWS_WITH(img::save_png(in, path), ContainsSubstring("cannot open " + path));
+}
+
+#ifdef __linux__
+TEST_CASE("image::save_png throws when the file cannot be written", "[image][io][png]")
+{
+    if (!std::filesystem::exists("/dev/full"))
+        SKIP("No /dev/full");
+
+    // A small image fails when the file is closed, a large one in libpng's write, which longjmps
+    auto size = GENERATE(4, 512);
+    INFO("size " << size);
+    Image in = image_test::makePattern(16, size, size, 3);
+    CHECK_THROWS_WITH(img::save_png(in, "/dev/full"), ContainsSubstring("cannot write /dev/full"));
+
+    // Nothing is left in a bad state for the next save
+    image_test::TempDir dir;
+    std::string path = dir.file("after.png");
+    img::save_png(in, path);
+    Image out;
+    img::load_png(out, path);
+    CHECK(image_test::samePixels(out, in));
+}
+#endif
 
 TEST_CASE("image::load_png leaves the image untouched on missing or corrupt files", "[image][io][png]")
 {

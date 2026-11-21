@@ -662,6 +662,8 @@ TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write a file", "[
 #ifdef __linux__
     SECTION("a message cannot be written")
     {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
         std::filesystem::create_directories(env.path("Admin Messages"));
         std::filesystem::create_symlink("/dev/full", env.path("Admin Messages/A-MSG-0001.txt")); // Opens, but every write fails
         mux.add(VCID, packetize(message, APID, 0));
@@ -695,6 +697,8 @@ TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write a file", "[
 #ifdef __linux__
     SECTION("an image cannot be written")
     {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
         std::filesystem::create_directories(env.path("IMAGES"));
         std::filesystem::create_symlink("/dev/full", env.path("IMAGES/CHART.lrit.png"));
         mux.add(VCID, riceImagePackets(riceImageHeaders("CHART.lrit"), imageLines(), APID));
