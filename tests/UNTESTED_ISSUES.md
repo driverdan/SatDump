@@ -121,7 +121,6 @@ Paths in this section are relative to `src-cli/`.
 
 | Location | Problem | Effect |
 |---|---|---|
-| `legacy/main.cpp:81` `main_old` | The function returns `int` but has no `return` after logging "Done! Goodbye". Every legacy command that succeeds ends there (`sdr_probe`, and `live`, `record`, `autotrack` or an offline pipeline returning 0), and `LegacyCmdHandler::run` passes the result to `exit()`. | Undefined behaviour. Segfault seen in a Release build: `satdump legacy sdr_probe` lists the devices, logs "Done! Goodbye" and dies with SIGSEGV (exit status 139). The tests only call the paths of `main_old` that return a value. |
 | `legacy/autotrack/autotrack_web.cpp:139` | The `/status` page reads `status["sat_current_range"]` as a double, but `ObjectTracker::getStatus` only sets that key while a satellite is being tracked. The exception is thrown from an nng HTTP callback, with `live_pipeline_mtx` locked. | Requesting `/status` (which the `/` page does every second) while no satellite is tracked throws through C code: `std::terminate`. |
 | `legacy/webserver.cpp:122-123` `start` | The results of `nng_url_parse` and `nng_http_server_hold` are not checked, and `url` is then used and freed. | An address that does not parse (`--http_server` typo) leads to a null or uninitialised pointer being used. A port already in use is not reported either. |
 | `legacy/webserver.cpp:156` `stop` | `is_active` is never set back to false. | A second `stop()` stops and releases a server that was already released: use after free. Each command currently calls it once. |
