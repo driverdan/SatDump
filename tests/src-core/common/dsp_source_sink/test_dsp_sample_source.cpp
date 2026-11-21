@@ -6,6 +6,7 @@ namespace
 {
     const std::string FAKE_TYPE = "unit_test_fake_source";
     const std::string THROWING_TYPE = "unit_test_throwing_source";
+    const std::string OTHER_TYPE = "unit_test_other_source";
 
     // Registers fake entries in the global registry and removes them afterwards
     struct FakeRegistry
@@ -50,6 +51,28 @@ TEST_CASE("dsp::getAllAvailableSources lists registered sources and survives thr
 
     auto remote = dsp::getAllAvailableSources(true);
     CHECK(countType(remote, FAKE_TYPE) == 2);
+}
+
+TEST_CASE("dsp::getAvailableSourcesOfType only lists the sources of that type", "[common][dsp_source_sink][dsp_sample_source]")
+{
+    FakeRegistry reg;
+    int other_listed = 0;
+    dsp::dsp_sources_registry[OTHER_TYPE] = {[](dsp::SourceDescriptor) -> std::shared_ptr<dsp::DSPSampleSource> { return nullptr; },
+                                             [&other_listed]()
+                                             {
+                                                 other_listed++;
+                                                 return std::vector<dsp::SourceDescriptor>{{OTHER_TYPE, "Other", "other"}};
+                                             }};
+
+    auto fake = dsp::getAvailableSourcesOfType(FAKE_TYPE);
+    CHECK(fake.size() == 2);
+    CHECK(countType(fake, FAKE_TYPE) == 2);
+
+    CHECK(dsp::getAvailableSourcesOfType(THROWING_TYPE).empty());
+    CHECK(dsp::getAvailableSourcesOfType("unit_test_no_such_type").empty());
+    CHECK(other_listed == 0);
+
+    dsp::dsp_sources_registry.erase(OTHER_TYPE);
 }
 
 TEST_CASE("dsp::getSourceFromDescriptor dispatches on source type", "[common][dsp_source_sink][dsp_sample_source]")

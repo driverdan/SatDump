@@ -99,10 +99,10 @@ TEST_CASE("main_record fails for a source that does not exist", "[cli][legacy][r
         CHECK(env.run(plus(env.flags(), {"--source_id", "7"})) == 1);
         INFO(env.log.dump());
         CHECK(env.log.contains("Could not find a handler for source type : file!", slog::LOG_ERROR));
+        // The sources of the type are listed before giving up
+        CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
     }
 
-    // The sources found are listed before giving up
-    CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
     CHECK_FALSE(std::filesystem::exists(env.out + ".cf32"));
 }
 
@@ -146,6 +146,28 @@ TEST_CASE("main_record stops as soon as its signal flag is set", "[cli][legacy][
 
     // The directory of the output is created, and the extension follows the format
     CHECK(std::filesystem::is_regular_file(env.out + ".cf32"));
+}
+
+TEST_CASE("main_record only lists the sources of the requested type", "[cli][legacy][record]")
+{
+    RecordEnv env;
+    rec_should_exit = true;
+
+    // Stands for the other sources, hardware or network, which can be slow to list
+    int other_listed = 0;
+    dsp::dsp_sources_registry["unit_cli_other_sdr"] = {[](dsp::SourceDescriptor) -> std::shared_ptr<dsp::DSPSampleSource> { return nullptr; },
+                                                       [&other_listed]()
+                                                       {
+                                                           other_listed++;
+                                                           return std::vector<dsp::SourceDescriptor>{{"unit_cli_other_sdr", "Other SDR", "0"}};
+                                                       }};
+
+    CHECK(env.run(env.flags()) == 0);
+
+    INFO(env.log.dump());
+    CHECK(other_listed == 0);
+    CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
+    CHECK_FALSE(env.log.contains("Device Other SDR"));
 }
 
 TEST_CASE("main_record writes the output samplerate in the WAV header", "[cli][legacy][record]")

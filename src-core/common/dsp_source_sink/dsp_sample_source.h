@@ -79,5 +79,7 @@ namespace dsp
     SATDUMP_DLL extern std::map<std::string, RegisteredSource> dsp_sources_registry;
     void registerAllSources();
     std::vector<SourceDescriptor> getAllAvailableSources(bool remote = false);
+    // Only lists the sources of one type, so that the others (hardware, network discovery...) are not probed
+    std::vector<SourceDescriptor> getAvailableSourcesOfType(std::string type);
     std::shared_ptr<DSPSampleSource> getSourceFromDescriptor(SourceDescriptor descriptor);
 }
