@@ -5,13 +5,21 @@
 #include "lrit_header.h"
 #include "module_goes_lrit_data_decoder.h"
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 
 namespace goes
 {
     namespace hrit
     {
+        // Largest file unpacked from an EMWIN ZIP archive. Real products are under 1 MB (the
+        // largest seen, GOES imagery, is about 700 kB). An archive claiming more, at a size its
+        // data could decompress to, is not unpacked but saved as received, as <name>.zip
+        const size_t EMWIN_MAX_FILE_SIZE = 16 * 1024 * 1024;
+
         std::string getHRITImageFilename(std::tm *timeReadable, std::string sat_name, std::string channel)
         {
             std::string utc_filename = sat_name + "_" + channel + "_" +                                                                                             // Satellite name and channel
@@ -31,8 +39,10 @@ namespace goes
          * @param filename Filename to save as
          * @param buffer Pointer to the data buffer
          * @param size How many bytes to write
+         * @param suffix Appended to the name of the file written, which is still sorted by filename
+         * @throws std::exception if the file or its directories cannot be written
          */
-        void GOESLRITDataDecoderModule::saveEMWINFile(std::string directory, std::string filename, char *buffer, size_t size)
+        void GOESLRITDataDecoderModule::saveEMWINFile(std::string directory, std::string filename, char *buffer, size_t size, std::string suffix)
         {
             if (!std::filesystem::exists(directory + "/EMWIN"))
                 std::filesystem::create_directory(directory + "/EMWIN");
@@ -100,11 +110,16 @@ namespace goes
             if (!std::filesystem::exists(directory + "/EMWIN" + subdirectory))
                 std::filesystem::create_directory(directory + "/EMWIN" + subdirectory);
 
-            // Write file out
-            logger->info("Writing file " + directory + "/EMWIN/" + subdirectory + filename + "...");
-            std::ofstream fileo(directory + "/EMWIN" + subdirectory + filename, std::ios::binary);
+            // Write file out. A failure throws, as creating the directories above does
+            std::string path = directory + "/EMWIN" + subdirectory + filename + suffix;
+            logger->info("Writing file %s...", path.c_str());
+            std::ofstream fileo(path, std::ios::binary);
+            if (!fileo)
+                throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
             fileo.write(buffer, size);
             fileo.close();
+            if (!fileo)
+                throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
         }
 
         void GOESLRITDataDecoderModule::saveLRITFile(satdump::xrit::XRITFile &file, std::string path)
@@ -211,18 +226,20 @@ namespace goes
                 std::string clean_filename = current_filename.substr(0, current_filename.size() - 5); // Remove extensions
                 if (noaa_header.noaa_specific_compression == 0)                                       // Uncompressed TXT
                 {
-                    if (!std::filesystem::exists(directory + "/EMWIN"))
-                        std::filesystem::create_directory(directory + "/EMWIN");
-
                     int offset = primary_header.total_header_length;
 
-                    saveEMWINFile(directory, clean_filename + ".txt", (char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
+                    // A file that cannot be written is lost, but the decoder carries on
+                    try
+                    {
+                        saveEMWINFile(directory, clean_filename + ".txt", (char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger->error("Could not write EMWIN file %s.txt! %s", clean_filename.c_str(), e.what());
+                    }
                 }
                 else if (noaa_header.noaa_specific_compression == 10) // ZIP Files
                 {
-                    if (!std::filesystem::exists(directory + "/EMWIN/"))
-                        std::filesystem::create_directory(directory + "/EMWIN");
-
                     int offset = primary_header.total_header_length;
 
                     // Init
@@ -233,6 +250,7 @@ namespace goes
                         logger->error("Could not open ZIP data! Discarding...");
                         return;
                     }
+                    std::unique_ptr<mz_zip_archive, mz_bool (*)(mz_zip_archive *)> zipGuard(&zipFile, mz_zip_reader_end); // Ended on every path
 
                     // Read filename. The archive is as received, so it may hold no file, or name it
                     // anything: the name must not leave the EMWIN directory
@@ -247,26 +265,60 @@ namespace goes
                     if (filename.empty() || filename == "." || filename == "..")
                     {
                         logger->error("ZIP data holds no file! Discarding...");
-                        mz_zip_reader_end(&zipFile);
                         return;
                     }
 
-                    // Decompress
-                    size_t outSize = 0;
-                    uint8_t *outBuffer = (uint8_t *)mz_zip_reader_extract_to_heap(&zipFile, 0, &outSize, 0);
-                    if (outBuffer == nullptr)
+                    mz_zip_archive_file_stat stat;
+                    if (!mz_zip_reader_file_stat(&zipFile, 0, &stat))
+                    {
+                        logger->error("Could not read ZIP file entry! Discarding...");
+                        return;
+                    }
+
+                    // The size the archive claims is as received too, and is what the output buffer
+                    // is allocated for: check it first. Deflate cannot expand data more than 1032 times
+                    // (divided, as a ZIP64 compressed size times 1032 could wrap), so more is corrupt
+                    if (stat.m_uncomp_size / 1032 > stat.m_comp_size)
+                    {
+                        logger->error("ZIP entry %s claims %llu bytes from %llu compressed bytes, more than deflate can produce! Discarding...", filename.c_str(),
+                                      (unsigned long long)stat.m_uncomp_size, (unsigned long long)stat.m_comp_size);
+                        return;
+                    }
+
+                    // A plausible size over the limit is not unpacked: the archive is saved as received
+                    if (stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE)
+                    {
+                        logger->warn("ZIP entry %s claims %llu bytes, over the %llu byte limit for EMWIN files! Saving the archive as received...", filename.c_str(),
+                                     (unsigned long long)stat.m_uncomp_size, (unsigned long long)EMWIN_MAX_FILE_SIZE);
+                        try
+                        {
+                            saveEMWINFile(directory, filename, (char *)&file.lrit_data[offset], file.lrit_data.size() - offset, ".zip");
+                        }
+                        catch (const std::exception &e)
+                        {
+                            logger->error("Could not write EMWIN file %s.zip! %s", filename.c_str(), e.what());
+                        }
+                        return;
+                    }
+
+                    // Decompress. Not with mz_zip_reader_extract_to_heap(), which sizes its buffer from
+                    // the 32-bit field, and not the ZIP64 size the archive may hold instead
+                    std::vector<uint8_t> outBuffer(stat.m_uncomp_size);
+                    if (!mz_zip_reader_extract_to_mem(&zipFile, 0, outBuffer.data(), outBuffer.size(), 0))
                     {
                         logger->error("Could not decompress ZIP data! Discarding...");
-                        mz_zip_reader_end(&zipFile);
                         return;
                     }
 
-                    // Write out
-                    saveEMWINFile(directory, filename, (char *)outBuffer, outSize);
-
-                    // Free memory
-                    zipFile.m_pFree(&zipFile, outBuffer);
-                    mz_zip_reader_end(&zipFile);
+                    // Write out. A file that cannot be written is lost, but the decoder carries on
+                    try
+                    {
+                        saveEMWINFile(directory, filename, (char *)outBuffer.data(), outBuffer.size());
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger->error("Could not write EMWIN file %s! %s", filename.c_str(), e.what());
+                    }
                 }
             }
             // Check if this is message data. If we slipped to here we know it's not EMWIN
