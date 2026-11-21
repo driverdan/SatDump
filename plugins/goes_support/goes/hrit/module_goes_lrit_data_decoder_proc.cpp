@@ -5,8 +5,11 @@
 #include "lrit_header.h"
 #include "module_goes_lrit_data_decoder.h"
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
 #include <memory>
+#include <stdexcept>
 
 namespace goes
 {
@@ -107,11 +110,14 @@ namespace goes
 
             // Write file out. A failure throws, as creating the directories above does
             logger->info("Writing file " + directory + "/EMWIN/" + subdirectory + filename + "...");
-            std::ofstream fileo;
-            fileo.exceptions(std::ios::failbit | std::ios::badbit);
-            fileo.open(directory + "/EMWIN" + subdirectory + filename, std::ios::binary);
+            std::string path = directory + "/EMWIN" + subdirectory + filename;
+            std::ofstream fileo(path, std::ios::binary);
+            if (!fileo)
+                throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
             fileo.write(buffer, size);
             fileo.close();
+            if (!fileo)
+                throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
         }
 
         void GOESLRITDataDecoderModule::saveLRITFile(satdump::xrit::XRITFile &file, std::string path)
@@ -225,7 +231,7 @@ namespace goes
                     {
                         saveEMWINFile(directory, clean_filename + ".txt", (char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
                     }
-                    catch (std::exception &e)
+                    catch (const std::exception &e)
                     {
                         logger->error("Could not write EMWIN file %s.txt! %s", clean_filename.c_str(), e.what());
                     }
@@ -260,10 +266,17 @@ namespace goes
                         return;
                     }
 
+                    mz_zip_archive_file_stat stat;
+                    if (!mz_zip_reader_file_stat(&zipFile, 0, &stat))
+                    {
+                        logger->error("Could not read ZIP file entry! Discarding...");
+                        return;
+                    }
+
                     // The size the archive claims is as received too, and is what the output buffer
                     // is allocated for: check it first. Deflate cannot expand data more than 1032 times
-                    mz_zip_archive_file_stat stat;
-                    if (!mz_zip_reader_file_stat(&zipFile, 0, &stat) || stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE || stat.m_uncomp_size > stat.m_comp_size * 1032)
+                    // (divided, as a ZIP64 compressed size times 1032 could wrap)
+                    if (stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE || stat.m_uncomp_size / 1032 > stat.m_comp_size)
                     {
                         logger->error("ZIP data has an invalid size! Discarding...");
                         return;
@@ -283,7 +296,7 @@ namespace goes
                     {
                         saveEMWINFile(directory, filename, (char *)outBuffer.data(), outBuffer.size());
                     }
-                    catch (std::exception &e)
+                    catch (const std::exception &e)
                     {
                         logger->error("Could not write EMWIN file %s! %s", filename.c_str(), e.what());
                     }

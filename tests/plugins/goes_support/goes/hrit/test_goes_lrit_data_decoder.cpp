@@ -560,6 +560,7 @@ TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write an EMWIN fi
         std::filesystem::create_directories(env.path("EMWIN/Text/A_EMWIN-FXUS61KB.txt"));
         decode(env, mux, params);
         CHECK(env.files() == std::vector<std::string>{"Admin Messages/A-MSG-0001.txt"});
+        CHECK(env.log.contains("A_EMWIN-RADALLUS.PNG! cannot open " + env.path("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") + ": ", slog::LOG_ERROR));
     }
 
     CHECK(env.log.contains("Could not write EMWIN file A_EMWIN-RADALLUS.PNG! ", slog::LOG_ERROR));
@@ -592,6 +593,8 @@ TEST_CASE("GOESLRITDataDecoderModule unpacks EMWIN files at their real size", "[
 
     decode(env, mux);
     REQUIRE(env.files() == std::vector<std::string>{"EMWIN/GOES/A_EMWIN-G16CIRUS.JPG"});
+    // Checked before reading it back, as a file of the size in the 32-bit field would be 4 GB
+    REQUIRE(std::filesystem::file_size(env.path("EMWIN/GOES/A_EMWIN-G16CIRUS.JPG")) == content.size());
     CHECK(bytesDiff(readBytes(env.path("EMWIN/GOES/A_EMWIN-G16CIRUS.JPG")), content) == "");
 }
 
