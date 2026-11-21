@@ -17,7 +17,7 @@ namespace satdump
                 // Only image data can be compressed
                 if (primary_header.file_type_code != 0 || !file.hasHeader<ImageStructureRecord>())
                 {
-                    logger->error("File " + file.filename + " is not an image!");
+                    logger->error("File %s is not an image!", file.filename.c_str());
                     return;
                 }
 

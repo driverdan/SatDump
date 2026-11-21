@@ -37,7 +37,7 @@ namespace elektro
                 if (!std::filesystem::exists(directory + "/LRIT"))
                     std::filesystem::create_directory(directory + "/LRIT");
 
-                logger->info("Writing file " + directory + "/LRIT/" + file.filename + "...");
+                logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
                 std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);

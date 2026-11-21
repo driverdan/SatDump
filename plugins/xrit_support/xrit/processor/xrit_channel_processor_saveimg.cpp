@@ -337,7 +337,7 @@ namespace satdump
             std::string directory_path = p.directory_path;
             std::string filename = meta.satellite_short_name + "_" + meta.channel + "_" + getXRITTimestamp(meta.timestamp) + ext;
             std::string pro_f_path = directory_path + "product.cbor";
-            logger->trace("Saving " + filename + "...");
+            logger->trace("Saving %s...", filename.c_str());
 
             // Check if the image already exists, this can happen when GOES goes (laugh please, pretty please) wrong.
             // If it does, we append a number and do NOT overwrite.
