@@ -12,6 +12,10 @@ namespace goes
 {
     namespace hrit
     {
+        // Largest file unpacked from an EMWIN ZIP archive. Real products are under 1 MB (the
+        // largest seen, GOES imagery, is about 700 kB): anything far above that is corrupt
+        const size_t EMWIN_MAX_FILE_SIZE = 16 * 1024 * 1024;
+
         std::string getHRITImageFilename(std::tm *timeReadable, std::string sat_name, std::string channel)
         {
             std::string utc_filename = sat_name + "_" + channel + "_" +                                                                                             // Satellite name and channel
@@ -251,10 +255,20 @@ namespace goes
                         return;
                     }
 
-                    // Decompress
-                    size_t outSize = 0;
-                    uint8_t *outBuffer = (uint8_t *)mz_zip_reader_extract_to_heap(&zipFile, 0, &outSize, 0);
-                    if (outBuffer == nullptr)
+                    // The size the archive claims is as received too, and is what the output buffer
+                    // is allocated for: check it first. Deflate cannot expand data more than 1032 times
+                    mz_zip_archive_file_stat stat;
+                    if (!mz_zip_reader_file_stat(&zipFile, 0, &stat) || stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE || stat.m_uncomp_size > stat.m_comp_size * 1032)
+                    {
+                        logger->error("ZIP data has an invalid size! Discarding...");
+                        mz_zip_reader_end(&zipFile);
+                        return;
+                    }
+
+                    // Decompress. Not with mz_zip_reader_extract_to_heap(), which sizes its buffer from
+                    // the 32-bit field, and not the ZIP64 size the archive may hold instead
+                    std::vector<uint8_t> outBuffer(stat.m_uncomp_size);
+                    if (!mz_zip_reader_extract_to_mem(&zipFile, 0, outBuffer.data(), outBuffer.size(), 0))
                     {
                         logger->error("Could not decompress ZIP data! Discarding...");
                         mz_zip_reader_end(&zipFile);
@@ -262,10 +276,9 @@ namespace goes
                     }
 
                     // Write out
-                    saveEMWINFile(directory, filename, (char *)outBuffer, outSize);
+                    saveEMWINFile(directory, filename, (char *)outBuffer.data(), outBuffer.size());
 
                     // Free memory
-                    zipFile.m_pFree(&zipFile, outBuffer);
                     mz_zip_reader_end(&zipFile);
                 }
             }

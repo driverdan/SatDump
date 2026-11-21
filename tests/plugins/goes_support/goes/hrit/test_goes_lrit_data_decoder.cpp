@@ -146,6 +146,82 @@ namespace
         return zip;
     }
 
+    // A ZIP archive of one file, whose central directory claims another uncompressed size
+    Bytes wrongSizeZip(const std::string &name, const std::string &content, uint32_t size)
+    {
+        Bytes zip = zipOf(name, content);
+        const uint8_t central_header[] = {'P', 'K', 1, 2};
+        auto it = std::search(zip.begin(), zip.end(), std::begin(central_header), std::end(central_header));
+        if (it != zip.end())
+            for (int i = 0; i < 4; i++)
+                *(it + 24 + i) = size >> (8 * i); // Uncompressed size
+        return zip;
+    }
+
+    // n bytes of v, little endian, as in a ZIP archive
+    void putLE(Bytes &b, uint64_t v, int n)
+    {
+        for (int i = 0; i < n; i++)
+            b.push_back(v >> (8 * i));
+    }
+
+    // A ZIP archive of one stored file, whose uncompressed size is in a ZIP64 field: the
+    // central directory says 0xFFFFFFFF, as it does for files of 4 GB or more
+    Bytes zip64SizeZip(const std::string &name, const std::string &content)
+    {
+        uint32_t crc = mz_crc32(MZ_CRC32_INIT, (const uint8_t *)content.data(), content.size());
+        Bytes zip;
+
+        // Local header and data
+        putLE(zip, 0x04034b50, 4);
+        putLE(zip, 45, 2); // Version needed
+        putLE(zip, 0, 2);  // Flags
+        putLE(zip, 0, 2);  // Stored
+        putLE(zip, 0, 4);  // Time and date
+        putLE(zip, crc, 4);
+        putLE(zip, content.size(), 4);
+        putLE(zip, content.size(), 4);
+        putLE(zip, name.size(), 2);
+        putLE(zip, 0, 2); // Extra field length
+        zip.insert(zip.end(), name.begin(), name.end());
+        zip.insert(zip.end(), content.begin(), content.end());
+
+        // Central directory
+        size_t cd_offset = zip.size();
+        putLE(zip, 0x02014b50, 4);
+        putLE(zip, 45, 2); // Version made by
+        putLE(zip, 45, 2); // Version needed
+        putLE(zip, 0, 2);  // Flags
+        putLE(zip, 0, 2);  // Stored
+        putLE(zip, 0, 4);  // Time and date
+        putLE(zip, crc, 4);
+        putLE(zip, content.size(), 4);
+        putLE(zip, 0xFFFFFFFF, 4); // Uncompressed size: in the ZIP64 field
+        putLE(zip, name.size(), 2);
+        putLE(zip, 12, 2); // Extra field length
+        putLE(zip, 0, 2);  // Comment length
+        putLE(zip, 0, 2);  // Disk
+        putLE(zip, 0, 2);  // Internal attributes
+        putLE(zip, 0, 4);  // External attributes
+        putLE(zip, 0, 4);  // Local header offset
+        zip.insert(zip.end(), name.begin(), name.end());
+        putLE(zip, 0x0001, 2); // ZIP64 extended information
+        putLE(zip, 8, 2);
+        putLE(zip, content.size(), 8);
+        size_t cd_size = zip.size() - cd_offset;
+
+        // End of central directory
+        putLE(zip, 0x06054b50, 4);
+        putLE(zip, 0, 2); // Disk
+        putLE(zip, 0, 2); // Disk of the central directory
+        putLE(zip, 1, 2); // Files on this disk
+        putLE(zip, 1, 2); // Files
+        putLE(zip, cd_size, 4);
+        putLE(zip, cd_offset, 4);
+        putLE(zip, 0, 2); // Comment length
+        return zip;
+    }
+
     // Pixels of a test image: every line is different, and none is black
     Bytes linePixels(int line, int columns = COLUMNS)
     {
@@ -434,8 +510,56 @@ TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[p
         CHECK(env.log.contains("Could not decompress ZIP data! Discarding...", slog::LOG_ERROR));
     }
 
+    // The size the archive claims is checked before anything is allocated for it
+    SECTION("an archive claiming a file of several GB")
+    {
+        Bytes zip = wrongSizeZip("A_EMWIN-RADBIGUS.PNG", "a few bytes, a few bytes, a few bytes, a few bytes", 0xF0000000);
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("ZIP data has an invalid size! Discarding...", slog::LOG_ERROR));
+    }
+
+    SECTION("an archive claiming more than its data can decompress to")
+    {
+        // A few bytes of deflate data, 1 MB once unpacked: under the size limit, but over 1032 times the data
+        Bytes zip = wrongSizeZip("A_EMWIN-RADBIGUS.PNG", "a few bytes, a few bytes, a few bytes, a few bytes", 1000000);
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("ZIP data has an invalid size! Discarding...", slog::LOG_ERROR));
+    }
+
     CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/A_EMWIN-RADALLUS.PNG"});
     CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
+}
+
+TEST_CASE("GOESLRITDataDecoderModule unpacks EMWIN files at their real size", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    Bytes content;
+
+    // The largest real products are GOES images of about 700 kB, which do not compress
+    SECTION("a large image")
+    {
+        content = randomBytes(1000000, 1);
+        mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "A_EMWIN-G16CIRUS.JPG", std::string(content.begin(), content.end())), APID));
+    }
+
+    // The size in the central directory is only the marker for a ZIP64 field, which holds
+    // the real one
+    SECTION("a size in a ZIP64 field")
+    {
+        std::string text = "the real size of this is in the ZIP64 field";
+        content = Bytes(text.begin(), text.end());
+        Bytes zip = zip64SizeZip("A_EMWIN-G16CIRUS.JPG", text);
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+    }
+
+    decode(env, mux);
+    REQUIRE(env.files() == std::vector<std::string>{"EMWIN/GOES/A_EMWIN-G16CIRUS.JPG"});
+    CHECK(bytesDiff(readBytes(env.path("EMWIN/GOES/A_EMWIN-G16CIRUS.JPG")), content) == "");
 }
 
 // The name of the file in the archive is used as the output file name
