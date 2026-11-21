@@ -1,4 +1,5 @@
 #include "common/dsp_source_sink/dsp_sample_source.h"
+#include "helpers/guards.h"
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
 
@@ -57,6 +58,7 @@ TEST_CASE("dsp::getAvailableSourcesOfType only lists the sources of that type", 
 {
     FakeRegistry reg;
     int other_listed = 0;
+    test_helpers::ValueGuard registry(dsp::dsp_sources_registry);
     dsp::dsp_sources_registry[OTHER_TYPE] = {[](dsp::SourceDescriptor) -> std::shared_ptr<dsp::DSPSampleSource> { return nullptr; },
                                              [&other_listed]()
                                              {
@@ -71,8 +73,6 @@ TEST_CASE("dsp::getAvailableSourcesOfType only lists the sources of that type", 
     CHECK(dsp::getAvailableSourcesOfType(THROWING_TYPE).empty());
     CHECK(dsp::getAvailableSourcesOfType("unit_test_no_such_type").empty());
     CHECK(other_listed == 0);
-
-    dsp::dsp_sources_registry.erase(OTHER_TYPE);
 }
 
 TEST_CASE("dsp::getSourceFromDescriptor dispatches on source type", "[common][dsp_source_sink][dsp_sample_source]")

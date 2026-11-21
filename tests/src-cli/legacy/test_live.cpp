@@ -143,6 +143,8 @@ TEST_CASE("main_live fails for a source that does not exist", "[cli][legacy][liv
         CHECK(env.run("unit_cli_live", {"--source", "unit_cli_no_such_sdr", "--samplerate", "48000", "--frequency", "100e6"}) == 1);
         INFO(env.log.dump());
         CHECK(env.log.contains("Could not find a handler for source type : unit_cli_no_such_sdr!", slog::LOG_ERROR));
+        // Only the sources of the requested type are listed, and there are none
+        CHECK_FALSE(env.log.contains("Device File Source"));
     }
 
     SECTION("known type, but no device with this ID")
