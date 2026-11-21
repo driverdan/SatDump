@@ -68,12 +68,20 @@ namespace satdump
                         std::string save_type = "png";
                         if (!force_png)
                             satdump_cfg.tryAssignValueFromSatDumpGeneral(save_type, "image_format");
-                        auto img = getimg_callback();
-                        std::string saved_at = save_image_dialog(default_name, default_dir, dialog_name, img.get(), &save_type);
-                        if (saved_at == "")
-                            logger->info("Save cancelled");
-                        else
-                            logger->info("Saved current image at %s", saved_at.c_str());
+                        // An exception would end the program from this thread, and leave the flag set
+                        try
+                        {
+                            auto img = getimg_callback();
+                            std::string saved_at = save_image_dialog(default_name, default_dir, dialog_name, img.get(), &save_type);
+                            if (saved_at == "")
+                                logger->info("Save cancelled");
+                            else
+                                logger->info("Saved current image at %s", saved_at.c_str());
+                        }
+                        catch (std::exception &e)
+                        {
+                            logger->error("Could not save image! %s", e.what());
+                        }
                         file_save_thread_running = false;
                     };
 

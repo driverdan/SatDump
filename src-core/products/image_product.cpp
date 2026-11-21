@@ -32,6 +32,7 @@ namespace satdump
             }
 
             std::mutex savemtx;
+            int failed_images = 0; // Under savemtx
 #pragma omp parallel for
             for (int64_t c = 0; c < (int64_t)images.size(); c++)
             {
@@ -63,7 +64,22 @@ namespace satdump
 
                 savemtx.unlock();
                 if (!save_as_matrix && !d_no_not_save_images)
-                    image::save_img(images[c].image, directory + "/" + images[c].filename);
+                {
+                    // An exception must not leave the OpenMP region (it would call std::terminate),
+                    // and one image that cannot be saved must not stop the others
+                    std::string path = directory + "/" + images[c].filename;
+                    try
+                    {
+                        image::save_img(images[c].image, path);
+                    }
+                    catch (std::exception &e)
+                    {
+                        logger->error("Could not save image %s! %s", path.c_str(), e.what());
+                        savemtx.lock();
+                        failed_images++;
+                        savemtx.unlock();
+                    }
+                }
             }
 
             if (save_as_matrix && !images.empty())
@@ -71,13 +87,26 @@ namespace satdump
                 int size = ceil(sqrt(images.size()));
                 logger->debug("Using size %d", size);
                 image::Image image_all = image::make_manyimg_composite(size, size, images.size(), [this](int c) { return images[c].image; });
-                image::save_img(image_all, directory + "/" + images[0].filename);
+                std::string path = directory + "/" + images[0].filename;
+                try
+                {
+                    image::save_img(image_all, path);
+                }
+                catch (std::exception &e)
+                {
+                    logger->error("Could not save image %s! %s", path.c_str(), e.what());
+                    failed_images++;
+                }
                 savemtx.lock();
                 contents["img_matrix_size"] = size;
                 savemtx.unlock();
             }
 
+            // The product file is still written, so the images that were saved can be used
             Product::save(directory);
+
+            if (failed_images > 0)
+                throw satdump_exception("could not save " + std::to_string(failed_images) + " image(s) of the product in " + directory);
         }
 
         void ImageProduct::load(std::string file)

@@ -67,7 +67,15 @@ namespace elektro_arktika
                         if (cur_time - day.second > 30)
                         {
                             logger->info("Processing directory " + day.first);
-                            process_day_cadu(day.first);
+                            // An exception would end the program from this thread with the mutex held
+                            try
+                            {
+                                process_day_cadu(day.first);
+                            }
+                            catch (std::exception &e)
+                            {
+                                logger->error("Could not process directory %s! %s", day.first.c_str(), e.what());
+                            }
                             ongoing_day_timers.erase(day.first);
                             break;
                         }
@@ -76,7 +84,14 @@ namespace elektro_arktika
                     if (cur_time - last_72h_processed > 60)
                     {
                         logger->info("Processing last 72h...");
-                        process_last_72h(cur_time);
+                        try
+                        {
+                            process_last_72h(cur_time);
+                        }
+                        catch (std::exception &e)
+                        {
+                            logger->error("Could not process the last 72h! %s", e.what());
+                        }
                         last_72h_processed = cur_time;
                     }
                 }

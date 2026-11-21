@@ -35,7 +35,15 @@ namespace satdump
 
                         // logger->debug("Queue length %d", queue.size());
                         logger->info("Saving " + img.second);
-                        save_img(img.first, img.second);
+                        // An exception would end the program from this thread, and the queue would stop
+                        try
+                        {
+                            save_img(img.first, img.second);
+                        }
+                        catch (std::exception &e)
+                        {
+                            logger->error("Could not save image %s! %s", img.second.c_str(), e.what());
+                        }
                         continue;
                     }
 
