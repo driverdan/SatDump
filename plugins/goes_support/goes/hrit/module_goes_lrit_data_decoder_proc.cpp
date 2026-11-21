@@ -16,7 +16,8 @@ namespace goes
     namespace hrit
     {
         // Largest file unpacked from an EMWIN ZIP archive. Real products are under 1 MB (the
-        // largest seen, GOES imagery, is about 700 kB): anything far above that is corrupt
+        // largest seen, GOES imagery, is about 700 kB). An archive claiming more, at a size its
+        // data could decompress to, is not unpacked but saved as received, as <name>.zip
         const size_t EMWIN_MAX_FILE_SIZE = 16 * 1024 * 1024;
 
         std::string getHRITImageFilename(std::tm *timeReadable, std::string sat_name, std::string channel)
@@ -38,9 +39,10 @@ namespace goes
          * @param filename Filename to save as
          * @param buffer Pointer to the data buffer
          * @param size How many bytes to write
+         * @param suffix Appended to the name of the file written, which is still sorted by filename
          * @throws std::exception if the file or its directories cannot be written
          */
-        void GOESLRITDataDecoderModule::saveEMWINFile(std::string directory, std::string filename, char *buffer, size_t size)
+        void GOESLRITDataDecoderModule::saveEMWINFile(std::string directory, std::string filename, char *buffer, size_t size, std::string suffix)
         {
             if (!std::filesystem::exists(directory + "/EMWIN"))
                 std::filesystem::create_directory(directory + "/EMWIN");
@@ -109,8 +111,8 @@ namespace goes
                 std::filesystem::create_directory(directory + "/EMWIN" + subdirectory);
 
             // Write file out. A failure throws, as creating the directories above does
-            logger->info("Writing file " + directory + "/EMWIN/" + subdirectory + filename + "...");
-            std::string path = directory + "/EMWIN" + subdirectory + filename;
+            std::string path = directory + "/EMWIN" + subdirectory + filename + suffix;
+            logger->info("Writing file %s...", path.c_str());
             std::ofstream fileo(path, std::ios::binary);
             if (!fileo)
                 throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
@@ -275,10 +277,27 @@ namespace goes
 
                     // The size the archive claims is as received too, and is what the output buffer
                     // is allocated for: check it first. Deflate cannot expand data more than 1032 times
-                    // (divided, as a ZIP64 compressed size times 1032 could wrap)
-                    if (stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE || stat.m_uncomp_size / 1032 > stat.m_comp_size)
+                    // (divided, as a ZIP64 compressed size times 1032 could wrap), so more is corrupt
+                    if (stat.m_uncomp_size / 1032 > stat.m_comp_size)
                     {
-                        logger->error("ZIP data has an invalid size! Discarding...");
+                        logger->error("ZIP entry %s claims %llu bytes from %llu compressed bytes, more than deflate can produce! Discarding...", filename.c_str(),
+                                      (unsigned long long)stat.m_uncomp_size, (unsigned long long)stat.m_comp_size);
+                        return;
+                    }
+
+                    // A plausible size over the limit is not unpacked: the archive is saved as received
+                    if (stat.m_uncomp_size > EMWIN_MAX_FILE_SIZE)
+                    {
+                        logger->warn("ZIP entry %s claims %llu bytes, over the %llu byte limit for EMWIN files! Saving the archive as received...", filename.c_str(),
+                                     (unsigned long long)stat.m_uncomp_size, (unsigned long long)EMWIN_MAX_FILE_SIZE);
+                        try
+                        {
+                            saveEMWINFile(directory, filename, (char *)&file.lrit_data[offset], file.lrit_data.size() - offset, ".zip");
+                        }
+                        catch (const std::exception &e)
+                        {
+                            logger->error("Could not write EMWIN file %s.zip! %s", filename.c_str(), e.what());
+                        }
                         return;
                     }
 

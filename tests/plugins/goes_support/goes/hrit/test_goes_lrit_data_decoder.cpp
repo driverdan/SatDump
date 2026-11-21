@@ -517,7 +517,8 @@ TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[p
         mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
         mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
         decode(env, mux);
-        CHECK(env.log.contains("ZIP data has an invalid size! Discarding...", slog::LOG_ERROR));
+        CHECK(env.log.contains("ZIP entry A_EMWIN-RADBIGUS.PNG claims 4026531840 bytes from ", slog::LOG_ERROR));
+        CHECK(env.log.contains(" compressed bytes, more than deflate can produce! Discarding...", slog::LOG_ERROR));
     }
 
     SECTION("an archive claiming more than its data can decompress to")
@@ -527,10 +528,31 @@ TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[p
         mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
         mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
         decode(env, mux);
-        CHECK(env.log.contains("ZIP data has an invalid size! Discarding...", slog::LOG_ERROR));
+        CHECK(env.log.contains("ZIP entry A_EMWIN-RADBIGUS.PNG claims 1000000 bytes from ", slog::LOG_ERROR));
+        CHECK(env.log.contains(" compressed bytes, more than deflate can produce! Discarding...", slog::LOG_ERROR));
     }
 
     CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/A_EMWIN-RADALLUS.PNG"});
+    CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
+}
+
+// A file over the size limit that its data could decompress to may be real: it is not unpacked,
+// but its archive is saved as received, where the file would have gone
+TEST_CASE("GOESLRITDataDecoderModule saves EMWIN archives over the size limit as received", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    const size_t limit = 16 * 1024 * 1024;
+
+    // Compresses about 1000 times, so the archive is small
+    Bytes zip = zipOf("A_EMWIN-RADBIGUS.PNG", std::string(limit + 1, 'R'));
+    mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+    mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+    decode(env, mux);
+
+    CHECK(env.log.contains("ZIP entry A_EMWIN-RADBIGUS.PNG claims 16777217 bytes, over the 16777216 byte limit for EMWIN files! Saving the archive as received...", slog::LOG_WARN));
+    REQUIRE(env.files() == std::vector<std::string>{"EMWIN/NWS/A_EMWIN-RADALLUS.PNG", "EMWIN/NWS/A_EMWIN-RADBIGUS.PNG.zip"});
+    CHECK(bytesDiff(readBytes(env.path("EMWIN/NWS/A_EMWIN-RADBIGUS.PNG.zip")), zip) == "");
     CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
 }
 
@@ -578,6 +600,12 @@ TEST_CASE("GOESLRITDataDecoderModule unpacks EMWIN files at their real size", "[
     SECTION("a large image")
     {
         content = randomBytes(1000000, 1);
+        mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "A_EMWIN-G16CIRUS.JPG", std::string(content.begin(), content.end())), APID));
+    }
+
+    SECTION("a file of the size limit")
+    {
+        content = Bytes(16 * 1024 * 1024, 'G');
         mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "A_EMWIN-G16CIRUS.JPG", std::string(content.begin(), content.end())), APID));
     }
 
