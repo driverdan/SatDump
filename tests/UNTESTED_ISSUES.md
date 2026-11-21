@@ -154,7 +154,6 @@ These were reported alongside the entries above. They do not crash, but they als
 - `image/io/tiffio.cpp`: `load_tiff` does not close the file when the depth is unsupported.
 - `utils/mqtt_client.h`: the constructor leaks the socket and buffers when it throws after the socket is opened.
 - `db/db_handler.cpp`: the SQLite handle is not closed when opening fails.
-- `logger.cpp`: `logf` uses `va_copy` without `va_end`.
 
 **Wrong results**
 
