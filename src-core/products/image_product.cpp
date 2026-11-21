@@ -102,11 +102,12 @@ namespace satdump
                 savemtx.unlock();
             }
 
-            // The product file is still written, so the images that were saved can be used
+            // The product file is still written, so the images that were saved can be used. Callers
+            // have no handler for a failure here, and would lose the work that follows the save
             Product::save(directory);
 
             if (failed_images > 0)
-                throw satdump_exception("could not save " + std::to_string(failed_images) + " image(s) of the product in " + directory);
+                logger->error("Could not save %d image(s) of the product in %s!", failed_images, directory.c_str());
         }
 
         void ImageProduct::load(std::string file)

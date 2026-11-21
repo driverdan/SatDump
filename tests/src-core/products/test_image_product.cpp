@@ -4,10 +4,8 @@
 #include "products/products_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 
-using Catch::Matchers::ContainsSubstring;
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 using products_test::ConfigGuard;
@@ -412,9 +410,22 @@ TEST_CASE("ImageProduct save falls back to PNG without a configured format", "[p
     CHECK(std::filesystem::exists(dir.path / "channel_0.png"));
 }
 
+namespace
+{
+    // How many times text appears in everything logged
+    int countLogged(cli_test::LogCapture &log, const std::string &text)
+    {
+        std::string all = log.dump();
+        int n = 0;
+        for (size_t pos = all.find(text); pos != std::string::npos; pos = all.find(text, pos + 1))
+            n++;
+        return n;
+    }
+} // namespace
+
 // The images are saved in an OpenMP loop, where an exception that leaves the loop ends the
 // program. This must hold with and without OpenMP
-TEST_CASE("ImageProduct save goes on when an image cannot be saved, then throws", "[products][image_product]")
+TEST_CASE("ImageProduct save goes on when an image cannot be saved", "[products][image_product]")
 {
     ConfigGuard cfg;
     cli_test::LogCapture log;
@@ -443,25 +454,24 @@ TEST_CASE("ImageProduct save goes on when an image cannot be saved, then throws"
     p.images.push_back(holder(0, "1", patternImage(8, 64, 64, 1)));
     p.images.push_back(holder(1, "bad", patternImage(8, 64, 64, 2)));
     p.images.push_back(holder(2, "3", patternImage(8, 64, 64, 3)));
-    CHECK_THROWS_WITH(p.save(dir.str()), ContainsSubstring("could not save 1 image(s) of the product in " + dir.str()));
+    CHECK_NOTHROW(p.save(dir.str()));
 
     // The other images and the product file are saved
     CHECK(std::filesystem::exists(dir.path / ("channel_1." + ext)));
     CHECK(std::filesystem::exists(dir.path / ("channel_3." + ext)));
+    REQUIRE(std::filesystem::exists(dir.path / "product.cbor"));
     ImageProduct q;
     q.load((dir.path / "product.cbor").string());
     CHECK(q.images.size() == 3);
 
-    // Logged once, with the file
-    std::string error = "Could not save image " + dir.str() + "/channel_bad." + ext + "! ";
+    // Logged once, with the file, and summed up once
     INFO(log.dump());
-    std::string all = log.dump();
-    size_t pos = all.find(error);
-    CHECK(pos != std::string::npos);
-    CHECK((pos == std::string::npos || all.find(error, pos + 1) == std::string::npos));
+    CHECK(countLogged(log, "Could not save image " + dir.str() + "/channel_bad." + ext + "! ") == 1);
+    CHECK(countLogged(log, "Could not save 1 image(s) of the product in " + dir.str() + "!") == 1);
+    CHECK(log.contains("Could not save 1 image(s) of the product in " + dir.str() + "!", slog::LOG_ERROR));
 }
 
-TEST_CASE("ImageProduct save as a matrix throws when the image cannot be saved", "[products][image_product]")
+TEST_CASE("ImageProduct save as a matrix goes on when the image cannot be saved", "[products][image_product]")
 {
     ConfigGuard cfg;
     cli_test::LogCapture log;
@@ -474,7 +484,9 @@ TEST_CASE("ImageProduct save as a matrix throws when the image cannot be saved",
     p.save_as_matrix = true;
     for (int i = 0; i < 3; i++)
         p.images.push_back(holder(i, std::to_string(i), patternImage(16, 6, 4, i + 1)));
-    CHECK_THROWS_WITH(p.save(dir.str()), ContainsSubstring("could not save 1 image(s)"));
+    CHECK_NOTHROW(p.save(dir.str()));
     CHECK(std::filesystem::exists(dir.path / "product.cbor"));
-    CHECK(log.contains("Could not save image " + dir.str() + "/channel_0.png! ", slog::LOG_ERROR));
+    INFO(log.dump());
+    CHECK(countLogged(log, "Could not save image " + dir.str() + "/channel_0.png! ") == 1);
+    CHECK(countLogged(log, "Could not save 1 image(s) of the product in " + dir.str() + "!") == 1);
 }
