@@ -114,7 +114,7 @@ namespace slog
         void trace(int v) { log(LOG_TRACE, v); }
         void debug(int v) { log(LOG_DEBUG, v); }
         void info(int v) { log(LOG_INFO, v); }
-        void notice(int v) { log(LOG_INFO, v); }
+        void notice(int v) { log(LOG_NOTICE, v); }
         void warn(int v) { log(LOG_WARN, v); }
         void error(int v) { log(LOG_ERROR, v); }
         void critical(int v) { log(LOG_CRIT, v); }
