@@ -4,6 +4,7 @@
 #include <ctime>
 #include <filesystem>
 #include <iostream>
+#include <utility>
 #ifdef __ANDROID__
 #include <android/log.h>
 static char ag_LogTag[] = "SatDump";
@@ -47,26 +48,28 @@ namespace slog
         std::vector<char> buf;
         buf.resize(size);
 
-        // Try to vsnprintf into our buffer.
-        size_t needed = snprintf((char *)&buf[0], size, fmt, args...);
-        // NB. On Windows, vsnprintf returns -1 if the string didn't fit the
-        // buffer.  On Linux & OSX, it returns the length it would have needed.
+        // Try to snprintf into our buffer. It returns the length it would
+        // have needed (excluding the NUL), or a negative value on error.
+        int needed = snprintf(buf.data(), size, fmt, args...);
 
-        if (needed <= size)
+        if (needed < 0)
+            return std::string();
+
+        // snprintf also needs room for the terminating NUL
+        if ((size_t)needed < size)
         {
             // It fit fine the first time, we're done.
-            return std::string(&buf[0]);
+            return std::string(buf.data(), needed);
         }
         else
         {
-            // vsnprintf reported that it wanted to write more characters
+            // snprintf reported that it wanted to write more characters
             // than we allotted.  So do a malloc of the right size and try again.
             // This doesn't happen very often if we chose our initial size
             // well.
-            size = needed;
-            buf.resize(size);
-            needed = snprintf((char *)&buf[0], size, fmt, args...);
-            return std::string(&buf[0]);
+            buf.resize((size_t)needed + 1);
+            snprintf(buf.data(), buf.size(), fmt, args...);
+            return std::string(buf.data(), needed);
         }
     }
 
@@ -197,18 +200,29 @@ namespace slog
         va_list argscopy;
         va_copy(argscopy, args);
 
-        size_t size = vsnprintf((char *)output.c_str(), output.size(), fmt.c_str(), args);
+        // Returns the formatted length (excluding the NUL), or a negative value on error
+        int size = vsnprintf(&output[0], output.size(), fmt.c_str(), args);
 
-        if (size <= output.size())
+        if (size < 0)
         {
-            log(lvl, output);
+            // Encoding error, log the format string as-is rather than nothing
+            output = fmt;
+        }
+        else if ((size_t)size < output.size())
+        {
+            // It fit, including the terminating NUL. Drop the unused space
+            output.resize(size);
         }
         else
         {
-            output.resize(size + 1);
-            size = vsnprintf((char *)output.c_str(), output.size(), fmt.c_str(), argscopy);
-            log(lvl, output);
+            output.resize((size_t)size + 1);
+            vsnprintf(&output[0], output.size(), fmt.c_str(), argscopy);
+            output.resize(size);
         }
+
+        va_end(argscopy);
+
+        log(lvl, std::move(output));
     }
 
 #ifdef __ANDROID__
