@@ -33,7 +33,7 @@ namespace satdump
                 seg_count = max_seg;
                 segments_done = std::vector<bool>(seg_count, false);
                 image.init(8, max_width, max_height, 1);
-                seg_size = int(max_height / max_seg) * max_width;
+                seg_size = max_seg > 0 ? int(max_height / max_seg) * max_width : 0; // With 0 segments, every segment is ignored
             }
 
             GOESSegmentedImageDecoder(XRITFile &file)

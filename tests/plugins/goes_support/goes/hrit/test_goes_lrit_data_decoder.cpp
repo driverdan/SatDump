@@ -779,6 +779,21 @@ TEST_CASE("GOESLRITDataDecoderModule fill_missing replaces the lost lines of an 
     }
 }
 
+TEST_CASE("GOESLRITDataDecoderModule fill_missing skips an image of 0 columns", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The lines left to fill are counted in columns
+    DecoderEnv env;
+    Mux mux;
+    auto params = hritParams();
+    params["fill_missing"] = true;
+    mux.add(VCID, packetize(lritFile(0, {imageStructureRecord(8, 0, LINES, 0), annotationRecord("EMPTY.lrit"), noaaRecord(1, 0, 0, 0)}, Bytes(4 * COLUMNS, 1)), APID, 0, 100));
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next file"), APID, 50));
+    decode(env, mux, params);
+
+    CHECK(env.log.contains("File EMPTY.lrit has 0 columns in its image structure record, its missing lines cannot be filled", slog::LOG_WARN));
+    CHECK(env.exists("Admin Messages/NEXT.txt"));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule saves GOES-R level 2 products apart from the imagery", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
@@ -811,6 +826,21 @@ TEST_CASE("GOESLRITDataDecoderModule uses the Rice settings of the file", "[plug
     CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({}));
     CHECK(env.log.contains("Rice header is present!", slog::LOG_DEBUG));
     CHECK(env.log.contains("Pixels per block : 16", slog::LOG_DEBUG));
+}
+
+TEST_CASE("GOESLRITDataDecoderModule uses 16 pixels per block when the Rice settings of the file give 0", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The Rice decoder divides by the pixels per block
+    DecoderEnv env;
+    Mux mux;
+    auto settings = riceSettings(COLUMNS);
+    Bytes headers = lritHeaders(0, {imageStructureRecord(8, COLUMNS, LINES, 1), annotationRecord("IMAGE.lrit"), noaaRecord(1, 0, 0, 1), riceCompressionRecord(settings.options_mask, 0, 1)}, 0);
+    mux.add(VCID, riceImagePackets(headers, imageLines(), APID));
+    decode(env, mux);
+
+    REQUIRE(settings.pixels_per_block == 16); // What the lines were compressed with
+    CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({}));
+    CHECK(env.log.contains("File IMAGE.lrit has 0 pixels per block in its Rice compression record, using 16", slog::LOG_WARN));
 }
 
 TEST_CASE("GOESLRITDataDecoderModule decodes the files after a Rice compressed image on the same APID as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
@@ -942,6 +972,28 @@ TEST_CASE("GOESLRITDataDecoderModule assembles the segments of a GOES-R ABI imag
     REQUIRE(product["images"].size() == 1);
     CHECK(product["images"][0]["name"] == "13");
     CHECK(product["images"][0]["file"] == "G16_13_20240502T120020Z.png");
+}
+
+TEST_CASE("GOESLRITDataDecoderModule saves a segment of an image of 0 segments as an image of its own", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The segments are placed in their image by max_row / max_segment
+    DecoderEnv env;
+    Mux mux;
+    const int seg_lines = 8;
+    std::string name = "OR_ABI-L2-CMIPF-M6C13_G16_s20241231200207_e20241231209527_c20241231210007.lrit";
+    std::string ancillary = "Time of frame start = 2024-05-02T12:00:20.7Z;Satellite = G16;Instrument = FM1;Channel = 13;Region = Full Disk;";
+    Bytes headers = lritHeaders(0,
+                                {imageStructureRecord(8, COLUMNS, seg_lines, 1), annotationRecord(name), timeStampRecord(24228, 43220000), ancillaryTextRecord(ancillary), noaaRecord(16, 13, 0, 1),
+                                 segmentIdentificationRecord(7, 1, 0, seg_lines, 0, COLUMNS, 3 * seg_lines)},
+                                0);
+    mux.add(VCID, riceImagePackets(headers, imageLines(seg_lines, seg_lines), APID));
+    decode(env, mux);
+
+    std::string dir = "IMAGES/GOES-16/Full Disk/2024-05-02_12-00-20/";
+    std::string image = dir + "G16_13_20240502T120020Z.png";
+    CHECK(env.files() == std::vector<std::string>{image, dir + "product.cbor"});
+    CHECK(savedLines(env.path(image), seg_lines, seg_lines) == linesWith({{0, 8}, {1, 9}, {2, 10}, {3, 11}, {4, 12}, {5, 13}, {6, 14}, {7, 15}}, seg_lines));
+    CHECK(env.log.contains("File " + name + " has 0 segments in its segment identification header", slog::LOG_WARN));
 }
 
 TEST_CASE("GOESLRITDataDecoderModule saves the raw LRIT files on request", "[plugins][goes_support][goes_lrit_data_decoder]")
