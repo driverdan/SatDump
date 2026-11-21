@@ -1,3 +1,4 @@
+#include "cli_test_helpers.h"
 #include "helpers/compare.h"
 #include "helpers/random.h"
 #include "xrit_support/xrit/transport/xrit_demux.h"
@@ -362,13 +363,16 @@ TEST_CASE("XRITDemux drops a file that ends before its headers are complete", "[
     auto packets = packetize(cut, 40, 0, PACKET);
     REQUIRE(packets.size() == 3);
 
+    // Its first packet only, then the next file
     SECTION("the next file starts") { packets.resize(1); }
-    SECTION("its last packet comes") { packets.erase(packets.begin() + 1); }
+    // All of its packets, in sequence, but the file is shorter than its headers say
+    SECTION("its last packet comes") { packets = packetize(Bytes(cut.begin(), cut.begin() + 250), 40, 0, PACKET); }
 
     Mux mux;
     mux.add(5, packets);
     mux.add(5, packetize(next, 40, 20, PACKET));
 
+    cli_test::LogCapture log;
     xr::XRITDemux demuxer;
     std::vector<std::string> finalized;
     demuxer.onFinalizeData = [&](xr::XRITFile &f) { finalized.push_back(f.filename); };
@@ -379,6 +383,7 @@ TEST_CASE("XRITDemux drops a file that ends before its headers are complete", "[
     CHECK(bytesDiff(files[0].lrit_data, next) == "");
     // The callback is not given what is left of the file either
     CHECK(finalized == std::vector<std::string>{"NEXT.lrit"});
+    CHECK(log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
 }
 
 TEST_CASE("XRITDemux reads the headers a last packet completes", "[plugins][xrit_support][xrit_demux]")
