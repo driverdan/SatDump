@@ -73,8 +73,13 @@ know what you are looking for.
 
 ## RTL-SDR
 
-*   `gain` : Device Gain in dBs
-*   `agc` : Enable or disable the AGC
+*   `gain` : Tuner Gain in dBs, rounded to the nearest gain the tuner
+    supports. Only used when `tuner_agc` is disabled
+*   `lna_agc` : Enable or disable the built-in LNA AGC. This does not
+    change `tuner_agc`
+*   `tuner_agc` : Enable or disable the tuner AGC. Disabled by default,
+    in which case `gain` is used
+*   `agc` : Legacy option, sets both `lna_agc` and `tuner_agc`
 *   `bias` : Enable Bias-Tee power
 *   `ppm_correction` : Frequency correction for dongles with drift
 
@@ -82,8 +87,13 @@ know what you are looking for.
 
 *   `ip_address` : IPv4 Server address
 *   `port` : Server port. Usually 1234
-*   `gain` : Device Gain in dBs
-*   `lna_agc` : Enable or disable the built-in LNA AGC
+*   `gain` : Tuner Gain in dBs, 10 by default. Only used when
+    `tuner_agc` is disabled
+*   `lna_agc` : Enable or disable the built-in LNA AGC. This does not
+    change `tuner_agc`
+*   `tuner_agc` : Enable or disable the tuner AGC. Disabled by default,
+    in which case `gain` is used
+*   `agc` : Legacy option, sets both `lna_agc` and `tuner_agc`
 *   `bias` : Enable Bias-Tee power (if supported)
 *   `ppm_correction` : Frequency correction for dongles with drift
 

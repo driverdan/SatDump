@@ -164,11 +164,9 @@ TEST_CASE("RTLTCPSource settings have defaults and are read back", "[plugins][sd
     }
 }
 
-// Bug: plugins/sdr_sources/rtltcp_support/rtltcp.cpp:59 - tuner_agc defaults to the value of
-// lna_agc instead of keeping its own (rtlsdr_sdr.cpp:123 has the intended line). Enabling
-// the LNA AGC alone therefore enables the tuner AGC as well, and a manual gain is then never
-// sent: "--lna_agc --gain 49" runs at whatever gain the tuner AGC picks.
-TEST_CASE("RTLTCPSource lna_agc leaves the tuner AGC alone", "[plugins][sdr_sources][rtltcp][!shouldfail]")
+// The two AGCs are independent settings, as for the USB RTL-SDR source: enabling the LNA AGC
+// alone must not enable the tuner AGC too, which would stop the manual gain from being sent
+TEST_CASE("RTLTCPSource lna_agc leaves the tuner AGC alone", "[plugins][sdr_sources][rtltcp]")
 {
     auto source = RTLTCPSource::getInstance(RTLTCPSource::getAvailableSources()[0]);
 
@@ -270,9 +268,9 @@ TEST_CASE("RTLTCPSource start configures the dongle", "[plugins][sdr_sources][rt
     CHECK(server.connected());
 }
 
-// Bug: see "RTLTCPSource lna_agc leaves the tuner AGC alone" above. This is the source part
-// of "satdump legacy live ... --source rtltcp --lna_agc --gain 49".
-TEST_CASE("RTLTCPSource sends the gain when only the LNA AGC is enabled", "[plugins][sdr_sources][rtltcp][!shouldfail]")
+// The source part of "satdump legacy live ... --source rtltcp --lna_agc --gain 49": the tuner
+// AGC stays off, so the manual gain is sent (see "RTLTCPSource lna_agc leaves the tuner AGC alone")
+TEST_CASE("RTLTCPSource sends the gain when only the LNA AGC is enabled", "[plugins][sdr_sources][rtltcp]")
 {
     FakeRtlTcp server;
     auto source = makeSource(server, {{"lna_agc", true}, {"gain", 49}});

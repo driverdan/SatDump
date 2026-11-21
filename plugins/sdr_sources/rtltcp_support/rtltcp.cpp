@@ -56,7 +56,7 @@ void RTLTCPSource::set_settings(nlohmann::json settings)
     port = getValueOrDefault(d_settings["port"], port);
     gain = getValueOrDefault(d_settings["gain"], gain);
     lna_agc_enabled = getValueOrDefault(d_settings["lna_agc"], lna_agc_enabled);
-    tuner_agc_enabled = getValueOrDefault(d_settings["tuner_agc"], lna_agc_enabled);
+    tuner_agc_enabled = getValueOrDefault(d_settings["tuner_agc"], tuner_agc_enabled);
     bias = getValueOrDefault(d_settings["bias"], bias);
     ppm_widget.set(getValueOrDefault(d_settings["ppm_correction"], ppm_widget.get()));
 
