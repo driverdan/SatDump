@@ -14,6 +14,7 @@ namespace goes
         struct NOAALRITHeader
         {
             static constexpr int TYPE = 129;
+            static constexpr int MIN_LENGTH = 14;
 
             uint8_t type;
             uint16_t record_length;
@@ -38,6 +39,7 @@ namespace goes
         struct RiceCompressionHeader
         {
             static constexpr int TYPE = 131;
+            static constexpr int MIN_LENGTH = 7;
 
             uint8_t type;
             uint16_t record_length;
@@ -58,6 +60,7 @@ namespace goes
         struct AncillaryTextRecord
         {
             static constexpr int TYPE = 6;
+            static constexpr int MIN_LENGTH = 3;
 
             uint8_t type;
             uint16_t record_length;
@@ -69,7 +72,8 @@ namespace goes
             {
                 type = data[0];
                 record_length = data[1] << 8 | data[2];
-                ancillary_text.insert(ancillary_text.end(), &data[3], &data[record_length]);
+                if (record_length > 3) // A malformed length under 3 must not give a negative size
+                    ancillary_text.insert(ancillary_text.end(), &data[3], &data[record_length]);
 
                 // I will admit I needed to peek in goestools to figure that one out
                 // A bit hard without having live data...
@@ -91,6 +95,7 @@ namespace goes
         struct AnnotationRecord
         {
             static constexpr int TYPE = 4;
+            static constexpr int MIN_LENGTH = 3;
 
             uint8_t type;
             uint16_t record_length;
@@ -100,13 +105,15 @@ namespace goes
             {
                 type = data[0];
                 record_length = data[1] << 8 | data[2];
-                annotation_text.insert(annotation_text.end(), &data[3], &data[record_length]);
+                if (record_length > 3) // A malformed length under 3 must not give a negative size
+                    annotation_text.insert(annotation_text.end(), &data[3], &data[record_length]);
             }
         };
 
         struct SegmentIdentificationHeader
         {
             static constexpr int TYPE = 128;
+            static constexpr int MIN_LENGTH = 17;
 
             uint8_t type;
             uint16_t record_length;

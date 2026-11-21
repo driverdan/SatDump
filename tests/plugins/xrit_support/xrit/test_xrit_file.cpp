@@ -1,6 +1,8 @@
+#include "xrit_support/xrit/goes/goes_headers.h"
 #include "xrit_support/xrit/xrit_file.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 using namespace xrit_test;
 namespace xr = satdump::xrit;
@@ -11,6 +13,18 @@ namespace
     {
         xr::XRITFile f;
         f.lrit_data = data;
+        return f;
+    }
+
+    // The file is cut after `size` bytes. The vector keeps its memory past the end, filled with
+    // 0xFF, so that reading past the data gives wrong values rather than a crash
+    xr::XRITFile cutFileOf(const Bytes &data, size_t size)
+    {
+        xr::XRITFile f;
+        f.lrit_data = data;
+        f.lrit_data.resize(size);
+        f.lrit_data.resize(data.size() + 64, 0xFF);
+        f.lrit_data.resize(size);
         return f;
     }
 } // namespace
@@ -118,4 +132,104 @@ TEST_CASE("XRITFile::parseHeaders forgets the headers of the previous file", "[p
     CHECK_FALSE(f.hasHeader<xr::ImageStructureRecord>());
     CHECK(f.filename == "text.lrit");
     CHECK(f.total_header_length == 16 + 12);
+}
+
+TEST_CASE("XRITFile::getHeader reads what a header-only file lacks of a record as zeros", "[plugins][xrit_support][xrit_file]")
+{
+    SECTION("Record cut by the end of the file")
+    {
+        auto data = lritFile(2, {imageNavigationRecord("GEOS(-75.2)", 0x00120034, 0x00560078, -1000, 2000)}, {});
+        auto f = cutFileOf(data, 16 + 20);
+        f.parseHeaders();
+        REQUIRE(f.hasHeader<xr::ImageNavigationRecord>());
+
+        auto nav = f.getHeader<xr::ImageNavigationRecord>();
+        CHECK(nav.record_length == 51);
+        CHECK(nav.projection_name == std::string("GEOS(-75.2)      ") + std::string(15, '\0'));
+        CHECK(nav.column_scaling_factor == 0);
+        CHECK(nav.line_scaling_factor == 0);
+        CHECK(nav.column_offset == 0.0);
+        CHECK(nav.line_offset == 0.0);
+    }
+
+    SECTION("Last record shorter than its type")
+    {
+        auto data = lritFile(2, {record(2, Bytes(7, 'x')), record(129, {'N', 'O', 'A', 'A', 0, 7})}, {});
+        auto f = cutFileOf(data, data.size());
+        f.parseHeaders();
+        REQUIRE(f.hasHeader<xr::goes::NOAALRITHeader>());
+
+        auto noaa = f.getHeader<xr::goes::NOAALRITHeader>();
+        CHECK(noaa.record_length == 9);
+        CHECK(std::string(noaa.agency_signature, 4) == "NOAA");
+        CHECK(noaa.product_id == 7);
+        CHECK(noaa.product_subid == 0);
+        CHECK(noaa.parameter == 0);
+        CHECK(noaa.noaa_specific_compression == 0);
+    }
+}
+
+TEST_CASE("XRITFile::parseHeaders stops where the headers go past the data", "[plugins][xrit_support][xrit_file]")
+{
+    auto data = lritFile(2, {annotationRecord("a.lrit"), annotationRecord("bbbb")}, {});
+    auto f = cutFileOf(data, 16 + 9); // Cut right after the first annotation
+    bool safe = GENERATE(false, true);
+
+    f.parseHeaders(safe);
+    CHECK(f.all_headers == std::map<int, int>{{0, 0}, {4, 16}});
+    CHECK(f.filename == "a.lrit");
+}
+
+TEST_CASE("XRITFile::parseHeaders reads a file shorter than a primary header as empty", "[plugins][xrit_support][xrit_file]")
+{
+    size_t size = GENERATE(0, 3);
+    xr::XRITFile f;
+    f.lrit_data = lritFile(2, {}, {}); // A file with no record...
+    f.lrit_data.resize(size);          // ...is cut, and the rest of its primary header stays in memory past the data
+
+    f.parseHeaders();
+    CHECK(f.all_headers.empty());
+    CHECK(f.total_header_length == 0);
+    CHECK(f.getHeader<xr::PrimaryHeader>().record_length == (size >= 3 ? 16 : 0));
+}
+
+TEST_CASE("XRITFile::getHeader reads a text record from a file shorter than 3 bytes as zeros", "[plugins][xrit_support][xrit_file]")
+{
+    size_t size = GENERATE(1, 2);
+    auto f = cutFileOf({4, 0x01, 0x02}, size); // Record length 0x0100 when the third byte is missing
+
+    f.parseHeaders();
+    REQUIRE(f.all_headers.empty());
+
+    // No annotation, so this reads the record at offset 0
+    auto annotation = f.getHeader<xr::AnnotationRecord>();
+    CHECK(annotation.record_length == (size == 2 ? 0x0100 : 0));
+    CHECK(annotation.annotation_text == std::string(size == 2 ? 0x0100 - 3 : 0, '\0'));
+}
+
+TEST_CASE("XRITFile::parseHeaders stops at a record too short to hold its own length", "[plugins][xrit_support][xrit_file]")
+{
+    uint8_t length = GENERATE(1, 2);
+    auto f = fileOf(lritFile(2, {annotationRecord("a.lrit"), Bytes{3, 0, length}, annotationRecord("b.lrit")}, {}));
+
+    f.parseHeaders();
+    CHECK(f.all_headers == std::map<int, int>{{0, 0}, {4, 16}});
+    CHECK(f.filename == "a.lrit");
+}
+
+TEST_CASE("XRITFile text records with a length under 3 are empty", "[plugins][xrit_support][xrit_file]")
+{
+    Bytes data = {0, 0, 2, 'a', 'b', 'c'};
+    CHECK(xr::ImageDataFunctionRecord(data.data()).datas == "");
+    CHECK(xr::AnnotationRecord(data.data()).annotation_text == "");
+    CHECK(xr::goes::AnnotationRecord(data.data()).annotation_text == "");
+    CHECK(xr::goes::AncillaryTextRecord(data.data()).ancillary_text == "");
+}
+
+TEST_CASE("XRITFile::parseHeaders in safe mode keeps the last record of a header-only file", "[plugins][xrit_support][xrit_file]")
+{
+    auto f = fileOf(lritFile(2, {annotationRecord("a.lrit")}, {}));
+    f.parseHeaders(true);
+    CHECK(f.all_headers == std::map<int, int>{{0, 0}, {4, 16}});
+    CHECK(f.filename == "a.lrit");
 }

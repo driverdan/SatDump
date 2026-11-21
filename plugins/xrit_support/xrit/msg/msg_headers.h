@@ -25,6 +25,7 @@ namespace satdump
             struct SegmentIdentificationHeader
             {
                 static constexpr int TYPE = 128;
+                static constexpr int MIN_LENGTH = 13;
 
                 uint8_t type;
                 uint16_t record_length;
