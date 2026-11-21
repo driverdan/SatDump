@@ -1,6 +1,9 @@
 #pragma once
 
 #define TEST_BITS_LENGTH 2048 // 1024 QPSK symbols
+// The test decoder reads (TEST_BITS_LENGTH / 2 + K - 1) * 2 symbols, starting up to 1 symbol in.
+// This tail of ber_soft_buffer stays erased (128), as the tail of soft_buffer does when locked.
+#define TEST_BITS_PADDING (2 * (7 - 1) + 1)
 
 #include "common/codings/rotation.h"
 #include "common/codings/viterbi/cc_decoder.h"
@@ -36,7 +39,7 @@ namespace viterbi
 
         // BER test buffers
         int8_t ber_test_buffer[TEST_BITS_LENGTH];
-        uint8_t ber_soft_buffer[TEST_BITS_LENGTH];
+        uint8_t ber_soft_buffer[TEST_BITS_LENGTH + TEST_BITS_PADDING];
         uint8_t ber_decoded_buffer[TEST_BITS_LENGTH];
         uint8_t ber_encoded_buffer[TEST_BITS_LENGTH];
 
