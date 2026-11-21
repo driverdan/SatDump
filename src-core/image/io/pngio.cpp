@@ -1,5 +1,7 @@
 #include "../io.h"
+#include "core/exception.h"
 #include "logger.h"
+#include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <png.h>
@@ -25,7 +27,7 @@ namespace satdump
 
             FILE *fp = fopen(file.c_str(), "wb");
             if (!fp)
-                abort();
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
 
             png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
             if (!png)
@@ -35,8 +37,13 @@ namespace satdump
             if (!info)
                 abort();
 
+            // A write error (a full disk...) comes back here
             if (setjmp(png_jmpbuf(png)))
-                abort();
+            {
+                png_destroy_write_struct(&png, &info);
+                fclose(fp);
+                throw satdump_exception("cannot write " + file);
+            }
 
             png_init_io(png, fp);
 
@@ -84,8 +91,9 @@ namespace satdump
             }
 
             png_write_end(png, NULL);
-            fclose(fp);
             png_destroy_write_struct(&png, &info);
+            if (fclose(fp) != 0)
+                throw satdump_exception("cannot write " + file + ": " + strerror(errno));
         }
 
         void load_png(Image &img, std::string file, bool disableIndexing)

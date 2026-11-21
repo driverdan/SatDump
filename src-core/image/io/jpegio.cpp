@@ -1,5 +1,7 @@
 #include "../io.h"
+#include "core/exception.h"
 #include "logger.h"
+#include <cerrno>
 #include <csetjmp>
 #include <cstring>
 #include <filesystem>
@@ -142,7 +144,7 @@ namespace satdump
 
             FILE *fp = fopen(file.c_str(), "wb");
             if (!fp)
-                abort();
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
 
             unsigned char *jpeg_decomp = NULL;
             jpeg_error_struct_l jerr;
@@ -152,12 +154,13 @@ namespace satdump
             cinfo.err = jpeg_std_error(&jerr.pub);
             jerr.pub.error_exit = libjpeg_error_func_l;
 
+            // A write error (a full disk...) comes back here
             if (setjmp(jerr.setjmp_buffer))
             {
                 // Free memory
                 delete[] jpeg_decomp;
                 fclose(fp);
-                return;
+                throw satdump_exception("cannot write " + file);
             }
 
             jpeg_create_compress(&cinfo);
@@ -208,8 +211,9 @@ namespace satdump
             jpeg_destroy_compress(&cinfo);
 
             // Free memory
-            fclose(fp);
             delete[] jpeg_decomp;
+            if (fclose(fp) != 0)
+                throw satdump_exception("cannot write " + file + ": " + strerror(errno));
         }
 
         // Declaration is in jpeg_utils.h

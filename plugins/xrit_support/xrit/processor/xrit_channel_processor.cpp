@@ -38,7 +38,7 @@ namespace satdump
             if (finfo.seg_groupid.size() == 0)
             {
                 auto img = getImageFromXRITFile(finfo.type, file);
-                saveImg(finfo, img);
+                trySaveImg(finfo, img);
             }
             else
             {
@@ -60,7 +60,7 @@ namespace satdump
                     if (segDecoder && segDecoder->hasData())
                     {
                         wip_img->imageStatus = SAVING;
-                        saveImg(segDecoder->info, segDecoder->image);
+                        trySaveImg(segDecoder->info, segDecoder->image);
                     }
 
                     if (finfo.type == xrit::XRIT_ELEKTRO_MSUGS || finfo.type == xrit::XRIT_MSG_SEVIRI)
@@ -96,10 +96,22 @@ namespace satdump
                 if (segDecoder->isComplete())
                 {
                     wip_img->imageStatus = SAVING;
-                    saveImg(segDecoder->info, segDecoder->image);
+                    trySaveImg(segDecoder->info, segDecoder->image);
                     segDecoder->reset();
                     wip_img->imageStatus = IDLE;
                 }
+            }
+        }
+
+        void XRITChannelProcessor::trySaveImg(xrit::XRITFileInfo &meta, image::Image &img)
+        {
+            try
+            {
+                saveImg(meta, img);
+            }
+            catch (const std::exception &e)
+            {
+                logger->error("Could not save image %s! %s", meta.filename.c_str(), e.what());
             }
         }
 
@@ -112,7 +124,7 @@ namespace satdump
                 auto &segDecoder = seg.second;
                 if (segDecoder && segDecoder->hasData())
                 {
-                    saveImg(segDecoder->info, segDecoder->image);
+                    trySaveImg(segDecoder->info, segDecoder->image);
                     segDecoder->reset();
                 }
             }

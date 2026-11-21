@@ -70,6 +70,14 @@ namespace satdump
              */
             void saveImg(xrit::XRITFileInfo &meta, image::Image &img);
 
+            /**
+             * @brief saveImg(), logging a failure instead of throwing it, so that an image
+             * that cannot be saved is dropped and the segmented decoders still move on
+             * @param meta xRIT file info
+             * @param img the image
+             */
+            void trySaveImg(xrit::XRITFileInfo &meta, image::Image &img);
+
         private:
             // TODOREWORK DOCUMENT
             void process_composites(std::shared_ptr<products::ImageProduct> pro, std::string pro_path);

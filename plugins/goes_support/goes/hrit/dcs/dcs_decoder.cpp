@@ -1,5 +1,8 @@
 #include <sstream>
 #include <fstream>
+#include <cerrno>
+#include <cstring>
+#include <stdexcept>
 #include "dcs_decoder.h"
 #include "core/config.h"
 #include "common/utils.h"
@@ -1064,8 +1067,12 @@ namespace goes
                 logger->info("Writing file " + directory + "/DCS/" + dcs_file.name + ".json" + "...");
                 nlohmann::ordered_json export_json = dcs_file;
                 std::ofstream json_writer(directory + "/DCS/" + dcs_file.name + ".json");
+                if (!json_writer)
+                    throw std::runtime_error("cannot open " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
                 json_writer << export_json.dump(4);
                 json_writer.close();
+                if (!json_writer)
+                    throw std::runtime_error("cannot write " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
             }
 
             // Remove old messages from UI
