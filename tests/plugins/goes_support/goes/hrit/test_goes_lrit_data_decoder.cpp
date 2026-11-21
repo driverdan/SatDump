@@ -359,11 +359,9 @@ TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files by kind", "[plugins][goes
     }
 }
 
-// Bug: plugins/goes_support/goes/hrit/module_goes_lrit_data_decoder_proc.cpp:47 - the check
-// for the "-" before the identifier reads filename.size() - 13 for any name of 10 characters
-// or more. For names of 10 to 12 characters that is before the start of the string:
-// std::string::compare throws std::out_of_range, which ends the decoder.
-TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plugins][goes_support][goes_lrit_data_decoder][!shouldfail]")
+// A name of 10 to 12 characters is too short to hold the "-" and the 8 character identifier,
+// so the decoder must not look for them before the start of the name
+TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
     Mux mux;
@@ -371,6 +369,17 @@ TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plu
 
     CHECK_NOTHROW(decode(env, mux));
     CHECK(env.files() == std::vector<std::string>{"EMWIN/Other/RADAR01.PNG"});
+}
+
+// Nor look for the extension before the start of a name of less than 3 characters
+TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a name shorter than an extension", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "AB", "data"), APID));
+
+    CHECK_NOTHROW(decode(env, mux));
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/Other/AB"});
 }
 
 TEST_CASE("GOESLRITDataDecoderModule saves the images of unknown imagers as they are", "[plugins][goes_support][goes_lrit_data_decoder]")

@@ -37,14 +37,15 @@ namespace goes
                 std::filesystem::create_directory(directory + "/EMWIN");
 
             std::string subdirectory;
-            std::string extension = filename.substr(filename.size() - 3, filename.size());
+            std::string extension = filename.size() >= 3 ? filename.substr(filename.size() - 3) : "";
             
             // Only proceed if we are meant to process text files
             if ((extension == "TXT" || extension == "txt") && !write_emwin_text)
                 return;
 
             // All files appear to feature an 8-character ID before the extension, proceed if it looks like it
-            if (filename.size() >= 10 && !filename.compare(filename.size() - 13, 1, "-"))
+            // (a "-", the 8-character ID, then a "." and a 3-character extension: 13 characters)
+            if (filename.size() >= 13 && !filename.compare(filename.size() - 13, 1, "-"))
             {
                 std::string ID = filename.substr(filename.size() - 12, 8);
                 // clang-format off
