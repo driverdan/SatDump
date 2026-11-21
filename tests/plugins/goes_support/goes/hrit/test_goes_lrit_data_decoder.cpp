@@ -9,6 +9,7 @@
 #include "plugins_test_helpers.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <catch2/generators/catch_generators.hpp>
 #include <thread>
 
@@ -117,6 +118,32 @@ namespace
     {
         Bytes zip = zipOf(zipped_name, content);
         return textFile(name, std::string(zip.begin(), zip.end()), product, 10);
+    }
+
+    // A ZIP archive holding no file
+    Bytes emptyZip()
+    {
+        mz_zip_archive zip;
+        MZ_CLEAR_OBJ(zip);
+        mz_zip_writer_init_heap(&zip, 0, 0);
+        void *buf = nullptr;
+        size_t size = 0;
+        mz_zip_writer_finalize_heap_archive(&zip, &buf, &size);
+        Bytes out((uint8_t *)buf, (uint8_t *)buf + size);
+        mz_zip_writer_end(&zip);
+        mz_free(buf);
+        return out;
+    }
+
+    // A ZIP archive of one file, whose CRC in the central directory does not match its data
+    Bytes badCrcZip(const std::string &name, const std::string &content)
+    {
+        Bytes zip = zipOf(name, content);
+        const uint8_t central_header[] = {'P', 'K', 1, 2};
+        auto it = std::search(zip.begin(), zip.end(), std::begin(central_header), std::end(central_header));
+        if (it != zip.end())
+            *(it + 16) ^= 0xFF; // CRC-32
+        return zip;
     }
 
     // Pixels of a test image: every line is different, and none is black
@@ -380,6 +407,45 @@ TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a name shorter than 
 
     CHECK_NOTHROW(decode(env, mux));
     CHECK(env.files() == std::vector<std::string>{"EMWIN/Other/AB"});
+}
+
+// The ZIP archive is as received: when there is nothing to save from it, the file is dropped
+// and the decoder carries on with the next one
+TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+
+    SECTION("an archive holding no file")
+    {
+        Bytes zip = emptyZip();
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("ZIP data holds no file! Discarding...", slog::LOG_ERROR));
+    }
+
+    SECTION("an archive whose file does not decompress")
+    {
+        Bytes zip = badCrcZip("A_EMWIN-RADBADUS.PNG", "the CRC of this is wrong");
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("Could not decompress ZIP data! Discarding...", slog::LOG_ERROR));
+    }
+
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/A_EMWIN-RADALLUS.PNG"});
+    CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
+}
+
+// The name of the file in the archive is used as the output file name
+TEST_CASE("GOESLRITDataDecoderModule keeps EMWIN files in the EMWIN directory", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "../../A_EMWIN-RADALLUS.PNG", "data"), APID));
+    decode(env, mux);
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/.._.._A_EMWIN-RADALLUS.PNG"});
 }
 
 TEST_CASE("GOESLRITDataDecoderModule saves the images of unknown imagers as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
@@ -686,6 +752,31 @@ TEST_CASE("GOESLRITDataDecoderModule names the raw files of image segments after
     // The decompressed image follows the headers
     CHECK(env.files() == std::vector<std::string>{"LRIT/SEGMENTED_012.lrit"});
     CHECK(std::filesystem::file_size(env.path("LRIT/SEGMENTED_012.lrit")) == headers.size() + COLUMNS * 4);
+}
+
+// The segment number goes before the ".lrit" extension, or at the end of a shorter name
+TEST_CASE("GOESLRITDataDecoderModule names the raw files of segments with a short name", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    auto params = hritParams();
+    Bytes segment = segmentIdentificationRecord(7, 12, 0, 48, 20, COLUMNS, 80);
+
+    SECTION("a file without data, saved by default")
+    {
+        mux.add(VCID, packetize(lritFile(2, {annotationRecord("AB"), noaaRecord(1, 0, 0, 0), segment}, {}), APID));
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"LRIT/AB_012"});
+    }
+
+    SECTION("write_lrit")
+    {
+        params["write_lrit"] = true;
+        params["write_messages"] = false;
+        mux.add(VCID, packetize(lritFile(2, {annotationRecord("AB"), noaaRecord(1, 0, 0, 0), segment}, Bytes{'x'}), APID));
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"LRIT/AB_012"});
+    }
 }
 
 TEST_CASE("GOESLRITDataDecoderModule drops corrupted files and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
