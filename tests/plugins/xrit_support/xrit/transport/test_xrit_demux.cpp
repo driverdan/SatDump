@@ -1,3 +1,4 @@
+#include "cli_test_helpers.h"
 #include "helpers/compare.h"
 #include "helpers/random.h"
 #include "xrit_support/xrit/transport/xrit_demux.h"
@@ -362,13 +363,16 @@ TEST_CASE("XRITDemux drops a file that ends before its headers are complete", "[
     auto packets = packetize(cut, 40, 0, PACKET);
     REQUIRE(packets.size() == 3);
 
+    // Its first packet only, then the next file
     SECTION("the next file starts") { packets.resize(1); }
-    SECTION("its last packet comes") { packets.erase(packets.begin() + 1); }
+    // All of its packets, in sequence, but the file is shorter than its headers say
+    SECTION("its last packet comes") { packets = packetize(Bytes(cut.begin(), cut.begin() + 250), 40, 0, PACKET); }
 
     Mux mux;
     mux.add(5, packets);
     mux.add(5, packetize(next, 40, 20, PACKET));
 
+    cli_test::LogCapture log;
     xr::XRITDemux demuxer;
     std::vector<std::string> finalized;
     demuxer.onFinalizeData = [&](xr::XRITFile &f) { finalized.push_back(f.filename); };
@@ -379,6 +383,7 @@ TEST_CASE("XRITDemux drops a file that ends before its headers are complete", "[
     CHECK(bytesDiff(files[0].lrit_data, next) == "");
     // The callback is not given what is left of the file either
     CHECK(finalized == std::vector<std::string>{"NEXT.lrit"});
+    CHECK(log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
 }
 
 TEST_CASE("XRITDemux reads the headers a last packet completes", "[plugins][xrit_support][xrit_demux]")
@@ -431,4 +436,76 @@ TEST_CASE("XRITDemux skips a first packet too short for the transport file heade
     REQUIRE(files.size() == 1);
     CHECK(files[0].filename == "NEXT.lrit");
     CHECK(bytesDiff(files[0].lrit_data, next) == "");
+}
+
+TEST_CASE("XRITDemux starts each file without the flags of the previous one", "[plugins][xrit_support][xrit_demux]")
+{
+    // The callbacks keep what they find out about a file in its flags, e.g. that it is
+    // compressed. The next file on the same APID may be different.
+    Bytes first = textFile("FIRST.lrit", 500, 25), second = textFile("SECOND.lrit", 500, 26);
+    Mux mux;
+    mux.add(5, packetize(first, 40, 0, PACKET));
+    mux.add(5, packetize(second, 40, 10, PACKET));
+
+    xr::XRITDemux demuxer;
+    std::vector<size_t> flags_seen;
+    demuxer.onParseHeader = [&](xr::XRITFile &f)
+    {
+        if (f.filename == "FIRST.lrit")
+            f.custom_flags[7] = 1;
+    };
+    demuxer.onProcessData = [&](xr::XRITFile &f, ccsds::CCSDSPacket &, bool)
+    {
+        if (f.filename == "SECOND.lrit")
+            flags_seen.push_back(f.custom_flags.size());
+        return true;
+    };
+    auto files = demux(demuxer, mux.vcdus());
+
+    REQUIRE(files.size() == 2);
+    CHECK(files[0].custom_flags[7] == 1);
+    CHECK(files[1].custom_flags.empty());
+    // Nor do the callbacks see them while the file comes in
+    CHECK(flags_seen == std::vector<size_t>(packetize(second, 40, 10, PACKET).size() - 1, 0));
+    CHECK(bytesDiff(files[1].lrit_data, second) == "");
+}
+
+TEST_CASE("XRITDemux drops a file that loses a packet before its headers are complete", "[plugins][xrit_support][xrit_demux]")
+{
+    // The headers need two packets. Without the second one, the data that comes next would
+    // be taken for the rest of the headers.
+    Bytes cut = longHeaderFile(randomBytes(1000, 27)), next = textFile("NEXT.lrit", 300, 28);
+    auto packets = packetize(cut, 40, 0, PACKET);
+    REQUIRE(packets.size() > 3);
+    packets.erase(packets.begin() + 1);
+
+    Mux mux;
+    mux.add(5, packets);
+    mux.add(5, packetize(next, 40, 20, PACKET));
+
+    xr::XRITDemux demuxer;
+    std::vector<std::string> parsed;
+    demuxer.onParseHeader = [&](xr::XRITFile &f) { parsed.push_back(f.filename); };
+    auto files = demux(demuxer, mux.vcdus());
+
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].filename == "NEXT.lrit");
+    CHECK(bytesDiff(files[0].lrit_data, next) == "");
+    // The callbacks are not given the file either
+    CHECK(parsed == std::vector<std::string>{"NEXT.lrit"});
+}
+
+TEST_CASE("XRITDemux reads headers over several packets as the packet counter wraps around", "[plugins][xrit_support][xrit_demux]")
+{
+    // The 14-bit packet counter goes from 16383 back to 0 between the packets of the headers
+    Bytes file = longHeaderFile(randomBytes(1000, 29));
+    auto first = GENERATE(16382, 16383);
+    Mux mux;
+    mux.add(5, packetize(file, 40, first, PACKET));
+
+    auto files = demux(mux.vcdus());
+
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].filename == std::string(300, 'N'));
+    CHECK(bytesDiff(files[0].lrit_data, file) == "");
 }

@@ -78,12 +78,26 @@ namespace satdump
                     continue;
                 }
 
+                // Until the headers are complete, a lost packet would get data taken for the rest of them
+                if ((pkt.header.sequence_flag == 0 || pkt.header.sequence_flag == 2) && current_file.file_in_progress && !current_file.header_parsed)
+                {
+                    if (pkt.header.packet_sequence_count != (current_file.last_tracked_counter + 1) % 16384)
+                    {
+                        logger->error("LRIT packet lost before the headers were complete... Skipping.");
+                        current_file.file_in_progress = false;
+                        std::vector<uint8_t>().swap(current_file.lrit_data);
+                        continue;
+                    }
+                    current_file.last_tracked_counter = pkt.header.packet_sequence_count;
+                }
+
                 if (pkt.header.sequence_flag == 1 || pkt.header.sequence_flag == 3)
                 {
                     if (current_file.file_in_progress)
                         finalizeLRITData(current_file);
 
                     current_file.lrit_data.clear();
+                    current_file.custom_flags.clear(); // Those of the previous file on this APID do not apply
 
                     // The transport file header and the CRC alone take 12 bytes
                     if (pkt.payload.size() < 12)

@@ -52,6 +52,14 @@ namespace goes
 
         GOESLRITDataDecoderModule::~GOESLRITDataDecoderModule() {}
 
+        size_t riceFillLimit(satdump::xrit::XRITFile &file, size_t decoded_size)
+        {
+            satdump::xrit::ImageStructureRecord image_structure_record = file.getHeader<satdump::xrit::ImageStructureRecord>();
+            size_t full_size = (size_t)image_structure_record.columns_count * image_structure_record.lines_count + file.total_header_length;
+            size_t size = file.lrit_data.size() + decoded_size;
+            return size < full_size ? full_size - size : 0; // A file may hold more than its image
+        }
+
         void GOESLRITDataDecoderModule::process()
         {
             directory = d_output_file_hint.substr(0, d_output_file_hint.rfind('/'));
@@ -75,7 +83,7 @@ namespace goes
 
             lrit_demux.onParseHeader = [this](satdump::xrit::XRITFile &file) -> void
             {
-                file.custom_flags.insert({RICE_COMPRESSED, false});
+                file.custom_flags.insert_or_assign(RICE_COMPRESSED, false);
 
                 // Check if this is image data
                 if (file.hasHeader<satdump::xrit::ImageStructureRecord>())
@@ -147,9 +155,8 @@ namespace goes
                         // There are missing lines
                         if (diff > 1)
                         {
-                            satdump::xrit::ImageStructureRecord image_structure_record = file.getHeader<satdump::xrit::ImageStructureRecord>();
                             size_t to_fill = rice_parameters.pixels_per_scanline * (diff - 1);
-                            size_t max_fill = image_structure_record.columns_count * image_structure_record.lines_count + file.total_header_length - (file.lrit_data.size() + output_size);
+                            size_t max_fill = riceFillLimit(file, output_size);
 
                             // Repeat next line if the user selected the fill missing option and it is below the threshold; otherwise fill with black
                             if (to_fill <= max_fill)

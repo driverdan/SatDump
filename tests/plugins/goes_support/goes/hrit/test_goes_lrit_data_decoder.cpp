@@ -625,6 +625,73 @@ TEST_CASE("GOESLRITDataDecoderModule uses the Rice settings of the file", "[plug
     CHECK(env.log.contains("Pixels per block : 16", slog::LOG_DEBUG));
 }
 
+TEST_CASE("GOESLRITDataDecoderModule decodes the files after a Rice compressed image on the same APID as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, riceImagePackets(riceImageHeaders("IMAGE.lrit"), imageLines(), APID));
+
+    // Files in several packets, which go through the Rice decompression if it is still on
+    std::string text;
+    for (int i = 0; i < 50; i++)
+        text += "Line " + std::to_string(i) + " of a message\r\n";
+    Bytes pixels;
+    for (int y = 0; y < LINES; y++)
+        for (uint8_t p : linePixels(y))
+            pixels.push_back(p);
+    mux.add(VCID, packetize(lritFile(1, {annotationRecord("MESSAGE.lrit"), noaaRecord(1, 0, 0, 0)}, Bytes(text.begin(), text.end())), APID, 100, 300));
+    mux.add(VCID, packetize(lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 0), annotationRecord("CHART.lrit"), noaaRecord(1, 0, 0, 0)}, pixels), APID, 200, 500));
+    decode(env, mux);
+
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/MESSAGE.txt", "IMAGES/CHART.lrit.png", "IMAGES/IMAGE.lrit.png"});
+    CHECK(env.read("Admin Messages/MESSAGE.txt") == text);
+    CHECK(savedLines(env.path("IMAGES/CHART.lrit.png")) == linesWith({}));
+    CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({}));
+}
+
+TEST_CASE("GOESLRITDataDecoderModule decodes a Rice compressed image whose headers take two packets", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The lines are counted from the last packet of the headers: the second one is not a
+    // lost line
+    DecoderEnv env;
+    Mux mux;
+    Bytes headers = riceImageHeaders("SPLIT.lrit");
+    Bytes first = transportHeader(headers.size());
+    first.insert(first.end(), headers.begin(), headers.end());
+
+    std::vector<Bytes> packets = {packet(APID, SEQ_FIRST, 0, Bytes(first.begin(), first.begin() + 30)), packet(APID, SEQ_CONTINUATION, 1, Bytes(first.begin() + 30, first.end()))};
+    auto lines = imageLines();
+    for (size_t i = 0; i < lines.size(); i++)
+        packets.push_back(packet(APID, i == lines.size() - 1 ? SEQ_LAST : SEQ_CONTINUATION, 2 + i, riceLine(lines[i].pixels)));
+    mux.add(VCID, packets);
+    decode(env, mux);
+
+    CHECK(env.files() == std::vector<std::string>{"IMAGES/SPLIT.lrit.png"});
+    CHECK(savedLines(env.path("IMAGES/SPLIT.lrit.png")) == linesWith({}));
+}
+
+TEST_CASE("riceFillLimit is what is left of the image to receive", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // Lost lines are filled up to the end of the image, and no further
+    satdump::xrit::XRITFile file;
+    Bytes headers = riceImageHeaders("IMAGE.lrit", 4);
+    file.lrit_data = headers;
+    file.parseHeaders();
+    const size_t image = COLUMNS * 4;
+
+    CHECK(goes::hrit::riceFillLimit(file, 0) == image);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == image - COLUMNS);
+
+    file.lrit_data.resize(headers.size() + 3 * COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, 0) == COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == 0);
+
+    // A file can hold more lines than its image has, which leaves nothing to fill
+    CHECK(goes::hrit::riceFillLimit(file, 2 * COLUMNS) == 0);
+    file.lrit_data.resize(headers.size() + 10 * COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == 0);
+}
+
 TEST_CASE("GOESLRITDataDecoderModule assembles the segments of a GOES-R ABI image", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
@@ -794,10 +861,10 @@ TEST_CASE("GOESLRITDataDecoderModule drops corrupted files and carries on", "[pl
     CHECK(env.log.contains("LRIT CRC is invalid... Skipping.", slog::LOG_ERROR));
 }
 
-TEST_CASE("GOESLRITDataDecoderModule drops files cut before the end of their headers and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
+TEST_CASE("GOESLRITDataDecoderModule drops files that lose a packet of their headers and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
-    // Headers of 16 + 303 + 14 bytes, sent in packets of 200 bytes: when the second packet
-    // is lost, the file ends before its headers do
+    // Headers of 16 + 303 + 14 bytes, sent in packets of 200 bytes: the second packet, with
+    // the rest of the headers, is lost
     DecoderEnv env;
     Mux mux;
     auto cut = packetize(lritFile(2, {annotationRecord(std::string(300, 'N')), noaaRecord(1, 0, 0, 0)}, Bytes(98, 'x')), APID, 10, 200);
@@ -812,7 +879,8 @@ TEST_CASE("GOESLRITDataDecoderModule drops files cut before the end of their hea
     CHECK(env.files() == std::vector<std::string>{"Admin Messages/FIRST.txt", "Admin Messages/NEXT.txt"});
     CHECK(env.read("Admin Messages/FIRST.txt") == "first");
     CHECK(env.read("Admin Messages/NEXT.txt") == "next");
-    CHECK(env.log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
+    // The gap in the packet counter is seen as soon as the last packet comes
+    CHECK(env.log.contains("LRIT packet lost before the headers were complete... Skipping.", slog::LOG_ERROR));
 }
 
 TEST_CASE("GOESLRITDataDecoderModule skips a first packet too short to start a file", "[plugins][goes_support][goes_lrit_data_decoder]")
