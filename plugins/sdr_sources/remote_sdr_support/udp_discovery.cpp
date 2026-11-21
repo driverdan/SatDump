@@ -1,6 +1,8 @@
 #include "udp_discovery.h"
 
 #include <sys/types.h>
+#include <atomic>
+#include <cerrno>
 #include <stdexcept>
 #include <cstring>
 #if defined(_WIN32)
@@ -186,7 +188,7 @@ namespace service_discovery
     std::vector<std::pair<std::string, int>> discoverUDPServers(UDPDiscoveryConfig cfg, int wait_millis)
     {
         std::vector<std::pair<std::string, int>> servers;
-        bool should_wait = true;
+        std::atomic<bool> should_wait = true;
         auto fun_rx = [&should_wait, &servers, &cfg]()
         {
 #if defined(_WIN32)
@@ -215,6 +217,20 @@ namespace service_discovery
                 return;
             }
 
+            // Other instances may be discovering on the same port, and a unicast packet only reaches one of
+            // their sockets. So the packet sent to wake this one up can be lost, and recvfrom must time out.
+#if defined(_WIN32)
+            DWORD rx_timeout = 100;
+#else
+            struct timeval rx_timeout = {0, 100000};
+#endif
+            if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&rx_timeout, sizeof(rx_timeout)) < 0)
+            {
+                logger->trace("Error in Remote SDR Discovery: error setting socket options!");
+                cleanup_socket(fd);
+                return;
+            }
+
             memset(&recv_addr, 0, sizeof(recv_addr));
             recv_addr.sin_family = AF_INET;
             recv_addr.sin_port = htons(cfg.rep_port);
@@ -235,6 +251,12 @@ namespace service_discovery
                 int nrecv = recvfrom(fd, (char *)buffer_rx, 65536, 0, (struct sockaddr *)&response_addr, &response_addr_len);
                 if (nrecv < 0)
                 {
+#if defined(_WIN32)
+                    if (WSAGetLastError() == WSAETIMEDOUT)
+#else
+                    if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+#endif
+                        continue;
                     logger->trace("Error in Remote SDR Discovery: error on recvfrom!");
                     break;
                 }

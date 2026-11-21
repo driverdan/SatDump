@@ -143,6 +143,8 @@ TEST_CASE("main_live fails for a source that does not exist", "[cli][legacy][liv
         CHECK(env.run("unit_cli_live", {"--source", "unit_cli_no_such_sdr", "--samplerate", "48000", "--frequency", "100e6"}) == 1);
         INFO(env.log.dump());
         CHECK(env.log.contains("Could not find a handler for source type : unit_cli_no_such_sdr!", slog::LOG_ERROR));
+        // Only the sources of the requested type are listed, and there are none
+        CHECK_FALSE(env.log.contains("Device File Source"));
     }
 
     SECTION("known type, but no device with this ID")
@@ -150,9 +152,9 @@ TEST_CASE("main_live fails for a source that does not exist", "[cli][legacy][liv
         CHECK(env.run("unit_cli_live", plus(env.flags(), {"--source_id", "7"})) == 1);
         INFO(env.log.dump());
         CHECK(env.log.contains("Could not find a handler for source type : file!", slog::LOG_ERROR));
+        CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
     }
 
-    CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
     CHECK(callsOf("construct").empty());
 }
 
@@ -221,6 +223,28 @@ TEST_CASE("main_live starts the live part of the pipeline on the source", "[cli]
 
     // Nothing is processed offline afterwards
     CHECK(callsOf("process").empty());
+}
+
+TEST_CASE("main_live only lists the sources of the requested type", "[cli][legacy][live]")
+{
+    LiveEnv env;
+    live_should_exit = true;
+
+    // Stands for the other sources, hardware or network, which can be slow to list
+    int other_listed = 0;
+    dsp::dsp_sources_registry["unit_cli_other_sdr"] = {[](dsp::SourceDescriptor) -> std::shared_ptr<dsp::DSPSampleSource> { return nullptr; },
+                                                       [&other_listed]()
+                                                       {
+                                                           other_listed++;
+                                                           return std::vector<dsp::SourceDescriptor>{{"unit_cli_other_sdr", "Other SDR", "0"}};
+                                                       }};
+
+    CHECK(env.run("unit_cli_live", env.flags()) == 0);
+
+    INFO(env.log.dump());
+    CHECK(other_listed == 0);
+    CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
+    CHECK_FALSE(env.log.contains("Device Other SDR"));
 }
 
 TEST_CASE("main_live sets the TLE override", "[cli][legacy][live]")

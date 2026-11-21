@@ -135,9 +135,9 @@ int main_live(int argc, char *argv[])
         if (!std::filesystem::exists(output_file))
             std::filesystem::create_directories(output_file);
 
-        // Get all sources
+        // Get the sources of the requested type
         dsp::registerAllSources();
-        std::vector<dsp::SourceDescriptor> source_tr = dsp::getAllAvailableSources();
+        std::vector<dsp::SourceDescriptor> source_tr = dsp::getAvailableSourcesOfType(handler_id);
         dsp::SourceDescriptor selected_src;
 
         for (dsp::SourceDescriptor src : source_tr)

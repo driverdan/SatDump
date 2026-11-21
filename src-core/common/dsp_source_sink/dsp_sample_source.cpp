@@ -18,18 +18,28 @@ namespace dsp
             if (remote)
                 if (source.first == "remote")
                     continue;
-            try
-            {
-                std::vector<SourceDescriptor> devices = source.second.getSources();
-                all_sources.insert(all_sources.end(), devices.begin(), devices.end());
-            }
-            catch (std::exception &e)
-            {
-                logger->error("Error trying to list " + source.first + " sources! %s", e.what());
-            }
+            std::vector<SourceDescriptor> devices = getAvailableSourcesOfType(source.first);
+            all_sources.insert(all_sources.end(), devices.begin(), devices.end());
         }
 
         return all_sources;
+    }
+
+    std::vector<SourceDescriptor> getAvailableSourcesOfType(std::string type)
+    {
+        auto source = dsp_sources_registry.find(type);
+        if (source == dsp_sources_registry.end())
+            return {};
+
+        try
+        {
+            return source->second.getSources();
+        }
+        catch (std::exception &e)
+        {
+            logger->error("Error trying to list " + type + " sources! %s", e.what());
+            return {};
+        }
     }
 
     std::shared_ptr<DSPSampleSource> getSourceFromDescriptor(SourceDescriptor descriptor)

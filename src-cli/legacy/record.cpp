@@ -66,9 +66,9 @@ int main_record(int argc, char *argv[])
         if (!std::filesystem::exists(std::filesystem::path(output_file).parent_path().string()))
             std::filesystem::create_directories(std::filesystem::path(output_file).parent_path().string());
 
-    // Get all sources
+    // Get the sources of the requested type
     dsp::registerAllSources();
-    std::vector<dsp::SourceDescriptor> source_tr = dsp::getAllAvailableSources();
+    std::vector<dsp::SourceDescriptor> source_tr = dsp::getAvailableSourcesOfType(handler_id);
     dsp::SourceDescriptor selected_src;
 
     // Try to find it and check it's usable
