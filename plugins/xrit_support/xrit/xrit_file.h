@@ -178,9 +178,8 @@ namespace satdump
                 // A record cut by the end of the data, or too short for its type, is read as if
                 // padded with zeros, rather than reading past the data
                 size_t available = offset < lrit_data.size() ? lrit_data.size() - offset : 0;
-                size_t needed = T::MIN_LENGTH;
-                if (available >= 3)
-                    needed = std::max<size_t>(needed, lrit_data[offset + 1] << 8 | lrit_data[offset + 2]);
+                size_t record_length = (available >= 2 ? lrit_data[offset + 1] << 8 : 0) | (available >= 3 ? lrit_data[offset + 2] : 0); // As the padded copy gives it
+                size_t needed = std::max<size_t>(T::MIN_LENGTH, record_length);
 
                 if (available >= needed)
                     return T(&lrit_data[offset]);

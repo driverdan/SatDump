@@ -193,6 +193,20 @@ TEST_CASE("XRITFile::parseHeaders reads a file shorter than a primary header as 
     CHECK(f.getHeader<xr::PrimaryHeader>().record_length == (size >= 3 ? 16 : 0));
 }
 
+TEST_CASE("XRITFile::getHeader reads a text record from a file shorter than 3 bytes as zeros", "[plugins][xrit_support][xrit_file]")
+{
+    size_t size = GENERATE(1, 2);
+    auto f = cutFileOf({4, 0x01, 0x02}, size); // Record length 0x0100 when the third byte is missing
+
+    f.parseHeaders();
+    REQUIRE(f.all_headers.empty());
+
+    // No annotation, so this reads the record at offset 0
+    auto annotation = f.getHeader<xr::AnnotationRecord>();
+    CHECK(annotation.record_length == (size == 2 ? 0x0100 : 0));
+    CHECK(annotation.annotation_text == std::string(size == 2 ? 0x0100 - 3 : 0, '\0'));
+}
+
 TEST_CASE("XRITFile::parseHeaders stops at a record too short to hold its own length", "[plugins][xrit_support][xrit_file]")
 {
     uint8_t length = GENERATE(1, 2);
