@@ -3,10 +3,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
-// main_old() is the dispatcher behind "satdump legacy". Only the paths that return a value are
-// called: the ones reaching the end of the function ("sdr_probe", or any command that
-// succeeds) have no return statement, and "help" / "-h" call exit() (see
-// tests/UNTESTED_ISSUES.md).
+// main_old() is the dispatcher behind "satdump legacy". "help" / "-h" are not called, as they
+// call exit().
 //
 // main_old() replaces the global logger with one writing to stderr, so the output is checked
 // by redirecting stderr, which is done with POSIX calls.
@@ -91,6 +89,22 @@ TEST_CASE("main_old dispatches to the command named by its first argument", "[cl
         CHECK(r.ret == 1);
         CHECK_THAT(r.output, ContainsSubstring("[pipeline_id] [input_level] [input_file]"));
     }
+}
+
+TEST_CASE("main_old returns 0 when a command succeeds", "[cli][legacy][main]")
+{
+    // "sdr_probe" is the only command that succeeds without a source or a pipeline. Every
+    // command that succeeds ends the same way, and LegacyCmdHandler::run() passes the result
+    // to exit(), so it is the exit status of "satdump legacy"
+    EventBusGuard bus;
+    DeviceRegistryGuard devices;
+    dsp::dsp_sources_registry.clear();
+    dsp::dsp_sinks_registry.clear();
+
+    Result r = runLegacy({"sdr_probe"});
+    CHECK(r.ret == 0);
+    CHECK_THAT(r.output, ContainsSubstring("Found devices (sources) :"));
+    CHECK_THAT(r.output, ContainsSubstring("Done! Goodbye"));
 }
 
 TEST_CASE("main_old logs at trace level whatever the level was before", "[cli][legacy][main]")
