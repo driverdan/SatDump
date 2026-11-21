@@ -100,7 +100,7 @@ namespace geonetcast
                                 if (!std::filesystem::exists(directory + "/PROCESSED"))
                                     std::filesystem::create_directories(directory + "/PROCESSED");
 
-                                logger->debug("Saving complete " + file.name + " size " + filesize_str);
+                                logger->debug("Saving complete %s size %s", file.name.c_str(), filesize_str.c_str());
 
                                 std::ofstream output_geonetcast_file(directory + "/COMPLETE/" + file.name);
                                 output_geonetcast_file.write((char *)file.data.data(), file.data.size());
@@ -111,7 +111,7 @@ namespace geonetcast
                                 if (!std::filesystem::exists(directory + "/INCOMPLETE"))
                                     std::filesystem::create_directories(directory + "/INCOMPLETE");
 
-                                logger->trace("Saving incomplete " + file.name + " size " + filesize_str);
+                                logger->trace("Saving incomplete %s size %s", file.name.c_str(), filesize_str.c_str());
 
                                 std::ofstream output_geonetcast_file(directory + "/INCOMPLETE/" + file.name);
                                 output_geonetcast_file.write((char *)file.data.data(), file.data.size());

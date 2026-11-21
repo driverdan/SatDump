@@ -140,7 +140,7 @@ namespace himawari
                                             continue;
 
                                         // Check if this has a filename
-                                        logger->info("New xRIT file : " + lfile.filename);
+                                        logger->info("New xRIT file : %s", lfile.filename.c_str());
 
                                         satdump::xrit::XRITFileInfo finfo = satdump::xrit::identifyXRITFIle(lfile);
 
@@ -151,7 +151,7 @@ namespace himawari
                                         }
                                         else
                                         {
-                                            logger->debug("Saving " + file.name + " size " + std::to_string(file.size));
+                                            logger->debug("Saving %s size %u", file.name.c_str(), (unsigned int)file.size);
 
                                             if (!std::filesystem::exists(directory + "/LRIT"))
                                                 std::filesystem::create_directories(directory + "/LRIT");
@@ -163,7 +163,7 @@ namespace himawari
                                     }
                                     else
                                     {
-                                        logger->debug("Saving " + file.name + " size " + std::to_string(file.size));
+                                        logger->debug("Saving %s size %u", file.name.c_str(), (unsigned int)file.size);
 
                                         if (!std::filesystem::exists(directory + "/ADD"))
                                             std::filesystem::create_directories(directory + "/ADD");

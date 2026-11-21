@@ -992,6 +992,32 @@ TEST_CASE("GOESLRITDataDecoderModule saves the raw LRIT files on request", "[plu
     }
 }
 
+// File names come off the air, and the output directory from the user. Both must be logged
+// as they are, not used as the printf format of the logger: a "%%" in them stays "%%".
+TEST_CASE("GOESLRITDataDecoderModule logs file names and the output directory as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    env.out = env.tmp.file("out_100%%");
+    Mux mux;
+    auto params = hritParams();
+    params["write_lrit"] = true;
+    std::string gif = "GIF89a, or so the decoder is told";
+    mux.add(VCID, packetize(textFile("MSG_100%%.lrit", "message"), APID, 0));
+    mux.add(VCID, packetize(lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 1), annotationRecord("CHART_%%d.lrit"), noaaRecord(1, 0, 0, 5)}, Bytes(gif.begin(), gif.end())), APID, 10));
+    decode(env, mux, params);
+
+    REQUIRE(env.files() == std::vector<std::string>{"Admin Messages/MSG_100%%.txt", "IMAGES/CHART_%%d.lrit.gif", "LRIT/CHART_%%d.lrit", "LRIT/MSG_100%%.lrit"});
+    INFO(env.log.dump());
+    // The demuxer, for every file
+    CHECK(env.log.contains("New LRIT file : MSG_100%%.lrit", slog::LOG_INFO));
+    CHECK(env.log.contains("New LRIT file : CHART_%%d.lrit", slog::LOG_INFO));
+    // Each way of saving a file
+    CHECK(env.log.contains("Writing file " + env.out + "/Admin Messages/MSG_100%%.txt...", slog::LOG_INFO));
+    CHECK(env.log.contains("Writing file " + env.out + "/IMAGES/CHART_%%d.lrit.gif...", slog::LOG_INFO));
+    CHECK(env.log.contains("Writing file " + env.out + "/LRIT/MSG_100%%.lrit...", slog::LOG_INFO));
+    CHECK(env.log.contains("Writing file " + env.out + "/LRIT/CHART_%%d.lrit...", slog::LOG_INFO));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule names the raw files of image segments after the segment", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;

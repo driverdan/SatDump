@@ -138,7 +138,7 @@ namespace goes
                 current_filename.insert(current_filename.length() >= 5 ? current_filename.length() - 5 : current_filename.length(), oss.str());
             }
 
-            logger->info("Writing file " + path + "/" + current_filename + "...");
+            logger->info("Writing file %s/%s...", path.c_str(), current_filename.c_str());
 
             // Write file out
             std::ofstream fileo(path + "/" + current_filename, std::ios::binary);
@@ -202,7 +202,7 @@ namespace goes
                 }
                 else if (noaa_header.noaa_specific_compression == 5) // Gif?
                 {
-                    logger->info("Writing file " + directory + "/IMAGES/" + current_filename + ".gif" + "...");
+                    logger->info("Writing file %s/IMAGES/%s.gif...", directory.c_str(), current_filename.c_str());
 
                     int offset = primary_header.total_header_length;
 
@@ -329,7 +329,7 @@ namespace goes
                 if (!std::filesystem::exists(directory + "/Admin Messages"))
                     std::filesystem::create_directory(directory + "/Admin Messages");
 
-                logger->info("Writing file " + directory + "/Admin Messages/" + clean_filename + ".txt" + "...");
+                logger->info("Writing file %s/Admin Messages/%s.txt...", directory.c_str(), clean_filename.c_str());
 
                 int offset = primary_header.total_header_length;
 

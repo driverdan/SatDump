@@ -156,7 +156,7 @@ namespace satdump
         void XRITDemux::parseHeader(XRITFile &file)
         {
             file.parseHeaders();
-            logger->info("New LRIT file : " + file.filename);
+            logger->info("New LRIT file : %s", file.filename.c_str());
             onParseHeader(file);
         }
 

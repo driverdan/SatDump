@@ -73,7 +73,7 @@ namespace gk2a
                 if (!std::filesystem::exists(directory + "/LRIT_ENCRYPTED"))
                     std::filesystem::create_directory(directory + "/LRIT_ENCRYPTED");
 
-                logger->info("Writing file " + directory + "/LRIT_ENCRYPTED/" + file.filename + "...");
+                logger->info("Writing file %s/LRIT_ENCRYPTED/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
                 std::ofstream fileo(directory + "/LRIT_ENCRYPTED/" + file.filename, std::ios::binary);
@@ -118,7 +118,7 @@ namespace gk2a
                 if (!std::filesystem::exists(directory + "/ADD/" + name))
                     std::filesystem::create_directories(directory + "/ADD/" + name);
 
-                logger->info("Writing file " + directory + "/ADD/" + name + clean_filename + "." + extension + "...");
+                logger->info("Writing file %s/ADD/%s%s.%s...", directory.c_str(), name.c_str(), clean_filename.c_str(), extension.c_str());
 
                 // Write file out
                 std::ofstream fileo(directory + "/ADD/" + name + clean_filename + "." + extension, std::ios::binary);
@@ -130,7 +130,7 @@ namespace gk2a
                 if (!std::filesystem::exists(directory + "/LRIT"))
                     std::filesystem::create_directory(directory + "/LRIT");
 
-                logger->info("Writing file " + directory + "/LRIT/" + file.filename + "...");
+                logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
                 std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);
