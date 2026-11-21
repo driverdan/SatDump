@@ -534,6 +534,39 @@ TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[p
     CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
 }
 
+// A file that cannot be written is lost, with an error, and the decoder carries on
+TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write an EMWIN file", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    auto params = hritParams();
+    params["write_emwin_text"] = true;
+    Mux mux;
+    mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "A_EMWIN-RADALLUS.PNG", "lost"), APID));
+    mux.add(VCID, packetize(textFile("A_EMWIN-FXUS61KB.lrit", "lost too", 9, 0), APID, 10));
+    mux.add(VCID, packetize(textFile("A-MSG-0001.lrit", "still here"), APID, 20));
+    std::filesystem::create_directories(env.out);
+
+    SECTION("its directory cannot be created")
+    {
+        writeBytes(env.path("EMWIN"), {0}); // A file, so no directory can be made in it
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"Admin Messages/A-MSG-0001.txt", "EMWIN"});
+    }
+
+    SECTION("the file cannot be opened")
+    {
+        // Directories where the files would go
+        std::filesystem::create_directories(env.path("EMWIN/NWS/A_EMWIN-RADALLUS.PNG"));
+        std::filesystem::create_directories(env.path("EMWIN/Text/A_EMWIN-FXUS61KB.txt"));
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"Admin Messages/A-MSG-0001.txt"});
+    }
+
+    CHECK(env.log.contains("Could not write EMWIN file A_EMWIN-RADALLUS.PNG! ", slog::LOG_ERROR));
+    CHECK(env.log.contains("Could not write EMWIN file A_EMWIN-FXUS61KB.txt! ", slog::LOG_ERROR));
+    CHECK(env.read("Admin Messages/A-MSG-0001.txt") == "still here");
+}
+
 TEST_CASE("GOESLRITDataDecoderModule unpacks EMWIN files at their real size", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
