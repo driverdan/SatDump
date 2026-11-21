@@ -47,6 +47,32 @@ TEST_CASE("parse_common_flags parses integers, doubles, bools and strings", "[co
     CHECK(p.size() == 7);
 }
 
+TEST_CASE("parse_common_flags parses the flags of a live command line", "[common][cli_utils]")
+{
+    // What follows "satdump legacy live goes_hrit <output>" for a GOES HRIT reception with a rtl_tcp server
+    Args args({"--source", "rtltcp", "--ip_address", "192.168.8.225", "--port", "1234", "--lna_agc", "--samplerate", "2.4e6", "--frequency", "1694.1e6", "--gain", "49", "--http_server",
+               "0.0.0.0:8080", "--fill_missing"});
+    nlohmann::json p = args.parse({{"source_id", typeid(std::string)}});
+
+    CHECK(p == nlohmann::json{{"source", "rtltcp"},
+                              {"ip_address", "192.168.8.225"},
+                              {"port", 1234},
+                              {"lna_agc", true},
+                              {"samplerate", 2400000},
+                              {"frequency", 1694100000},
+                              {"gain", 49},
+                              {"http_server", "0.0.0.0:8080"},
+                              {"fill_missing", true}});
+
+    // The types matter: the sources and modules read them without converting
+    CHECK(p["ip_address"].is_string());
+    CHECK(p["port"].is_number_integer());
+    CHECK(p["samplerate"].is_number_integer());
+    CHECK(p["frequency"].is_number_integer());
+    CHECK(p["lna_agc"].is_boolean());
+    CHECK(p["fill_missing"].is_boolean());
+}
+
 TEST_CASE("parse_common_flags treats flags without values as switches", "[common][cli_utils]")
 {
     Args args({"--first", "--second", "value", "--last"});

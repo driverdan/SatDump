@@ -20,9 +20,15 @@ endif()
 
 # Tests mirror the source tree: the tests for <root>/<path> are in
 # tests/<root>/<path>. Everything else under tests/ is shared by all of them.
-set(SATDUMP_TESTED_ROOTS src-core src-cli)
+set(SATDUMP_TESTED_ROOTS src-core src-cli plugins)
 
 file(GLOB_RECURSE SatDump_tests_CPPS CONFIGURE_DEPENDS *.cpp)
+
+# The tests of a plugin are only built with that plugin, see below
+file(GLOB_RECURSE SatDump_tests_plugins_CPPS CONFIGURE_DEPENDS plugins/*.cpp)
+if(SatDump_tests_plugins_CPPS)
+    list(REMOVE_ITEM SatDump_tests_CPPS ${SatDump_tests_plugins_CPPS})
+endif()
 
 # The CLI is an executable, so its sources are compiled into the tests to be
 # reachable from them. Its entry point (src-cli/main.cpp) is left out.
@@ -43,6 +49,34 @@ endforeach()
 
 # src-cli headers are included relative to src-cli/ (e.g. "legacy/webserver.h")
 target_include_directories(satdump_tests PRIVATE ${CMAKE_SOURCE_DIR}/src-cli)
+
+# Plugin headers are included relative to plugins/ (e.g. "xrit_support/xrit/xrit_file.h")
+target_include_directories(satdump_tests PRIVATE ${CMAKE_SOURCE_DIR}/plugins)
+
+# Adds the tests in tests/plugins/<dir> if the plugin is built, and links the
+# plugin into the tests. SATDUMP_TEST_PLUGIN_<TARGET> is then the path of the
+# plugin, to load it the way satdump does. Plugins export nothing with MSVC.
+set(SATDUMP_TESTED_PLUGINS)
+function(satdump_add_plugin_tests target dir)
+    if(MSVC OR NOT TARGET ${target})
+        message("Not building the unit tests of ${target}")
+        return()
+    endif()
+
+    file(GLOB_RECURSE plugin_tests_CPPS CONFIGURE_DEPENDS plugins/${dir}/*.cpp)
+    target_sources(satdump_tests PRIVATE ${plugin_tests_CPPS})
+    target_link_libraries(satdump_tests PRIVATE ${target})
+    string(TOUPPER ${target} target_upper)
+    target_compile_definitions(satdump_tests PRIVATE SATDUMP_TEST_PLUGIN_${target_upper}="$<TARGET_FILE:${target}>")
+
+    list(APPEND SATDUMP_TESTED_PLUGINS ${target})
+    set(SATDUMP_TESTED_PLUGINS ${SATDUMP_TESTED_PLUGINS} PARENT_SCOPE)
+    set(SATDUMP_TESTED_PLUGIN_DIR_${target} ${dir} PARENT_SCOPE)
+endfunction()
+
+satdump_add_plugin_tests(rtltcp_support sdr_sources/rtltcp_support)
+satdump_add_plugin_tests(xrit_support xrit_support)
+satdump_add_plugin_tests(goes_support goes_support)
 
 # Lets tests load files shipped in the repository (e.g. resources/)
 target_compile_definitions(satdump_tests PRIVATE SATDUMP_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -79,9 +113,13 @@ if(ENABLE_COVERAGE)
         list(APPEND COVERAGE_COMPILE_OPTIONS -fprofile-update=atomic)
     endif()
 
-    foreach(target satdump_core satdump_tests)
+    set(COVERAGE_PLUGIN_FILTERS)
+    foreach(target satdump_core satdump_tests ${SATDUMP_TESTED_PLUGINS})
         target_compile_options(${target} PRIVATE ${COVERAGE_COMPILE_OPTIONS})
         target_link_options(${target} PRIVATE --coverage)
+        if(SATDUMP_TESTED_PLUGIN_DIR_${target})
+            list(APPEND COVERAGE_PLUGIN_FILTERS --filter ${CMAKE_SOURCE_DIR}/plugins/${SATDUMP_TESTED_PLUGIN_DIR_${target}}/)
+        endif()
     endforeach()
 
     # "coverage" target : run the tests, then generate a report with gcovr
@@ -110,6 +148,7 @@ if(ENABLE_COVERAGE)
                 --root ${CMAKE_SOURCE_DIR}
                 --filter ${CMAKE_SOURCE_DIR}/src-core/
                 --filter ${CMAKE_SOURCE_DIR}/src-cli/
+                ${COVERAGE_PLUGIN_FILTERS}
                 # Vendored third-party code
                 --exclude ${CMAKE_SOURCE_DIR}/src-core/libs/
                 --exclude ${CMAKE_SOURCE_DIR}/src-core/imgui/

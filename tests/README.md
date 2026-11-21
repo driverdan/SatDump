@@ -1,6 +1,6 @@
 # Unit tests
 
-Automated unit tests for `satdump_core` and the `satdump` CLI (`src-cli`), built on [Catch2](https://github.com/catchorg/Catch2) v3 and run through CTest.
+Automated unit tests for `satdump_core`, the `satdump` CLI (`src-cli`) and some of the plugins, built on [Catch2](https://github.com/catchorg/Catch2) v3 and run through CTest.
 
 Catch2 3.4.0 or newer is required. A system install is used if it is recent enough, otherwise Catch2 3.16.1 is fetched and built at configure time (this needs network access on the first configure).
 
@@ -35,7 +35,7 @@ cmake -B build-coverage -DBUILD_UNIT_TESTS=ON -DENABLE_COVERAGE=ON
 cmake --build build-coverage --target coverage -j$(nproc)
 ```
 
-The `coverage` target runs the tests, prints a summary and writes an HTML report to `build-coverage/coverage/index.html` (and a Cobertura `coverage.xml` next to it). It covers `src-core`, excluding the vendored libraries, and `src-cli`.
+The `coverage` target runs the tests, prints a summary and writes an HTML report to `build-coverage/coverage/index.html` (and a Cobertura `coverage.xml` next to it). It covers `src-core`, excluding the vendored libraries, `src-cli`, and the plugins that have tests.
 
 ## Adding tests
 
@@ -45,10 +45,31 @@ Any `.cpp` file under this directory is picked up automatically. Tests mirror th
 | --- | --- |
 | `src-core/utils/string.h` | `tests/src-core/utils/test_string.cpp` |
 | `src-cli/legacy/record.cpp` | `tests/src-cli/legacy/test_record.cpp` |
+| `plugins/xrit_support/xrit/xrit_file.cpp` | `tests/plugins/xrit_support/xrit/test_xrit_file.cpp` |
 
 Only what is shared by every source root sits directly in `tests/`: `main.cpp` and `helpers/`. To test another source root, create `tests/<root>/` and add it to `SATDUMP_TESTED_ROOTS` in `CMakeLists.txt`.
 
 The sources of `src-cli` are compiled into the test executable, except `src-cli/main.cpp` (the entry point of `satdump`), which has no test. Where a source directory holds many small related files (most of `src-core/dsp`), one test file may cover the whole directory, e.g. `tests/src-core/dsp/pll/test_pll.cpp`.
+
+**Plugins**
+
+The tests of a plugin are only built when that plugin is, and the plugin is then linked into the test executable. A plugin with tests is declared in `CMakeLists.txt`, with its target and its directory under `plugins/`:
+
+```cmake
+satdump_add_plugin_tests(goes_support goes_support)
+```
+
+This also defines `SATDUMP_TEST_PLUGIN_<TARGET>`, the path of the built plugin: `plugins_test::loadTestPlugin()` loads it the way `satdump` does, so that it registers its modules or sources. Plugin tests are not built with MSVC, as plugins export no symbols there.
+
+**Whole commands**
+
+`tests/plugins/goes_support/test_goes_hrit_live.cpp` runs `satdump legacy live goes_hrit` from end to end against a rtl_tcp server made by the test, with the real plugins and the pipelines of `resources/`. It needs no hardware: SatDump only receives, so the transmit side is in the test helpers, and can be reused for other links.
+
+| Helper | Provides |
+| --- | --- |
+| `helpers/ccsds_tx.h` | Reed-Solomon, randomization, NRZ-M and convolutional coding of CADUs, BPSK modulation, 8-bit I/Q |
+| `plugins/xrit_support/xrit_test_helpers.h` | LRIT / HRIT files, their source packets (Rice compressed image lines included) and virtual channels |
+| `plugins/sdr_sources/rtltcp_support/rtltcp_test_helpers.h` | A rtl_tcp server that plays samples back and records the commands it is sent |
 
 ## Conventions
 
@@ -56,7 +77,7 @@ Code is formatted with the repository's `.clang-format` (clang-format 19 or newe
 
 **Test cases**
 
-- Every `TEST_CASE` has tags. For `src-core` the first tag is its top-level directory (`[common]`, `[dsp]`, `[image]`...), for `src-cli` it is `[cli]`.
+- Every `TEST_CASE` has tags. For `src-core` the first tag is its top-level directory (`[common]`, `[dsp]`, `[image]`...), for `src-cli` it is `[cli]`, and for plugins it is `[plugins]` followed by the plugin (`[goes_support]`).
 - Do not use an unbalanced `[` or `]` in a test name (e.g. `[0, 1)`), as the CTest discovery of older Catch2 versions then merges the following tests into one.
 - Helpers local to one file go in an anonymous namespace, as every test file is linked into the same executable.
 - Tests must pass in any order and leave no state behind. Global state (configuration, registries, working directory...) is changed through a guard that restores it, and files are only written to a `test_helpers::TempDir` / `TempFile`.
@@ -64,6 +85,7 @@ Code is formatted with the repository's `.clang-format` (clang-format 19 or newe
 - Blocking waits are bounded by a timeout, so a hang fails the test.
 - Compare floating point values with the Catch2 matchers (`WithinAbs`, `WithinRel`) rather than a hand-written `fabs(a - b) < tol`, as they print both values on failure. `Catch::Approx` is still used by older tests.
 - Do not assert once per sample over thousands of samples. Compute the worst case and assert on that.
+- Do not compare large buffers with `==`, as both are printed in full on failure: `CHECK(test_helpers::bytesDiff(got, expected) == "")`.
 - Use `M_PI`, like `src-core` does.
 
 **Helpers**
@@ -75,7 +97,7 @@ Code is formatted with the repository's `.clang-format` (clang-format 19 or newe
 
 **Known bugs**
 
-- A test that documents a bug in `src-core` or `src-cli` is tagged `[!shouldfail]` and is preceded by a comment starting with `// Bug: <file>:<line>` that explains it. It starts failing (as "passed unexpectedly") once the bug is fixed; remove the tag then.
+- A test that documents a bug in `src-core`, `src-cli` or a plugin is tagged `[!shouldfail]` and is preceded by a comment starting with `// Bug: <file>:<line>` that explains it. It starts failing (as "passed unexpectedly") once the bug is fixed; remove the tag then.
 - If the bug only shows on some compilers, standard libraries or optimization levels, tag the test `[!mayfail]` instead and say so in the comment.
 - Never exercise undefined behaviour or a crash from a test. Those problems are listed in [UNTESTED_ISSUES.md](UNTESTED_ISSUES.md) instead.
 

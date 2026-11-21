@@ -1,9 +1,9 @@
 # Crash and undefined-behaviour problems without tests
 
-These problems were found by reading `src-core` and `src-cli` while the unit tests were being written. None of them has a test, because exercising them would crash or hang the test executable or rely on undefined behaviour.
+These problems were found by reading `src-core`, `src-cli` and some plugins while the unit tests were being written. None of them has a test, because exercising them would crash or hang the test executable or rely on undefined behaviour.
 
 - **Status:** reported from code reading, mostly not independently verified. Four were observed crashing (marked "seen"). Treat each entry as a lead to confirm, not a confirmed defect.
-- **Paths** are relative to `src-core/`, except in the [src-cli](#src-cli) section. Line numbers are as of commit `9fee0793c` (`518b9a068` for `src-cli`) and will drift.
+- **Paths** are relative to `src-core/`, except in the [src-cli](#src-cli) and [plugins](#plugins) sections. Line numbers are as of commit `9fee0793c` (`518b9a068` for `src-cli`) and will drift.
 - **Not listed here:** bugs that do have a test. Those are tagged `[!shouldfail]`; list them with `./satdump_tests --list-tests "[!shouldfail]"`.
 
 When one of these is fixed, add a regular test for it and remove the entry.
@@ -128,6 +128,16 @@ Paths in this section are relative to `src-cli/`.
 | `legacy/record.cpp:129`, `:143` | With both `--decimation` and `--fft_enable`, the resampler and the FFT splitter are both created on `source_ptr->output_stream`, so two blocks read the same stream. The file sink is then fed from the splitter, not from the resampler. | The two readers race for the samples, and the recording is not decimated although its samplerate (WAV / ZIQ header, file name) is divided. |
 | `legacy/record.cpp:166`, `legacy/live.cpp:358` | The `/api` callback reads `fft->output_stream->writeBuf` from the webserver thread while the FFT block writes it. | Data race. |
 
+## plugins
+
+Paths in this section are relative to `plugins/`. Line numbers are as of commit `da47ee530`.
+
+| Location | Problem | Effect |
+|---|---|---|
+| `sdr_sources/rtltcp_support/rtltcp_client.h:90-94` `connectToRTL` | The result of `gethostbyname` is used without a null check. | Null dereference when the host of `--ip_address` cannot be resolved (typo, DNS down). The socket is also leaked whenever the connection fails. |
+| `sdr_sources/rtltcp_support/rtltcp.cpp:129` `stop`, `rtltcp.h:35` `mainThread` | `stop()` joins the work thread, which is blocked in `read()` until 8192 bytes have arrived. The connection is only closed after the join. | `satdump` cannot be stopped (CTRL+C hangs) once the rtl_tcp server stops sending without closing the connection, e.g. when the network drops. The tests always keep the server sending. |
+| `sdr_sources/rtltcp_support/rtltcp_client.h:138-150` `receiveData`, `rtltcp.h:35` `mainThread` | A read error or a closed connection is not reported: `receiveData` returns, and the work thread outputs its buffer again, in a loop. | When the rtl_tcp server exits, the pipeline is fed the last 4096 samples forever, with one core busy, instead of stopping or reconnecting. |
+
 ## Related problems that are not crashes
 
 These were reported alongside the entries above. They do not crash, but they also have no test.
@@ -154,6 +164,9 @@ These were reported alongside the entries above. They do not crash, but they als
 - `dsp/channel_model/model/attenuation/atmospheric_gases_itu.cpp:272`: integer division inside `exp`; the temperature profile for 71 to 84.852 km uses the wrong formula.
 - `dsp/filter/fft.cpp:122`: `FFTFilterBlock<float>` does nothing.
 - `db/kepler/kepler_handler.cpp`: `putKepler` does not escape the designator in its SQL.
+- `pipeline/modules/base/filestream_to_filestream.cpp:76`, and the modules built on it (`plugins/goes_support/goes/hrit/module_goes_lrit_data_decoder.cpp:211`...): the loop runs while `!data_in.eof()`, so after the last read comes up empty the previous buffer is processed once more. Decoding a `.cadu` file therefore handles its last CADU twice. The LRIT decoder tests end their input with a fill frame, as a recording does anyway.
+- `plugins/xrit_support/xrit/xrit_file.h:119-138` `TimeStampRecord`: the constructor declares locals named like the `days` and `milliseconds_of_day` members, which stay uninitialised, and adds the milliseconds of the day to the timestamp as if they were seconds. GOES-R files are not affected when they carry a "Time of frame start", which is used instead.
+- `pipeline/modules/demod/module_psk_demod.cpp:176` (and the other demodulators): from a file, the loop ends as soon as the file source has read the end of the file, so the samples still in the DSP blocks are never demodulated. A recording shorter than the buffers of the chain gives no output at all, and how much of the end is lost depends on timing.
 
 **Other**
 
