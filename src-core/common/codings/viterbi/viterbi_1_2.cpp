@@ -27,6 +27,8 @@ namespace viterbi
         soft_buffer = new uint8_t[d_buffer_size * 2];
         output_buffer = new uint8_t[d_buffer_size * 2];
 
+        memset(ber_soft_buffer, 128, sizeof(ber_soft_buffer)); // Only the first TEST_BITS_LENGTH are ever written
+
         for (int s = 0; s < 2; s++)
             for (int i = 0; i < 2; i++)
                 for (int y = 0; y < 4; y++)
