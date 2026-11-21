@@ -27,6 +27,7 @@ namespace satdump
             struct KeyHeader
             {
                 static constexpr int TYPE = 7;
+                static constexpr int MIN_LENGTH = 7;
 
                 uint8_t type;
                 uint16_t record_length;
@@ -43,6 +44,7 @@ namespace satdump
             struct ImageSegmentationIdentification
             {
                 static constexpr int TYPE = 128;
+                static constexpr int MIN_LENGTH = 7;
 
                 uint8_t type;
                 uint16_t record_length;

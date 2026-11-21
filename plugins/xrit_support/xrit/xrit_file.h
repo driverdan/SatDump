@@ -1,10 +1,12 @@
 #pragma once
 
 #include "libs/others/strptime.h"
+#include <algorithm>
 #include <cstdint>
 #include <ctime>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace satdump
@@ -12,9 +14,14 @@ namespace satdump
     namespace xrit
     {
         ////////////////////////////////////////
+        // Header records are built from a pointer to their first byte, by XRITFile::getHeader().
+        // Each one gives MIN_LENGTH, the number of bytes its constructor reads whatever the record
+        // length (3 for a record that reads up to its record length).
+        ////////////////////////////////////////
         struct PrimaryHeader
         {
             static constexpr int TYPE = 0;
+            static constexpr int MIN_LENGTH = 16;
 
             uint8_t type;
             uint16_t record_length;
@@ -36,6 +43,7 @@ namespace satdump
         struct ImageStructureRecord
         {
             static constexpr int TYPE = 1;
+            static constexpr int MIN_LENGTH = 9;
 
             uint8_t type;
             uint16_t record_length;
@@ -58,6 +66,7 @@ namespace satdump
         struct ImageNavigationRecord
         {
             static constexpr int TYPE = 2;
+            static constexpr int MIN_LENGTH = 51;
 
             uint8_t type;
             uint16_t record_length;
@@ -87,6 +96,7 @@ namespace satdump
         struct ImageDataFunctionRecord
         {
             static constexpr int TYPE = 3;
+            static constexpr int MIN_LENGTH = 3;
 
             uint8_t type;
             uint16_t record_length;
@@ -96,13 +106,15 @@ namespace satdump
             {
                 type = data[0];
                 record_length = data[1] << 8 | data[2];
-                datas = std::string((char *)&data[3], (char *)&data[3 + record_length - 3]);
+                if (record_length > 3) // A malformed length under 3 must not give a negative size
+                    datas = std::string((char *)&data[3], (char *)&data[3 + record_length - 3]);
             }
         };
 
         struct AnnotationRecord
         {
             static constexpr int TYPE = 4;
+            static constexpr int MIN_LENGTH = 3;
 
             uint8_t type;
             uint16_t record_length;
@@ -112,13 +124,15 @@ namespace satdump
             {
                 type = data[0];
                 record_length = data[1] << 8 | data[2];
-                annotation_text.insert(annotation_text.end(), &data[3], &data[record_length]);
+                if (record_length > 3) // A malformed length under 3 must not give a negative size
+                    annotation_text.insert(annotation_text.end(), &data[3], &data[record_length]);
             }
         };
 
         struct TimeStampRecord
         {
             static constexpr int TYPE = 5;
+            static constexpr int MIN_LENGTH = 9;
 
             uint8_t type;
             uint16_t record_length;
@@ -157,10 +171,24 @@ namespace satdump
             template <typename T>
             T getHeader()
             {
-                if constexpr (std::is_same_v<T, PrimaryHeader>)
-                    return PrimaryHeader(&lrit_data[0]);
-                else
-                    return T(&lrit_data[all_headers[T::TYPE]]);
+                size_t offset = 0;
+                if constexpr (!std::is_same_v<T, PrimaryHeader>)
+                    offset = all_headers[T::TYPE];
+
+                // A record cut by the end of the data, or too short for its type, is read as if
+                // padded with zeros, rather than reading past the data
+                size_t available = offset < lrit_data.size() ? lrit_data.size() - offset : 0;
+                size_t needed = T::MIN_LENGTH;
+                if (available >= 3)
+                    needed = std::max<size_t>(needed, lrit_data[offset + 1] << 8 | lrit_data[offset + 2]);
+
+                if (available >= needed)
+                    return T(&lrit_data[offset]);
+
+                std::vector<uint8_t> padded(needed, 0);
+                if (available > 0)
+                    std::copy_n(lrit_data.begin() + offset, available, padded.begin());
+                return T(padded.data());
             }
 
             template <typename T>

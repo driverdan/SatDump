@@ -19,6 +19,7 @@ namespace satdump
             struct KeyHeader
             {
                 static constexpr int TYPE = 7;
+                static constexpr int MIN_LENGTH = 7;
 
                 uint8_t type;
                 uint16_t record_length;
@@ -35,6 +36,7 @@ namespace satdump
             struct ImageInformationRecord
             {
                 static constexpr int TYPE = 1;
+                static constexpr int MIN_LENGTH = 32;
 
                 uint8_t type;
                 uint16_t record_length;
@@ -83,6 +85,7 @@ namespace satdump
             struct ImageNavigationRecord
             {
                 static constexpr int TYPE = 2;
+                static constexpr int MIN_LENGTH = 51;
 
                 uint8_t type;
                 uint16_t record_length;

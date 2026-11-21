@@ -14,15 +14,18 @@ namespace satdump
             all_headers.clear();
             for (uint32_t i = 0; i < primary_header.total_header_length;)
             {
+                if (i + 3 > lrit_data.size()) // The header goes past the data
+                    break;
+
                 uint8_t type = lrit_data[i];
                 uint16_t record_length = lrit_data[i + 1] << 8 | lrit_data[i + 2];
 
-                if (record_length == 0)
+                if (record_length < 3) // Cannot even hold its own type and length
                     break;
 
                 if (safe)
-                    if (i + record_length >= lrit_data.size())
-                        break; //  TODOREWORK ? ? ?
+                    if (i + record_length > lrit_data.size())
+                        break;
 
                 all_headers.emplace(std::pair<int, int>(type, i));
 
