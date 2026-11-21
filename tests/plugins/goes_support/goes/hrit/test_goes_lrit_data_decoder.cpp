@@ -794,6 +794,39 @@ TEST_CASE("GOESLRITDataDecoderModule drops corrupted files and carries on", "[pl
     CHECK(env.log.contains("LRIT CRC is invalid... Skipping.", slog::LOG_ERROR));
 }
 
+TEST_CASE("GOESLRITDataDecoderModule drops files cut before the end of their headers and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // Headers of 16 + 303 + 14 bytes, sent in packets of 200 bytes: when the second packet
+    // is lost, the file ends before its headers do
+    DecoderEnv env;
+    Mux mux;
+    auto cut = packetize(lritFile(2, {annotationRecord(std::string(300, 'N')), noaaRecord(1, 0, 0, 0)}, Bytes(98, 'x')), APID, 10, 200);
+    REQUIRE(cut.size() == 3);
+    cut.erase(cut.begin() + 1);
+
+    mux.add(VCID, packetize(textFile("FIRST.lrit", "first"), APID, 0));
+    mux.add(VCID, cut);
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next"), APID, 20));
+    decode(env, mux);
+
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/FIRST.txt", "Admin Messages/NEXT.txt"});
+    CHECK(env.read("Admin Messages/FIRST.txt") == "first");
+    CHECK(env.read("Admin Messages/NEXT.txt") == "next");
+    CHECK(env.log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
+}
+
+TEST_CASE("GOESLRITDataDecoderModule skips a first packet too short to start a file", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packet(APID, SEQ_FIRST, 0, Bytes{1, 2, 3, 4}));
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next"), APID, 1));
+
+    CHECK_NOTHROW(decode(env, mux));
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/NEXT.txt"});
+    CHECK(env.log.contains("LRIT header packet is too short... Skipping.", slog::LOG_ERROR));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule decodes a live stream", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     // As in a live pipeline: CADUs come from the previous module through a FIFO

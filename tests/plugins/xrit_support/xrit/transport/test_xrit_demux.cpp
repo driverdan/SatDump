@@ -347,3 +347,88 @@ TEST_CASE("XRITDemux leaves out the data its callback takes care of", "[plugins]
     expected.insert(expected.end(), packets.size() - 1, 0xEE);
     CHECK(bytesDiff(files[0].lrit_data, expected) == "");
 }
+
+namespace
+{
+    // Headers (16 + 303 + 14 bytes) that need two packets of PACKET bytes
+    Bytes longHeaderFile(const Bytes &data) { return lritFile(2, {annotationRecord(std::string(300, 'N')), noaaRecord(1, 0, 0, 0)}, data); }
+} // namespace
+
+TEST_CASE("XRITDemux drops a file that ends before its headers are complete", "[plugins][xrit_support][xrit_demux]")
+{
+    // On the air, packets are lost when the signal drops. Without all of its headers, the
+    // size of the headers in the primary header is more than what was received of the file.
+    Bytes cut = longHeaderFile(randomBytes(98, 20)), next = textFile("NEXT.lrit", 300, 21);
+    auto packets = packetize(cut, 40, 0, PACKET);
+    REQUIRE(packets.size() == 3);
+
+    SECTION("the next file starts") { packets.resize(1); }
+    SECTION("its last packet comes") { packets.erase(packets.begin() + 1); }
+
+    Mux mux;
+    mux.add(5, packets);
+    mux.add(5, packetize(next, 40, 20, PACKET));
+
+    xr::XRITDemux demuxer;
+    std::vector<std::string> finalized;
+    demuxer.onFinalizeData = [&](xr::XRITFile &f) { finalized.push_back(f.filename); };
+    auto files = demux(demuxer, mux.vcdus());
+
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].filename == "NEXT.lrit");
+    CHECK(bytesDiff(files[0].lrit_data, next) == "");
+    // The callback is not given what is left of the file either
+    CHECK(finalized == std::vector<std::string>{"NEXT.lrit"});
+}
+
+TEST_CASE("XRITDemux reads the headers a last packet completes", "[plugins][xrit_support][xrit_demux]")
+{
+    // Two packets: the first one with most of the headers, the last one with the rest of
+    // them and the data
+    Bytes file = longHeaderFile(randomBytes(20, 22));
+    auto packets = packetize(file, 40, 0, PACKET);
+    REQUIRE(packets.size() == 2);
+    Mux mux;
+    mux.add(5, packets);
+
+    auto files = demux(mux.vcdus());
+
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].header_parsed);
+    CHECK(files[0].filename == std::string(300, 'N'));
+    CHECK(files[0].total_header_length == 16 + 303 + 14);
+    CHECK(bytesDiff(files[0].lrit_data, file) == "");
+}
+
+TEST_CASE("XRITDemux reads the primary header once it has all of it", "[plugins][xrit_support][xrit_demux]")
+{
+    // The first packet only holds 5 bytes of the 16 of the primary header
+    Bytes file = textFile("SPLIT.lrit", 100, 23);
+    Bytes stream = transportHeader(file.size());
+    stream.insert(stream.end(), file.begin(), file.end());
+    Mux mux;
+    mux.add(5, packet(40, SEQ_FIRST, 0, Bytes(stream.begin(), stream.begin() + 15)));
+    mux.add(5, packet(40, SEQ_LAST, 1, Bytes(stream.begin() + 15, stream.end())));
+
+    auto files = demux(mux.vcdus());
+
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].filename == "SPLIT.lrit");
+    CHECK(bytesDiff(files[0].lrit_data, file) == "");
+}
+
+TEST_CASE("XRITDemux skips a first packet too short for the transport file header", "[plugins][xrit_support][xrit_demux]")
+{
+    // A first packet holds the 10 bytes of the transport file header before the file
+    Bytes next = textFile("NEXT.lrit", 300, 24);
+    auto flag = GENERATE(SEQ_FIRST, SEQ_SINGLE);
+    Mux mux;
+    mux.add(5, packet(40, flag, 0, Bytes{1, 2, 3, 4}));
+    mux.add(5, packetize(next, 40, 1, PACKET));
+
+    std::vector<xr::XRITFile> files;
+    REQUIRE_NOTHROW(files = demux(mux.vcdus()));
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].filename == "NEXT.lrit");
+    CHECK(bytesDiff(files[0].lrit_data, next) == "");
+}

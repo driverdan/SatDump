@@ -11,6 +11,10 @@ namespace satdump
 
         XRITDemux::~XRITDemux() {}
 
+        // Whether all the headers of the file were received. The primary header (16 bytes)
+        // gives the length of all of them.
+        static bool headersComplete(XRITFile &file) { return file.lrit_data.size() >= 16 && file.lrit_data.size() >= file.getHeader<PrimaryHeader>().total_header_length; }
+
         // CRC Implementation from LRIT-Mission-Specific-Document.pdf
         uint16_t computeCRC(const uint8_t *data, int size)
         {
@@ -81,6 +85,14 @@ namespace satdump
 
                     current_file.lrit_data.clear();
 
+                    // The transport file header and the CRC alone take 12 bytes
+                    if (pkt.payload.size() < 12)
+                    {
+                        logger->error("LRIT header packet is too short... Skipping.");
+                        current_file.file_in_progress = false;
+                        continue;
+                    }
+
                     processLRITHeader(current_file, pkt);
                     current_file.vcid = vcdu.vcid;
                     current_file.header_parsed = false;
@@ -105,9 +117,7 @@ namespace satdump
 
                 if (current_file.file_in_progress && !current_file.header_parsed)
                 {
-                    PrimaryHeader primary_header = current_file.getHeader<PrimaryHeader>();
-
-                    if (current_file.lrit_data.size() >= primary_header.total_header_length)
+                    if (headersComplete(current_file))
                     {
                         parseHeader(current_file);
                         current_file.header_parsed = true;
@@ -144,6 +154,20 @@ namespace satdump
 
         void XRITDemux::finalizeLRITData(XRITFile &file)
         {
+            // The last packet may have completed the headers
+            if (!file.header_parsed && headersComplete(file))
+            {
+                parseHeader(file);
+                file.header_parsed = true;
+            }
+
+            // Without them, nothing can be made of the file. Some of it was lost.
+            if (!file.header_parsed)
+            {
+                logger->error("LRIT file ended before its headers were complete... Skipping.");
+                return;
+            }
+
             onFinalizeData(file);
             files.push_back(file);
         }
