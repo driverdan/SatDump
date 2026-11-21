@@ -321,6 +321,14 @@ namespace satdump
                 else
                     return false;
 
+                // A segment of an image of 0 segments cannot be placed in it, nor can its navigation be
+                // shifted: keep the file as an image of its own
+                if (file.hasHeader<goes::SegmentIdentificationHeader>() && file.getHeader<goes::SegmentIdentificationHeader>().max_segment == 0)
+                {
+                    logger->warn("File %s has 0 segments in its segment identification header, saving it as an image of its own", file.filename.c_str());
+                    i.seg_groupid.clear();
+                }
+
                 //////////////////
 
                 if (file.all_headers.count(ImageNavigationRecord::TYPE))
@@ -361,7 +369,7 @@ namespace satdump
                     if (file.all_headers.count(goes::SegmentIdentificationHeader::TYPE))
                     {
                         auto segment_id_header = file.getHeader<goes::SegmentIdentificationHeader>();
-                        if (i.image_navigation_record && noaa_header.product_id != goes::ID_HIMAWARI && !used_ancillary_proj)
+                        if (i.image_navigation_record && noaa_header.product_id != goes::ID_HIMAWARI && !used_ancillary_proj && segment_id_header.max_segment > 0)
                             i.image_navigation_record->line_offset =
                                 i.image_navigation_record->line_offset + segment_id_header.segment_sequence_number * (segment_id_header.max_row / segment_id_header.max_segment);
                     }

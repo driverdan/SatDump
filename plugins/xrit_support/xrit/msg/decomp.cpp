@@ -101,7 +101,10 @@ namespace satdump
 
                         // Fill our output buffer
                         buf_size = decompressedImage.Size() / 8;
-                        out_pixels = decompressedImage.Size() / image_structure_record.bit_per_pixel;
+                        if (image_structure_record.bit_per_pixel > 0)
+                            out_pixels = decompressedImage.Size() / image_structure_record.bit_per_pixel;
+                        else // Leaves out_pixels at 0, so the image is discarded below unless it has no pixels at all
+                            logger->warn("File %s has 0 bits per pixel in its image structure record, it cannot be decompressed", file.filename.c_str());
                         image_ptr = new uint8_t[buf_size];
                         decompressedImage.Read(0, image_ptr, buf_size);
                     }

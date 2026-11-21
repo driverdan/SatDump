@@ -118,9 +118,10 @@ namespace goes
                             rice_parameters.pixels_per_block = rice_compression_header.pixels_per_block;
                             rice_parameters.options_mask = rice_compression_header.flags | SZ_RAW_OPTION_MASK;
                         }
-                        else if (rice_parameters.pixels_per_block <= 0)
+
+                        if (rice_parameters.pixels_per_block <= 0) // The Rice decoder divides by it
                         {
-                            logger->critical("Pixel per blocks is set to 0! Using defaults");
+                            logger->warn("File %s has 0 pixels per block in its Rice compression record, using 16", file.filename.c_str());
                             rice_parameters.pixels_per_block = 16;
                         }
                     }
@@ -196,7 +197,9 @@ namespace goes
 
                     if (primary_header.file_type_code == 0 && (image_header.compression_flag == 0 || (image_header.compression_flag == 1 && noaa_header.noaa_specific_compression == 1)))
                     {
-                        if (fill_missing && file.lrit_data.size() > primary_header.total_header_length + image_header.columns_count)
+                        if (fill_missing && image_header.columns_count == 0) // No line to repeat
+                            logger->warn("File %s has 0 columns in its image structure record, its missing lines cannot be filled", file.filename.c_str());
+                        else if (fill_missing && file.lrit_data.size() > primary_header.total_header_length + image_header.columns_count)
                         {
                             // Fill remaining data with last line
                             uint32_t to_fill = (image_header.lines_count * image_header.columns_count - (file.lrit_data.size() - file.total_header_length)) / image_header.columns_count;
