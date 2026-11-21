@@ -836,7 +836,8 @@ TEST_CASE("GOESLRITDataDecoderModule drops files cut before the end of their hea
     CHECK(env.files() == std::vector<std::string>{"Admin Messages/FIRST.txt", "Admin Messages/NEXT.txt"});
     CHECK(env.read("Admin Messages/FIRST.txt") == "first");
     CHECK(env.read("Admin Messages/NEXT.txt") == "next");
-    CHECK(env.log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
+    // The lost packet is seen as soon as the last one comes
+    CHECK(env.log.contains("LRIT packet lost before the headers were complete... Skipping.", slog::LOG_ERROR));
 }
 
 TEST_CASE("GOESLRITDataDecoderModule skips a first packet too short to start a file", "[plugins][goes_support][goes_lrit_data_decoder]")
