@@ -649,6 +649,28 @@ TEST_CASE("GOESLRITDataDecoderModule decodes the files after a Rice compressed i
     CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({}));
 }
 
+TEST_CASE("riceFillLimit is what is left of the image to receive", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // Lost lines are filled up to the end of the image, and no further
+    satdump::xrit::XRITFile file;
+    Bytes headers = riceImageHeaders("IMAGE.lrit", 4);
+    file.lrit_data = headers;
+    file.parseHeaders();
+    const size_t image = COLUMNS * 4;
+
+    CHECK(goes::hrit::riceFillLimit(file, 0) == image);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == image - COLUMNS);
+
+    file.lrit_data.resize(headers.size() + 3 * COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, 0) == COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == 0);
+
+    // A file can hold more lines than its image has, which leaves nothing to fill
+    CHECK(goes::hrit::riceFillLimit(file, 2 * COLUMNS) == 0);
+    file.lrit_data.resize(headers.size() + 10 * COLUMNS);
+    CHECK(goes::hrit::riceFillLimit(file, COLUMNS) == 0);
+}
+
 TEST_CASE("GOESLRITDataDecoderModule assembles the segments of a GOES-R ABI image", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;

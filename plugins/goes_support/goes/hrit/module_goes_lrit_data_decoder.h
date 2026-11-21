@@ -88,5 +88,9 @@ namespace goes
             static nlohmann::json getParams() { return {}; } // TODOREWORK
             static std::shared_ptr<ProcessingModule> getInstance(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
         };
+
+        // Bytes of the image of a Rice compressed file that are still to come once decoded_size
+        // more bytes are added to it: lost lines are not filled past the end of the image
+        size_t riceFillLimit(satdump::xrit::XRITFile &file, size_t decoded_size);
     } // namespace hrit
 } // namespace goes
