@@ -1,4 +1,5 @@
 #include "common/codings/viterbi/viterbi_1_2.h"
+#include "helpers/prefilled.h"
 #include "helpers/random.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -174,10 +175,10 @@ TEST_CASE("Viterbi1_2 does not lock on noise and loses lock after max_outsync ba
     CHECK(vit.getState() == 0);
 }
 
-// Bug: the BER re-encoder (cc_encoder_ber, frame = 1024 bits) keeps its register state from the
-// previous re-encode, which is the state 1024 bits into the previous buffer rather than at its end,
-// so ber() is non-zero on a perfectly clean stream (viterbi_1_2.cpp:101).
-TEST_CASE("Viterbi1_2 ber() is zero on a clean locked stream", "[common][codings][viterbi][!shouldfail]")
+// The BER re-encoder cannot know the encoder state at the start of a buffer (it used to chain the
+// state from 1024 bits into the previous buffer), so the symbols of the first 6 bits must be left
+// out of the comparison for ber() to be zero on a clean stream.
+TEST_CASE("Viterbi1_2 ber() is zero on a clean locked stream", "[common][codings][viterbi]")
 {
     const int buffers = 3;
     std::vector<uint8_t> bits = randomBits(BUFFER / 2 * buffers + 64, 8);
@@ -185,4 +186,63 @@ TEST_CASE("Viterbi1_2 ber() is zero on a clean locked stream", "[common][codings
     viterbi::Viterbi1_2 vit(THRESHOLD, 5, BUFFER);
     run(vit, stream, 0, buffers);
     CHECK(vit.ber() == 0.0f);
+}
+
+
+// With a threshold of 0 the decoder never locks, so ber() is the lowest BER of the lock search.
+// The test decoder reads 13 symbols past the 2048 of the search buffer (the K-1 tail, plus 1 with a
+// shift); these must be erasures and not whatever memory follows the buffer.
+TEST_CASE("Viterbi1_2 lock search BER is zero on a clean stream for every alignment and phase", "[common][codings][viterbi]")
+{
+    auto offset = GENERATE(0, 1, 3);
+    auto phase = GENERATE(PHASE_0, PHASE_90, PHASE_180, PHASE_270);
+    INFO("offset " << offset << ", phase " << phase);
+    for (int seed = 0; seed < 32; seed++)
+    {
+        INFO("seed " << seed);
+        std::vector<uint8_t> bits = randomBits(BUFFER / 2 + 64, 100 + seed);
+        std::vector<int8_t> stream = encodeSigned(bits);
+        std::vector<int8_t> in(stream.begin() + offset, stream.begin() + offset + BUFFER);
+        rotate_soft(in.data(), in.size(), phase, false);
+
+        viterbi::Viterbi1_2 vit(0.0f, 5, BUFFER);
+        std::vector<uint8_t> out(BUFFER);
+        CHECK(vit.work(in.data(), BUFFER, out.data()) == 0);
+        CHECK(vit.ber() == 0.0f);
+    }
+}
+
+TEST_CASE("Viterbi1_2 lock search does not depend on the memory the decoder was built over", "[common][codings][viterbi]")
+{
+    auto offset = GENERATE(0, 1);
+    INFO("offset " << offset);
+    const int buffers = 2;
+    for (int seed = 0; seed < 8; seed++)
+    {
+        INFO("seed " << seed);
+        std::vector<uint8_t> bits = randomBits(BUFFER / 2 * (buffers + 1), 200 + seed);
+        std::vector<int8_t> stream = encodeSigned(bits);
+
+        std::vector<std::vector<uint8_t>> decoded;
+        std::vector<float> searchBer;
+        for (uint8_t fill : {0x00, 0xFF, 0x80, 0x55})
+        {
+            auto vit = test_helpers::makePrefilled<viterbi::Viterbi1_2>(fill, THRESHOLD, 5, BUFFER);
+            decoded.push_back(run(*vit, stream, offset, buffers));
+
+            auto search = test_helpers::makePrefilled<viterbi::Viterbi1_2>(fill, 0.0f, 5, BUFFER);
+            std::vector<int8_t> in(stream.begin() + offset, stream.begin() + offset + BUFFER);
+            std::vector<uint8_t> out(BUFFER);
+            search->work(in.data(), BUFFER, out.data());
+            searchBer.push_back(search->ber());
+        }
+        for (size_t f = 1; f < decoded.size(); f++)
+        {
+            INFO("fill " << f);
+            REQUIRE(decoded[f].size() == decoded[0].size());
+            CHECK(std::equal(decoded[f].begin(), decoded[f].end(), decoded[0].begin()));
+            CHECK(searchBer[f] == searchBer[0]);
+        }
+        CHECK(searchBer[0] == 0.0f);
+    }
 }

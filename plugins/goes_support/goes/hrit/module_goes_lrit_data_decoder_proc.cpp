@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "lrit_header.h"
 #include "module_goes_lrit_data_decoder.h"
+#include <algorithm>
 #include <filesystem>
 #include <memory>
 
@@ -37,14 +38,15 @@ namespace goes
                 std::filesystem::create_directory(directory + "/EMWIN");
 
             std::string subdirectory;
-            std::string extension = filename.substr(filename.size() - 3, filename.size());
+            std::string extension = filename.size() >= 3 ? filename.substr(filename.size() - 3) : "";
             
             // Only proceed if we are meant to process text files
             if ((extension == "TXT" || extension == "txt") && !write_emwin_text)
                 return;
 
             // All files appear to feature an 8-character ID before the extension, proceed if it looks like it
-            if (filename.size() >= 10 && !filename.compare(filename.size() - 13, 1, "-"))
+            // (a "-", the 8-character ID, then a "." and a 3-character extension: 13 characters)
+            if (filename.size() >= 13 && !filename.compare(filename.size() - 13, 1, "-"))
             {
                 std::string ID = filename.substr(filename.size() - 12, 8);
                 // clang-format off
@@ -117,7 +119,8 @@ namespace goes
                 SegmentIdentificationHeader segment_id_header = file.getHeader<SegmentIdentificationHeader>();
                 std::ostringstream oss;
                 oss << "_" << std::setfill('0') << std::setw(3) << segment_id_header.segment_sequence_number;
-                current_filename.insert(current_filename.length() - 5, oss.str());
+                // Before the ".lrit" extension, or at the end of a name too short to have it
+                current_filename.insert(current_filename.length() >= 5 ? current_filename.length() - 5 : current_filename.length(), oss.str());
             }
 
             logger->info("Writing file " + path + "/" + current_filename + "...");
@@ -231,20 +234,39 @@ namespace goes
                         return;
                     }
 
-                    // Read filename
+                    // Read filename. The archive is as received, so it may hold no file, or name it
+                    // anything: the name must not leave the EMWIN directory
                     char filenameStr[1000];
-                    int chs = mz_zip_reader_get_filename(&zipFile, 0, filenameStr, 1000);
-                    std::string filename(filenameStr, &filenameStr[chs - 1]);
+                    mz_uint chs = 0;
+                    if (mz_zip_reader_get_num_files(&zipFile) > 0)
+                        chs = mz_zip_reader_get_filename(&zipFile, 0, filenameStr, 1000);
+                    std::string filename(filenameStr, chs > 0 ? chs - 1 : 0);
+                    std::replace(filename.begin(), filename.end(), '/', '_');  // Safety
+                    std::replace(filename.begin(), filename.end(), '\\', '_'); // Safety
+                    std::replace(filename.begin(), filename.end(), '\0', '_');  // Safety
+                    if (filename.empty() || filename == "." || filename == "..")
+                    {
+                        logger->error("ZIP data holds no file! Discarding...");
+                        mz_zip_reader_end(&zipFile);
+                        return;
+                    }
 
                     // Decompress
                     size_t outSize = 0;
                     uint8_t *outBuffer = (uint8_t *)mz_zip_reader_extract_to_heap(&zipFile, 0, &outSize, 0);
+                    if (outBuffer == nullptr)
+                    {
+                        logger->error("Could not decompress ZIP data! Discarding...");
+                        mz_zip_reader_end(&zipFile);
+                        return;
+                    }
 
                     // Write out
                     saveEMWINFile(directory, filename, (char *)outBuffer, outSize);
 
                     // Free memory
                     zipFile.m_pFree(&zipFile, outBuffer);
+                    mz_zip_reader_end(&zipFile);
                 }
             }
             // Check if this is message data. If we slipped to here we know it's not EMWIN

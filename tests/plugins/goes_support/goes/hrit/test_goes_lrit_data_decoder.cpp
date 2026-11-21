@@ -9,6 +9,7 @@
 #include "plugins_test_helpers.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <algorithm>
 #include <catch2/generators/catch_generators.hpp>
 #include <thread>
 
@@ -117,6 +118,32 @@ namespace
     {
         Bytes zip = zipOf(zipped_name, content);
         return textFile(name, std::string(zip.begin(), zip.end()), product, 10);
+    }
+
+    // A ZIP archive holding no file
+    Bytes emptyZip()
+    {
+        mz_zip_archive zip;
+        MZ_CLEAR_OBJ(zip);
+        mz_zip_writer_init_heap(&zip, 0, 0);
+        void *buf = nullptr;
+        size_t size = 0;
+        mz_zip_writer_finalize_heap_archive(&zip, &buf, &size);
+        Bytes out((uint8_t *)buf, (uint8_t *)buf + size);
+        mz_zip_writer_end(&zip);
+        mz_free(buf);
+        return out;
+    }
+
+    // A ZIP archive of one file, whose CRC in the central directory does not match its data
+    Bytes badCrcZip(const std::string &name, const std::string &content)
+    {
+        Bytes zip = zipOf(name, content);
+        const uint8_t central_header[] = {'P', 'K', 1, 2};
+        auto it = std::search(zip.begin(), zip.end(), std::begin(central_header), std::end(central_header));
+        if (it != zip.end())
+            *(it + 16) ^= 0xFF; // CRC-32
+        return zip;
     }
 
     // Pixels of a test image: every line is different, and none is black
@@ -359,11 +386,9 @@ TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files by kind", "[plugins][goes
     }
 }
 
-// Bug: plugins/goes_support/goes/hrit/module_goes_lrit_data_decoder_proc.cpp:47 - the check
-// for the "-" before the identifier reads filename.size() - 13 for any name of 10 characters
-// or more. For names of 10 to 12 characters that is before the start of the string:
-// std::string::compare throws std::out_of_range, which ends the decoder.
-TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plugins][goes_support][goes_lrit_data_decoder][!shouldfail]")
+// A name of 10 to 12 characters is too short to hold the "-" and the 8 character identifier,
+// so the decoder must not look for them before the start of the name
+TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
     Mux mux;
@@ -371,6 +396,56 @@ TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a short name", "[plu
 
     CHECK_NOTHROW(decode(env, mux));
     CHECK(env.files() == std::vector<std::string>{"EMWIN/Other/RADAR01.PNG"});
+}
+
+// Nor look for the extension before the start of a name of less than 3 characters
+TEST_CASE("GOESLRITDataDecoderModule saves EMWIN files with a name shorter than an extension", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "AB", "data"), APID));
+
+    CHECK_NOTHROW(decode(env, mux));
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/Other/AB"});
+}
+
+// The ZIP archive is as received: when there is nothing to save from it, the file is dropped
+// and the decoder carries on with the next one
+TEST_CASE("GOESLRITDataDecoderModule drops EMWIN archives it cannot unpack", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+
+    SECTION("an archive holding no file")
+    {
+        Bytes zip = emptyZip();
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("ZIP data holds no file! Discarding...", slog::LOG_ERROR));
+    }
+
+    SECTION("an archive whose file does not decompress")
+    {
+        Bytes zip = badCrcZip("A_EMWIN-RADBADUS.PNG", "the CRC of this is wrong");
+        mux.add(VCID, packetize(textFile("Z_ZIP1.lrit", std::string(zip.begin(), zip.end()), 9, 10), APID));
+        mux.add(VCID, packetize(zipFile("Z_ZIP2.lrit", "A_EMWIN-RADALLUS.PNG", "still here"), APID, 10));
+        decode(env, mux);
+        CHECK(env.log.contains("Could not decompress ZIP data! Discarding...", slog::LOG_ERROR));
+    }
+
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/A_EMWIN-RADALLUS.PNG"});
+    CHECK(env.read("EMWIN/NWS/A_EMWIN-RADALLUS.PNG") == "still here");
+}
+
+// The name of the file in the archive is used as the output file name
+TEST_CASE("GOESLRITDataDecoderModule keeps EMWIN files in the EMWIN directory", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(zipFile("Z_ZIP1.lrit", "../../A_EMWIN-RADALLUS.PNG", "data"), APID));
+    decode(env, mux);
+    CHECK(env.files() == std::vector<std::string>{"EMWIN/NWS/.._.._A_EMWIN-RADALLUS.PNG"});
 }
 
 TEST_CASE("GOESLRITDataDecoderModule saves the images of unknown imagers as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
@@ -679,6 +754,31 @@ TEST_CASE("GOESLRITDataDecoderModule names the raw files of image segments after
     CHECK(std::filesystem::file_size(env.path("LRIT/SEGMENTED_012.lrit")) == headers.size() + COLUMNS * 4);
 }
 
+// The segment number goes before the ".lrit" extension, or at the end of a shorter name
+TEST_CASE("GOESLRITDataDecoderModule names the raw files of segments with a short name", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    auto params = hritParams();
+    Bytes segment = segmentIdentificationRecord(7, 12, 0, 48, 20, COLUMNS, 80);
+
+    SECTION("a file without data, saved by default")
+    {
+        mux.add(VCID, packetize(lritFile(2, {annotationRecord("AB"), noaaRecord(1, 0, 0, 0), segment}, {}), APID));
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"LRIT/AB_012"});
+    }
+
+    SECTION("write_lrit")
+    {
+        params["write_lrit"] = true;
+        params["write_messages"] = false;
+        mux.add(VCID, packetize(lritFile(2, {annotationRecord("AB"), noaaRecord(1, 0, 0, 0), segment}, Bytes{'x'}), APID));
+        decode(env, mux, params);
+        CHECK(env.files() == std::vector<std::string>{"LRIT/AB_012"});
+    }
+}
+
 TEST_CASE("GOESLRITDataDecoderModule drops corrupted files and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
@@ -692,6 +792,39 @@ TEST_CASE("GOESLRITDataDecoderModule drops corrupted files and carries on", "[pl
 
     CHECK(env.files() == std::vector<std::string>{"Admin Messages/GOOD.txt"});
     CHECK(env.log.contains("LRIT CRC is invalid... Skipping.", slog::LOG_ERROR));
+}
+
+TEST_CASE("GOESLRITDataDecoderModule drops files cut before the end of their headers and carries on", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // Headers of 16 + 303 + 14 bytes, sent in packets of 200 bytes: when the second packet
+    // is lost, the file ends before its headers do
+    DecoderEnv env;
+    Mux mux;
+    auto cut = packetize(lritFile(2, {annotationRecord(std::string(300, 'N')), noaaRecord(1, 0, 0, 0)}, Bytes(98, 'x')), APID, 10, 200);
+    REQUIRE(cut.size() == 3);
+    cut.erase(cut.begin() + 1);
+
+    mux.add(VCID, packetize(textFile("FIRST.lrit", "first"), APID, 0));
+    mux.add(VCID, cut);
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next"), APID, 20));
+    decode(env, mux);
+
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/FIRST.txt", "Admin Messages/NEXT.txt"});
+    CHECK(env.read("Admin Messages/FIRST.txt") == "first");
+    CHECK(env.read("Admin Messages/NEXT.txt") == "next");
+    CHECK(env.log.contains("LRIT file ended before its headers were complete... Skipping.", slog::LOG_ERROR));
+}
+
+TEST_CASE("GOESLRITDataDecoderModule skips a first packet too short to start a file", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packet(APID, SEQ_FIRST, 0, Bytes{1, 2, 3, 4}));
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next"), APID, 1));
+
+    CHECK_NOTHROW(decode(env, mux));
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/NEXT.txt"});
+    CHECK(env.log.contains("LRIT header packet is too short... Skipping.", slog::LOG_ERROR));
 }
 
 TEST_CASE("GOESLRITDataDecoderModule decodes a live stream", "[plugins][goes_support][goes_lrit_data_decoder]")

@@ -79,8 +79,8 @@ TEST_CASE("Logger delivers each level with the right tag", "[logger]")
     const slog::LogLevel expected[] = {slog::LOG_TRACE, slog::LOG_DEBUG, slog::LOG_INFO, slog::LOG_NOTICE, slog::LOG_WARN, slog::LOG_ERROR, slog::LOG_CRIT};
     for (int i = 0; i < 7; i++)
         CHECK(t.sink->msgs[i].lvl == expected[i]);
-    CHECK(std::string(t.sink->msgs[0].str.c_str()) == "t");
-    CHECK(std::string(t.sink->msgs[6].str.c_str()) == "c");
+    CHECK(t.sink->msgs[0].str == "t");
+    CHECK(t.sink->msgs[6].str == "c");
 }
 
 TEST_CASE("Logger drops messages below its level", "[logger]")
@@ -108,8 +108,8 @@ TEST_CASE("Logger printf-style formatting", "[logger]")
     t.logger.info("%d-%s-%.2f-%c-%%", 42, "abc", 3.14159, 'z');
     t.logger.warn("no arguments");
     REQUIRE(t.sink->msgs.size() == 2);
-    CHECK(std::string(t.sink->msgs[0].str.c_str()) == "42-abc-3.14-z-%");
-    CHECK(std::string(t.sink->msgs[1].str.c_str()) == "no arguments");
+    CHECK(t.sink->msgs[0].str == "42-abc-3.14-z-%");
+    CHECK(t.sink->msgs[1].str == "no arguments");
 }
 
 TEST_CASE("Logger formats messages longer than its 1024 byte buffer", "[logger]")
@@ -118,27 +118,30 @@ TEST_CASE("Logger formats messages longer than its 1024 byte buffer", "[logger]"
     std::string big(3000, 'q');
     t.logger.error("<%s>", big.c_str());
     REQUIRE(t.sink->msgs.size() == 1);
-    std::string got = t.sink->msgs[0].str.c_str();
+    const std::string &got = t.sink->msgs[0].str;
     CHECK(got.size() == big.size() + 2);
     CHECK((got == "<" + big + ">"));
 }
 
-// Bug: Logger::logf (logger.cpp:202) checks `size <= output.size()`, but vsnprintf needs room
-// for the terminating NUL, so a message of exactly 1024 characters loses its last character.
-TEST_CASE("Logger keeps every character of a 1024 character message", "[logger][!shouldfail]")
+// Messages around the 1024 byte buffer size, which needs room for the terminating NUL
+TEST_CASE("Logger keeps every character of a 1024 character message", "[logger]")
 {
     LoggerWithSink t;
-    std::string exact(1024, 'x');
-    t.logger.info("%s", exact.c_str());
-    REQUIRE(t.sink->msgs.size() == 1);
-    std::string got = t.sink->msgs[0].str.c_str();
-    CHECK(got.size() == exact.size());
+    for (size_t len : {1022, 1023, 1024, 1025})
+    {
+        std::string exact(len, 'x');
+        t.logger.info("%s", exact.c_str());
+    }
+    REQUIRE(t.sink->msgs.size() == 4);
+    CHECK(t.sink->msgs[0].str == std::string(1022, 'x'));
+    CHECK(t.sink->msgs[1].str == std::string(1023, 'x'));
+    CHECK(t.sink->msgs[2].str == std::string(1024, 'x'));
+    CHECK(t.sink->msgs[3].str == std::string(1025, 'x'));
 }
 
-// Bug: Logger::logf (logger.cpp:192-212) formats into a 1024 byte std::string and never shrinks it,
-// so sinks receive LogMsg::str with the text followed by NUL padding (and one trailing NUL for long
-// messages). Sinks that use log.str directly, rather than through c_str(), get the padding.
-TEST_CASE("Logger formatted messages have no trailing NUL padding", "[logger][!shouldfail]")
+// LogMsg::str must hold exactly the formatted text, as some sinks use it directly rather than
+// through c_str()
+TEST_CASE("Logger formatted messages have no trailing NUL padding", "[logger]")
 {
     LoggerWithSink t;
     t.logger.info("value=%d", 5);
@@ -253,15 +256,19 @@ TEST_CASE("LoggerSink format_log colored layout and color position", "[logger]")
     CHECK(plain.substr(cpos) == "(W) careful\n");
 }
 
-// Bug: slog::vformat (logger.cpp:55,67) retries with a buffer of exactly `needed` bytes, leaving no
-// room for the NUL, so any formatted line of 1024 characters or more loses its final '\n'.
-TEST_CASE("LoggerSink format_log keeps the newline of long lines", "[logger][!shouldfail]")
+// Formatted lines at and beyond vformat's 1024 byte buffer, which needs room for the NUL
+TEST_CASE("LoggerSink format_log keeps the newline of long lines", "[logger]")
 {
     RecordingSink s;
-    std::string big(1500, 'b');
-    std::string out = s.format({big, slog::LOG_INFO}, false);
-    CHECK(out.size() == 24 + 4 + big.size() + 1);
-    CHECK(out.back() == '\n');
+    // 24 byte timestamp + "(I) " + message + '\n'
+    for (size_t len : {994, 995, 996, 1500})
+    {
+        std::string big(len, 'b');
+        std::string out = s.format({big, slog::LOG_INFO}, false);
+        CHECK(out.size() == 24 + 4 + big.size() + 1);
+        CHECK(out.back() == '\n');
+        CHECK(out.substr(28, len) == big);
+    }
 }
 
 TEST_CASE("FileSink writes formatted lines and respects its level", "[logger]")
