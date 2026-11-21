@@ -432,3 +432,35 @@ TEST_CASE("XRITDemux skips a first packet too short for the transport file heade
     CHECK(files[0].filename == "NEXT.lrit");
     CHECK(bytesDiff(files[0].lrit_data, next) == "");
 }
+
+TEST_CASE("XRITDemux starts each file without the flags of the previous one", "[plugins][xrit_support][xrit_demux]")
+{
+    // The callbacks keep what they find out about a file in its flags, e.g. that it is
+    // compressed. The next file on the same APID may be different.
+    Bytes first = textFile("FIRST.lrit", 500, 25), second = textFile("SECOND.lrit", 500, 26);
+    Mux mux;
+    mux.add(5, packetize(first, 40, 0, PACKET));
+    mux.add(5, packetize(second, 40, 10, PACKET));
+
+    xr::XRITDemux demuxer;
+    std::vector<size_t> flags_seen;
+    demuxer.onParseHeader = [&](xr::XRITFile &f)
+    {
+        if (f.filename == "FIRST.lrit")
+            f.custom_flags[7] = 1;
+    };
+    demuxer.onProcessData = [&](xr::XRITFile &f, ccsds::CCSDSPacket &, bool)
+    {
+        if (f.filename == "SECOND.lrit")
+            flags_seen.push_back(f.custom_flags.size());
+        return true;
+    };
+    auto files = demux(demuxer, mux.vcdus());
+
+    REQUIRE(files.size() == 2);
+    CHECK(files[0].custom_flags[7] == 1);
+    CHECK(files[1].custom_flags.empty());
+    // Nor do the callbacks see them while the file comes in
+    CHECK(flags_seen == std::vector<size_t>(packetize(second, 40, 10, PACKET).size() - 1, 0));
+    CHECK(bytesDiff(files[1].lrit_data, second) == "");
+}

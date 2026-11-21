@@ -84,6 +84,7 @@ namespace satdump
                         finalizeLRITData(current_file);
 
                     current_file.lrit_data.clear();
+                    current_file.custom_flags.clear(); // Those of the previous file on this APID do not apply
 
                     // The transport file header and the CRC alone take 12 bytes
                     if (pkt.payload.size() < 12)

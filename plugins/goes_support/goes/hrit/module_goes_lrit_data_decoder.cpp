@@ -75,7 +75,7 @@ namespace goes
 
             lrit_demux.onParseHeader = [this](satdump::xrit::XRITFile &file) -> void
             {
-                file.custom_flags.insert({RICE_COMPRESSED, false});
+                file.custom_flags.insert_or_assign(RICE_COMPRESSED, false);
 
                 // Check if this is image data
                 if (file.hasHeader<satdump::xrit::ImageStructureRecord>())

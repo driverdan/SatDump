@@ -625,6 +625,30 @@ TEST_CASE("GOESLRITDataDecoderModule uses the Rice settings of the file", "[plug
     CHECK(env.log.contains("Pixels per block : 16", slog::LOG_DEBUG));
 }
 
+TEST_CASE("GOESLRITDataDecoderModule decodes the files after a Rice compressed image on the same APID as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, riceImagePackets(riceImageHeaders("IMAGE.lrit"), imageLines(), APID));
+
+    // Files in several packets, which go through the Rice decompression if it is still on
+    std::string text;
+    for (int i = 0; i < 50; i++)
+        text += "Line " + std::to_string(i) + " of a message\r\n";
+    Bytes pixels;
+    for (int y = 0; y < LINES; y++)
+        for (uint8_t p : linePixels(y))
+            pixels.push_back(p);
+    mux.add(VCID, packetize(lritFile(1, {annotationRecord("MESSAGE.lrit"), noaaRecord(1, 0, 0, 0)}, Bytes(text.begin(), text.end())), APID, 100, 300));
+    mux.add(VCID, packetize(lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 0), annotationRecord("CHART.lrit"), noaaRecord(1, 0, 0, 0)}, pixels), APID, 200, 500));
+    decode(env, mux);
+
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/MESSAGE.txt", "IMAGES/CHART.lrit.png", "IMAGES/IMAGE.lrit.png"});
+    CHECK(env.read("Admin Messages/MESSAGE.txt") == text);
+    CHECK(savedLines(env.path("IMAGES/CHART.lrit.png")) == linesWith({}));
+    CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({}));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule assembles the segments of a GOES-R ABI image", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
