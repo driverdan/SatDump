@@ -49,7 +49,7 @@ namespace satdump
                 // Check CRC
                 if (!ccsds::crcCheckHLDC32(pkt))
                 {
-                    logger->error("LRIT CRC is invalid... Skipping. %d - %d %d - %d", pkt.header.apid, pkt.header.packet_length, pkt.payload.size(), pkt.header.packet_sequence_count);
+                    logger->error("LRIT CRC is invalid... Skipping. %d - %d %zu - %d", pkt.header.apid, pkt.header.packet_length, pkt.payload.size(), pkt.header.packet_sequence_count);
                     current_file.clear();
                     continue;
                 }
