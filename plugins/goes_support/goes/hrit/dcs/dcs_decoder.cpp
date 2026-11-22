@@ -419,8 +419,9 @@ namespace goes
                     continue;
                 }
 
-                // Block header and CRC, and the fixed fields of a DCP message or a missed message
-                size_t min_block_length = block_id == 1 ? 42 : block_id == 2 ? 27 : 5;
+                // ID, length and CRC (5 bytes), plus the 36 byte header of a DCP message or the 24 byte
+                // header of a missed message (HRIT DCS File Format, Rev 1)
+                size_t min_block_length = block_id == 1 ? 41 : block_id == 2 ? 29 : 5;
                 if (block_length < min_block_length)
                 {
                     logger->warn("Invalid DCS block length! Skipping remainder of file");
@@ -567,11 +568,15 @@ namespace goes
 
                     //std::string source_secondary = std::string(&block_ptr[37], &block_ptr[39]);
 
-                    dcs_message->header.type_id = block_ptr[39] & 0x3f;
+                    // The first data byte, if the message has data
+                    if (block_length > 41)
+                    {
+                        dcs_message->header.type_id = block_ptr[39] & 0x3f;
+                        hex_stream << std::hex << std::setfill('0') << std::setw(2) << +block_ptr[39];
+                    }
 
                     // Initial body parsing
                     bool found_beginning = false;
-                    hex_stream << std::hex << std::setfill('0') << std::setw(2) << +block_ptr[39];
                     for (size_t i = 40; i < block_length - 2; i++)
                     {
                         // Save raw data as hex

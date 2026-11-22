@@ -1,9 +1,12 @@
 #include "cli_test_helpers.h"
 #include "goes_support/goes/hrit/module_goes_lrit_data_decoder.h"
 #include "helpers/temp_files.h"
+#include "helpers/wait.h"
 #include <catch2/catch_test_macros.hpp>
 #include <cstdio>
 #include <filesystem>
+#include <future>
+#include <thread>
 
 // processDCS() is given a DCS file holding one DCP message, and writes what it decoded of it
 // to DCS/<file name>.json. The DCP of the message is put in the PDT list the decoder uses.
@@ -30,6 +33,19 @@ namespace
         ~DCSDecoder() { dcp_list.erase(ADDRESS); }
 
         bool process(std::vector<uint8_t> &file) { return processDCS(file.data(), file.size()); }
+
+        // process() on a thread of its own, so that a parser that never returns fails the test
+        // instead of stalling the run. The thread is then left running, with its own references
+        // to the decoder and the file.
+        static bool processBounded(std::shared_ptr<DCSDecoder> decoder, std::vector<uint8_t> file)
+        {
+            std::packaged_task<bool()> task([decoder, file]() mutable { return decoder->process(file); });
+            std::future<bool> result = task.get_future();
+            std::thread(std::move(task)).detach();
+            if (result.wait_for(test_helpers::kTimeout) != std::future_status::ready)
+                FAIL("processDCS() did not return");
+            return result.get();
+        }
 
         void addDCP(const std::vector<std::string> &physical_elements)
         {
@@ -78,10 +94,9 @@ namespace
         TempDir tmp("goes_dcs");
         std::filesystem::create_directories(tmp.file("DCS"));
 
-        DCSDecoder decoder(tmp.str());
-        decoder.addDCP(physical_elements);
-        auto file = dcsFile(body);
-        REQUIRE(decoder.process(file));
+        auto decoder = std::make_shared<DCSDecoder>(tmp.str());
+        decoder->addDCP(physical_elements);
+        REQUIRE(DCSDecoder::processBounded(decoder, dcsFile(body)));
 
         nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
         REQUIRE(out["blocks"].size() == 1);
@@ -208,22 +223,23 @@ namespace
         cli_test::LogCapture log;
         TempDir tmp("goes_dcs");
         std::filesystem::create_directories(tmp.file("DCS"));
-        DCSDecoder decoder(tmp.str());
-        CHECK_FALSE(decoder.process(file));
+        CHECK_FALSE(DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), file));
         CHECK(log.contains(warning));
         CHECK_FALSE(std::filesystem::exists(tmp.file("DCS/" + FILE_NAME + ".json")));
     }
 } // namespace
 
 // #67: the block CRC loop ran 64 KiB past a block of length 0 or 1 (and never ended for 0),
-// and the fields of a short message block were read past it
+// and the fields of a short missed message block were read past it. The minimum lengths are
+// those of the HRIT DCS file format: 41 for a DCP message with no data, 29 for a missed message.
 TEST_CASE("DCS blocks shorter than their fields are not parsed", "[plugins][goes_support][goes_dcs]")
 {
     SECTION("a DCP message block of length 0") { checkRejected(dcsFileOf(dcsBlock(1, 0)), "Invalid DCS block length"); }
     SECTION("a DCP message block of length 1") { checkRejected(dcsFileOf(dcsBlock(1, 1)), "Invalid DCS block length"); }
     SECTION("a DCP message block of length 2") { checkRejected(dcsFileOf(dcsBlock(1, 2)), "Invalid DCS block length"); }
-    SECTION("a DCP message block that ends inside its header") { checkRejected(dcsFileOf(dcsBlock(1, 41)), "Invalid DCS block length"); }
+    SECTION("a DCP message block that ends inside its header") { checkRejected(dcsFileOf(dcsBlock(1, 40)), "Invalid DCS block length"); }
     SECTION("a missed message block that ends inside its header") { checkRejected(dcsFileOf(dcsBlock(2, 26)), "Invalid DCS block length"); }
+    SECTION("a missed message block that ends inside its CRC") { checkRejected(dcsFileOf(dcsBlock(2, 28)), "Invalid DCS block length"); }
     SECTION("a block of an unknown type shorter than a block header and CRC") { checkRejected(dcsFileOf(dcsBlock(3, 4)), "Invalid DCS block length"); }
 }
 
@@ -232,16 +248,24 @@ TEST_CASE("DCS blocks of the smallest length are parsed", "[plugins][goes_suppor
     cli_test::LogCapture log;
     TempDir tmp("goes_dcs");
     std::filesystem::create_directories(tmp.file("DCS"));
-    DCSDecoder decoder(tmp.str());
 
-    std::vector<uint8_t> blocks = dcsBlock(1, 42);
-    std::vector<uint8_t> missed = dcsBlock(2, 27);
-    blocks.insert(blocks.end(), missed.begin(), missed.end());
-    auto file = dcsFileOf(blocks);
-    REQUIRE(decoder.process(file));
+    // A message, one with no data, a missed message, and a message
+    std::vector<uint8_t> no_data = dcsBlock(1, 41);
+    no_data[39] = 0x7f; // Its CRC, not a first data byte
+    no_data[40] = 0x01;
+    std::vector<uint8_t> blocks;
+    for (auto block : {dcsBlock(1, 50), no_data, dcsBlock(2, 29), dcsBlock(1, 50)})
+        blocks.insert(blocks.end(), block.begin(), block.end());
+    REQUIRE(DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), dcsFileOf(blocks)));
 
     nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
-    CHECK(out["blocks"].size() == 2);
+    REQUIRE(out["blocks"].size() == 4);
+    CHECK(out["blocks"][0]["type"] == "DCS Message");
+    CHECK(out["blocks"][1]["type"] == "DCS Message");
+    CHECK(out["blocks"][1]["header"]["type_id"] == 0);
+    CHECK(out["blocks"][1]["data_ascii"] == "");
+    CHECK(out["blocks"][2]["type"] == "Missed Message");
+    CHECK(out["blocks"][3]["type"] == "DCS Message");
 }
 
 // #67: the header was read before the size was known to hold it
