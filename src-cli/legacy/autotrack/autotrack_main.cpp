@@ -17,7 +17,7 @@ int main_autotrack(int argc, char *argv[])
 {
     if (argc < 3) // Check overall command
     {
-        logger->error("Usage : " + std::string(argv[0]) + " autotrack autotrack_config.json");
+        logger->error("Usage : %s autotrack autotrack_config.json", argv[0]);
         logger->error("Sample command :");
         logger->error("./satdump autotrack autotrack_config.json");
         return 1;
