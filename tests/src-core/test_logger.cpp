@@ -1,4 +1,5 @@
 #include "common/utils.h" // timegm on MSVC
+#include "helpers/guards.h"
 #include "helpers/temp_files.h"
 #include "logger.h"
 #include <catch2/catch_test_macros.hpp>
@@ -12,6 +13,14 @@
 // sinks. Note that Logger::add_sink replays the process-wide init buffer (messages logged before
 // completeLoggerInit(), which the test main never calls), so recording sinks are cleared after
 // being added.
+
+// The init buffer is made of data symbols of satdump_core that no header declares, so they are not
+// exported from the Windows DLL: the test that uses them is skipped with MSVC
+#ifndef _MSC_VER
+// Defined (non-static) in logger.cpp
+extern std::vector<slog::LogMsg> init_log_buffer;
+extern bool init_buffer_active;
+#endif
 
 namespace
 {
@@ -138,21 +147,26 @@ TEST_CASE("Logger drops messages logged at LOG_OFF", "[logger]")
 }
 
 // The init buffer is replayed into every sink added later, so a LOG_OFF message must not be
-// buffered either
+// buffered either. Buffering stops for good after 1000 messages from any logger of the process,
+// so the test turns it back on, with an empty buffer, to always check the replay. This needs
+// data symbols of satdump_core that are not exported from the Windows DLL
+#ifndef _MSC_VER
 TEST_CASE("Logger does not replay LOG_OFF messages to sinks added later", "[logger]")
 {
+    test_helpers::ValueGuard<std::vector<slog::LogMsg>> buffer_guard(init_log_buffer, std::vector<slog::LogMsg>());
+    test_helpers::ValueGuard<bool> active_guard(init_buffer_active, true);
+
     slog::Logger l;
-    const std::string marker = "logged at off, must not be replayed";
-    l.log(slog::LOG_OFF, marker);
+    l.log(slog::LOG_OFF, std::string("logged at off, must not be replayed"));
+    l.info("replayed");
 
     auto late = std::make_shared<RecordingSink>();
     l.add_sink(late);
-    for (auto &m : late->msgs)
-    {
-        CHECK(m.str != marker);
-        CHECK(m.lvl < slog::LOG_OFF);
-    }
+    REQUIRE(late->msgs.size() == 1);
+    CHECK(late->msgs[0].str == "replayed");
+    CHECK(late->msgs[0].lvl == slog::LOG_INFO);
 }
+#endif
 
 TEST_CASE("Logger printf-style formatting", "[logger]")
 {
