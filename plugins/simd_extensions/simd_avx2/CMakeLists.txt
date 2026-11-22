@@ -20,7 +20,10 @@ endif()
 # CXX_AVX2_FOUND is FindAVX's overall result: the C++ compiler builds AVX2 code, with or
 # without the flags it found (CXX_AVX2_FLAGS). Its per-attempt results (CXX_HAS_<type>_<n>)
 # depend on which attempt succeeded, so they are not used here.
-if(CXX_AVX2_FOUND)
+# MSVC compiles the AVX2 test program without any flag, so CXX_AVX2_FOUND is TRUE there and
+# this would build the plugin on Windows x64 for the first time. It has never been compiled
+# with MSVC: keep it off there until a Windows build has been checked.
+if(CXX_AVX2_FOUND AND NOT MSVC)
     message("Found AVX2 features, enabling AVX2 plugin")
 
     file(GLOB_RECURSE simd_avx2_CPPS *.cpp)
