@@ -166,7 +166,7 @@ namespace satdump
                 rational_rate.num = (samplerate - rational_rate.integer) * rational_rate.den;
                 bladerf_set_rational_sample_rate(bladerf_dev_obj, BLADERF_CHANNEL_RX(0), &rational_rate, &actual);
                 uint64_t actuals = actual.integer + (actual.num / static_cast<double>(actual.den));
-                logger->info("Actual samplerate %d (rational)", actuals);
+                logger->info("Actual samplerate %llu (rational)", (unsigned long long)actuals);
             }
 #endif
 

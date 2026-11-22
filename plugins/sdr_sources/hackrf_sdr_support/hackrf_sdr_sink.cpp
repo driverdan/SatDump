@@ -166,7 +166,7 @@ void HackRFSink::set_frequency(uint64_t frequency)
     if (is_open && is_started)
     {
         hackrf_set_freq(hackrf_dev_obj, frequency);
-        logger->debug("Set HackRF frequency to %d", frequency);
+        logger->debug("Set HackRF frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSink::set_frequency(frequency);
 }

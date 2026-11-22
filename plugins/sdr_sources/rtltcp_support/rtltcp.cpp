@@ -154,7 +154,7 @@ void RTLTCPSource::set_frequency(uint64_t frequency)
     if (is_open && is_started)
     {
         client.setFrequency(frequency);
-        logger->debug("Set RTL-TCP frequency to %d", frequency);
+        logger->debug("Set RTL-TCP frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

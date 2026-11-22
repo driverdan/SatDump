@@ -62,7 +62,7 @@ namespace sstv
             if (md.timestamp != 0 && (d_parameters.contains("start_timestamp") ? d_parameters["start_timestamp"] == -1 : 1))
             {
                 d_parameters["start_timestamp"] = md.timestamp;
-                logger->trace("Has timestamp %d", md.timestamp);
+                logger->trace("Has timestamp %lld", (long long)md.timestamp);
             }
             else
             {

@@ -249,7 +249,7 @@ void AaroniaSource::start()
             while (decim <= 128)
             {
                 uint64_t samprate = SPECTRAN_SAMPLERATE_61_44M / decim;
-                logger->info("%llu %llu", current_samplerate, samprate);
+                logger->info("%llu %llu", (unsigned long long)current_samplerate, (unsigned long long)samprate);
                 if (samprate == current_samplerate)
                 {
                     current_decimation = decim;
@@ -267,7 +267,7 @@ void AaroniaSource::start()
             while (decim <= 128)
             {
                 uint64_t samprate = SPECTRAN_SAMPLERATE_92M / decim;
-                logger->info("%llu %llu", current_samplerate, samprate);
+                logger->info("%llu %llu", (unsigned long long)current_samplerate, (unsigned long long)samprate);
                 if (samprate == current_samplerate)
                 {
                     current_decimation = decim;
@@ -359,7 +359,7 @@ void AaroniaSource::set_frequency(uint64_t frequency)
         // Set frequency
         if (rtsa_api->AARTSAAPI_ConfigFind(&aaronia_device, &root, &config, L"main/centerfreq") == AARTSAAPI_OK)
             rtsa_api->AARTSAAPI_ConfigSetFloat(&aaronia_device, &config, frequency);
-        logger->debug("Set Aaronia frequency to %d", frequency);
+        logger->debug("Set Aaronia frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

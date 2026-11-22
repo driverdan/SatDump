@@ -68,13 +68,13 @@ protected:
 
                 if (cnt > dsp::STREAM_BUFFER_SIZE)
                 {
-                    logger->critical("Spectran buffer too big!", cnt);
+                    logger->critical("Spectran buffer too big! %d", cnt);
                     continue;
                 }
 
                 if (cnt > dsp::STREAM_BUFFER_SIZE)
                 {
-                    logger->critical("Spectran buffer too big!", cnt);
+                    logger->critical("Spectran buffer too big! %d", cnt);
                     continue;
                 }
 

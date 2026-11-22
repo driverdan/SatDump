@@ -304,7 +304,7 @@ namespace proba
                                 else if (pkt.header.apid == 284)
                                     vegx_reader18.work(pkt);
                                 else
-                                    logger->info("%d, %d", pkt.header.apid, pkt.payload.size());
+                                    logger->info("%d, %zu", pkt.header.apid, pkt.payload.size());
                             }
                         }
                         else if (d_satellite == PROBA_3) {}

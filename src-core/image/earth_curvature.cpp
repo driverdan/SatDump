@@ -124,7 +124,7 @@ namespace satdump
                 {
                     if ((int)img.width() != proj_cfg["corr_width"].get<int>())
                     {
-                        logger->debug("Image width mistmatch %d %d => RES %f/%f", proj_cfg["corr_width"].get<int>(), img.width(), resol, swath);
+                        logger->debug("Image width mistmatch %d %zu => RES %f/%f", proj_cfg["corr_width"].get<int>(), img.width(), resol, swath);
                         resol *= proj_cfg["corr_width"].get<int>() / float(img.width());
                     }
                 }

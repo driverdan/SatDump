@@ -96,7 +96,7 @@ namespace metopsg
                 return;
             }
 
-            logger->warn("Unknown Sentinel-5 packet! %5d %3d %2d %5d", pkt.header.apid, mkr, mkr2, pkt.payload.size());
+            logger->warn("Unknown Sentinel-5 packet! %5d %3d %2d %5zu", pkt.header.apid, mkr, mkr2, pkt.payload.size());
 
             total_packets++;
         }

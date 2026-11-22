@@ -155,7 +155,7 @@ namespace satdump
                 {
 
                     unsigned char *buf = (unsigned char *)_TIFFmalloc(TIFFTileSize(tif));
-                    logger->error("%d - %d - %d - %d", tile_width, tile_length, d_channels, TIFFTileSize(tif));
+                    logger->error("%d - %d - %d - %lld", tile_width, tile_length, d_channels, (long long)TIFFTileSize(tif));
                     for (size_t y = 0; y < d_height; y += tile_length)
                     {
                         for (size_t x = 0; x < d_width; x += tile_width)
