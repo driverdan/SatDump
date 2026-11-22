@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <fstream>
 #include <filesystem>
 #include "common/dsp/buffer.h"
@@ -25,7 +26,7 @@ namespace dsp
         std::ifstream input_file;
 
         // Control
-        bool should_repeat = false;
+        std::atomic<bool> should_repeat{false};
 
     private:
         // Main mutex
