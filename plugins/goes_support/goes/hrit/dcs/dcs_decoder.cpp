@@ -128,6 +128,10 @@ namespace goes
                 {
                     try
                     {
+                        // A line must reach the data format field. Every field after it is checked before use.
+                        if (pdt_line.size() <= field_offsets[10])
+                            throw std::runtime_error("line too short");
+
                         std::shared_ptr<DCP> new_dcp = std::make_shared<DCP>();
 
                         // Agency
@@ -154,7 +158,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[14])
                         {
                             int desc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     desc_last_pos = last_pos;
                             if (desc_last_pos != 0)
@@ -168,7 +172,7 @@ namespace goes
                         // Lat and Lon
                         // This is supposed to be in Degrees, Minutes, and seconds, but some PDTs report it as a decimal.
                         // Often does not report correctly for West or East. These are all upstream errors.
-                        if (pdt_line.size() >= field_offsets[16])
+                        if (pdt_line.size() >= field_offsets[17])
                         {
                             // Correct format
                             if (pdt_line[field_offsets[16] + 1] == '0' || (pdt_line[field_offsets[16] + 1] == '1' && pdt_line[field_offsets[16] + 2] < '9'))
@@ -199,7 +203,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[18])
                         {
                             int manu_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     manu_last_pos = last_pos;
                             if (manu_last_pos != 0)
@@ -214,7 +218,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[19])
                         {
                             int model_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     model_last_pos = last_pos;
                             if (model_last_pos != 0)
@@ -229,7 +233,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[22])
                         {
                             int nmc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     nmc_last_pos = last_pos;
                             if (nmc_last_pos != 0)
@@ -243,9 +247,9 @@ namespace goes
                         // SHEF Codes in this file are mostly wrong - ignore!
 
                         // Finish up
-                        dcp_mtx.lock();
-                        dcp_list[std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16)] = new_dcp;
-                        dcp_mtx.unlock();
+                        uint32_t device_address = std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16);
+                        std::lock_guard<std::mutex> lock(dcp_mtx);
+                        dcp_list[device_address] = new_dcp;
                     }
                     catch (std::exception &e)
                     {
@@ -290,10 +294,14 @@ namespace goes
 
                     try
                     {
+                        // Up to the description
+                        if (hads_tokens.size() < 10)
+                            throw std::runtime_error("too few fields");
+
                         std::shared_ptr<DCP> this_dcp;
                         uint32_t device_address = std::stoul(hads_tokens[0], nullptr, 16);
 
-                        dcp_mtx.lock();
+                        std::unique_lock<std::mutex> lock(dcp_mtx);
                         if (dcp_list.count(device_address) > 0)
                             this_dcp = dcp_list[device_address];
 
@@ -303,12 +311,12 @@ namespace goes
                             this_dcp = std::make_shared<DCP>();
                             this_dcp->agency = hads_tokens[2];
                             this_dcp->state = hads_tokens[3];
-                            dcp_list[device_address] = this_dcp;
 
                             // Other info
                             this_dcp->transmit_interval = std::stoi(hads_tokens[8]);
+                            dcp_list[device_address] = this_dcp;
                         }
-                        dcp_mtx.unlock();
+                        lock.unlock();
 
                         // Latitude
                         std::stringstream degree_stream;
@@ -332,7 +340,7 @@ namespace goes
 
                         this_dcp->description = hads_tokens[9];
 
-                        for (size_t i = 11; i < hads_tokens.size() - 5; i += 5)
+                        for (size_t i = 11; i + 5 < hads_tokens.size(); i += 5)
                         {
                             if (hads_tokens[i] == "")
                                 break;
