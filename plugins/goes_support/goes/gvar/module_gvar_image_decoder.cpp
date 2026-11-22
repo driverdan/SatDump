@@ -405,7 +405,7 @@ namespace goes
                                     (timeReadable->tm_hour > 9 ? std::to_string(timeReadable->tm_hour) : "0" + std::to_string(timeReadable->tm_hour)) + "-" +
                                     (timeReadable->tm_min > 9 ? std::to_string(timeReadable->tm_min) : "0" + std::to_string(timeReadable->tm_min));
 
-            logger->info("New sounder scan starting, saving at " + timestamp + "...");
+            logger->info("New sounder scan starting, saving at %s...", timestamp.c_str());
 
             std::filesystem::create_directories(directory_snd + "/" + timestamp);
             std::string directory_d = directory_snd + "/" + timestamp;
@@ -470,7 +470,7 @@ namespace goes
                 vis_height = images.image5.height();
 
             std::string dir_name = "GOES-" + std::to_string(sat_number) + "/" + timestamp;
-            logger->info("Full disk finished, saving at " + dir_name + "...");
+            logger->info("Full disk finished, saving at %s...", dir_name.c_str());
 
             std::string disk_folder = directory + "/" + dir_name;
             std::filesystem::create_directories(disk_folder);
@@ -575,7 +575,7 @@ namespace goes
             }
             else
             {
-                logger->warn("Resource " + filename + " doesn't exist. Can't calibrate!");
+                logger->warn("Resource %s doesn't exist. Can't calibrate!", filename.c_str());
             }
 
             // Save
@@ -678,8 +678,8 @@ namespace goes
             if (!std::filesystem::exists(directory_snd))
                 std::filesystem::create_directory(directory_snd);
 
-            logger->info("Using input frames " + d_input_file);
-            logger->info("Decoding to " + directory);
+            logger->info("Using input frames %s", d_input_file.c_str());
+            logger->info("Decoding to %s", directory.c_str());
 
             time_t image_time = 0;
             // Time when processing started, used as a backup if no other time is decoded

@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     auto v = [](const satdump::proj::RequestSatelliteRaytracerEvent &evt)
     {
-        logger->info("REGISTER!!!! " + evt.id);
+        logger->info("REGISTER!!!! %s", evt.id.c_str());
         if (evt.id == "normal_single_xy_line")
         {
             try

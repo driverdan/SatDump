@@ -65,7 +65,7 @@ namespace webhook_app
         payload[payload_key] = message;
 
         std::string json = payload.dump();
-        logger->debug("Sending webhook: \"" + json + "\"");
+        logger->debug("Sending webhook: \"%s\"", json.c_str());
 
         std::string response;
         satdump::perform_http_request_post(url, response, json, "Content-Type: application/json");

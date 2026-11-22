@@ -41,30 +41,30 @@ namespace spacex
 #else
         std::ofstream video_out = std::ofstream(directory + "/camera.mxf", std::ios::binary);
         // d_output_files.push_back(directory + "/camera.mxf");
-        logger->info("Decoding to " + directory + "/camera.mxf");
+        logger->info("Decoding to %s/camera.mxf", directory.c_str());
         logger->warn("This MXF (MPEG) video stream may need to be converted to be usable. GStreamer is recommended as it gives significantly better results than most other software!");
         logger->warn("gst-launch-1.0 filesrc location=\"camera.mxf\" ! decodebin ! videoconvert ! avimux name=mux ! filesink location=camera.avi");
 #endif
 
         std::ofstream gps_debug_out = std::ofstream(directory + "/gps_debug.txt");
         // d_output_files.push_back(directory + "/gps_debug.txt");
-        logger->info("Decoding to " + directory + "/gps_debug.txt");
+        logger->info("Decoding to %s/gps_debug.txt", directory.c_str());
 
         std::ofstream sfc1a_debug = std::ofstream(directory + "/sfc1a_debug.txt");
         // d_output_files.push_back(directory + "/sfc1a_debug.txt");
-        logger->info("Decoding to " + directory + "/sfc1a_debug.txt");
+        logger->info("Decoding to %s/sfc1a_debug.txt", directory.c_str());
 
         std::ofstream sftmm1a_debug = std::ofstream(directory + "/sftmm1a_debug.txt");
         // d_output_files.push_back(directory + "/sftmm1a_debug.txt");
-        logger->info("Decoding to " + directory + "/sftmm1a_debug.txt");
+        logger->info("Decoding to %s/sftmm1a_debug.txt", directory.c_str());
 
         std::ofstream sftmm1b_debug = std::ofstream(directory + "/sftmm1b_debug.txt");
         // d_output_files.push_back(directory + "/sftmm1b_debug.txt");
-        logger->info("Decoding to " + directory + "/sftmm1b_debug.txt");
+        logger->info("Decoding to %s/sftmm1b_debug.txt", directory.c_str());
 
         std::ofstream sftmm1c_debug = std::ofstream(directory + "/sftmm1c_debug.txt");
         // d_output_files.push_back(directory + "/sftmm1c_debug.txt");
-        logger->info("Decoding to " + directory + "/sftmm1c_debug.txt");
+        logger->info("Decoding to %s/sftmm1c_debug.txt", directory.c_str());
 
         //  data_out = std::ofstream(d_output_file_hint + ".frm", std::ios::binary);
         //  d_output_files.push_back(d_output_file_hint + ".frm");

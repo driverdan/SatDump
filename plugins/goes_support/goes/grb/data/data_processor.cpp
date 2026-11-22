@@ -115,7 +115,7 @@ namespace goes
                 std::string filename = "ABI_" + zone + "_" + std::to_string(abi_product.channel) + "_" + timestamp_to_string(generic_header.utc_time);
                 std::string abi_dir = directory + "/ABI/" + zone + "/" + timestamp_to_string(generic_header.utc_time) + "/";
                 std::filesystem::create_directories(abi_dir);
-                logger->info("Saving " + abi_dir + filename + ".xml");
+                logger->info("Saving %s%s.xml", abi_dir.c_str(), filename.c_str());
                 std::ofstream output_xml(abi_dir + filename + ".xml", std::ios::binary);
                 output_xml.write((char *)&payload.payload[21], payload.payload.size() - 21);
                 output_xml.close();
@@ -151,7 +151,7 @@ namespace goes
             {
                 GRBGenericPayloadHeader generic_header(&payload.payload[0]);
                 std::string filename = "SUVI_" + channel + "_" + timestamp_to_string(generic_header.utc_time);
-                logger->info("Saving " + suvidir + filename + ".xml");
+                logger->info("Saving %s%s.xml", suvidir.c_str(), filename.c_str());
                 std::ofstream output_xml(suvidir + filename + ".xml", std::ios::binary);
                 output_xml.write((char *)&payload.payload[21], payload.payload.size() - 21);
                 output_xml.close();
@@ -170,7 +170,7 @@ namespace goes
             {
                 GRBGenericPayloadHeader generic_header(&payload.payload[0]);
                 std::string utc_filename = timestamp_to_string(generic_header.utc_time);
-                logger->info("Saving " + directory + "/Information/" + utc_filename + ".xml");
+                logger->info("Saving %s/Information/%s.xml", directory.c_str(), utc_filename.c_str());
                 std::ofstream output_xml(directory + "/Information/" + utc_filename + ".xml", std::ios::binary);
                 output_xml.write((char *)&payload.payload[21], payload.payload.size() - 21);
                 output_xml.close();
@@ -193,7 +193,7 @@ namespace goes
                     std::string glm_meta_dir = directory + "/GLM/Meta/";
                     std::filesystem::create_directories(glm_meta_dir);
                     std::string utc_filename = timestamp_to_string(generic_header.utc_time);
-                    logger->info("Saving " + glm_meta_dir + utc_filename + ".xml");
+                    logger->info("Saving %s%s.xml", glm_meta_dir.c_str(), utc_filename.c_str());
                     std::ofstream output_xml(glm_meta_dir + utc_filename + ".xml", std::ios::binary);
                     output_xml.write((char *)&payload.payload[21], payload.payload.size() - 21);
                     output_xml.close();
@@ -204,7 +204,7 @@ namespace goes
                     std::string glm_dir = directory + "/GLM/" + (glm_cfg == products::GLM::FLASH ? "Flash" : (glm_cfg == products::GLM::EVENT ? "Event" : "Group")) + "/";
                     std::filesystem::create_directories(glm_dir);
                     std::string utc_filename = timestamp_to_string(generic_header.utc_time);
-                    logger->info("Saving " + glm_dir + utc_filename + ".json");
+                    logger->info("Saving %s%s.json", glm_dir.c_str(), utc_filename.c_str());
                     std::ofstream output_glm(glm_dir + utc_filename + ".json", std::ios::binary);
                     output_glm.write((char *)glm_data.c_str(), glm_data.size());
                     output_glm.close();

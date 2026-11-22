@@ -30,7 +30,7 @@ namespace lucky7
             if (frame_buffer[1] == 0x00) // TLM
             {
                 std::string callsign(&frame_buffer[6], &frame_buffer[12]);
-                logger->info("Telemetry " + callsign);
+                logger->info("Telemetry %s", callsign.c_str());
             }
             else if ((frame_buffer[1] & 0xC0) == 0xC0) // Imagery
             {

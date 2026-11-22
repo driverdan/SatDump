@@ -44,8 +44,8 @@ namespace noaa
             data_out = std::ofstream(d_output_file_hint + ".frm", std::ios::binary);
         d_output_file = d_output_file_hint + ".frm";
 
-        logger->info("Using input symbols " + d_input_file);
-        logger->info("Decoding to " + d_output_file_hint + ".frm");
+        logger->info("Using input symbols %s", d_input_file.c_str());
+        logger->info("Decoding to %s.frm", d_output_file_hint.c_str());
 
         time_t lastTime = 0;
 

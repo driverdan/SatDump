@@ -79,7 +79,7 @@ namespace stereo
 
                         std::filesystem::create_directories(output_directory + "/" + channel_name);
 
-                        logger->info("Saving SECCHI " + channel_name + " Image");
+                        logger->info("Saving SECCHI %s Image", channel_name.c_str());
 
                         if (last_timestamp_0 != 0)
                             image::save_img(img, output_directory + "/" + channel_name + "/" + filename_timestamp(last_timestamp_0));
@@ -125,7 +125,7 @@ namespace stereo
 
                         std::filesystem::create_directories(output_directory + "/" + channel_name);
 
-                        logger->info("Saving SECCHI " + channel_name + " Image");
+                        logger->info("Saving SECCHI %s Image", channel_name.c_str());
 
                         // if (last_timestamp_1 != 0)
                         //     img.save_img(output_directory + "/" + channel_name + "/" + filename_timestamp(last_timestamp_1));
@@ -168,7 +168,7 @@ namespace stereo
 
                         std::filesystem::create_directories(output_directory + "/" + channel_name);
 
-                        logger->info("Saving SECCHI " + channel_name + " Image");
+                        logger->info("Saving SECCHI %s Image", channel_name.c_str());
 
                         // if (last_timestamp_2 != 0)
                         //     img.save_img(output_directory + "/" + channel_name + "/" + filename_timestamp(last_timestamp_2));
@@ -225,7 +225,7 @@ namespace stereo
 
                         std::filesystem::create_directories(output_directory + "/" + channel_name);
 
-                        logger->info("Saving SECCHI " + channel_name + " Image");
+                        logger->info("Saving SECCHI %s Image", channel_name.c_str());
 
                         if (last_timestamp_3 != 0)
                             image::save_img(img, output_directory + "/" + channel_name + "/" + filename_timestamp(last_timestamp_3));

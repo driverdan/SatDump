@@ -154,7 +154,7 @@ namespace satdump
             int index = rtlsdr_get_index_by_serial(p_serial.c_str());
             if (index != -1 && rtlsdr_open(&rtlsdr_dev_obj, index) != 0)
                 throw satdump_exception("Could not open RTL-SDR device!");
-            logger->info("Opened RTL-SDR device! Serial : " + p_serial);
+            logger->info("Opened RTL-SDR device! Serial : %s", p_serial.c_str());
             is_open = true;
 
             // Set available gains

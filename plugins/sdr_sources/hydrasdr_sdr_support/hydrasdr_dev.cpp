@@ -74,7 +74,7 @@ namespace satdump
         {
             if (hydrasdr_open_sn(&hydrasdr_dev_obj, std::stoull(p_serial)) != HYDRASDR_SUCCESS)
                 throw satdump_exception("Could not open HydraSDR device! Serial : " + p_serial);
-            logger->info("Opened HydraSDR device! Serial : " + p_serial);
+            logger->info("Opened HydraSDR device! Serial : %s", p_serial.c_str());
             is_open = true;
 
             hydrasdr_set_samplerate(hydrasdr_dev_obj, p_samplerate);

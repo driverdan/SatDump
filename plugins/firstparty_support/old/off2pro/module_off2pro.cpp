@@ -46,7 +46,7 @@ namespace off2pro
                 nc2pro::process_sc3_slstr(source_off_file, pro_output_file, product_paths, &progress);
 
             else
-                logger->error("Unknown EUMETSAT file type! " + eum_id);
+                logger->error("Unknown EUMETSAT file type! %s", eum_id.c_str());
         }
         else if (source_off_path.extension() == ".nc")
         {

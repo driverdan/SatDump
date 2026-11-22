@@ -37,7 +37,7 @@ void sig_handler_ui(int signo)
         signal_caught = true;
 }
 
-static void glfw_error_callback(int error, const char *description) { logger->error("Glfw Error " + std::to_string(error) + ": " + description); }
+static void glfw_error_callback(int error, const char *description) { logger->error("Glfw Error %d: %s", error, description); }
 
 void window_content_scale_callback(GLFWwindow *, float xscale, float)
 {

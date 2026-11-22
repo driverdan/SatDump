@@ -52,7 +52,7 @@ private:
 public:
     RTSAApiInstance(std::string path)
     {
-        logger->trace("Loading RTSA API from " + path + "...");
+        logger->trace("Loading RTSA API from %s...", path.c_str());
 
         dynlib = dlopen(path.c_str(), RTLD_LAZY);
         if (!dynlib)

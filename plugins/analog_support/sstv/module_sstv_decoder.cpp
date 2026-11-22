@@ -72,7 +72,7 @@ namespace sstv
             data_in = std::ifstream(d_input_file, std::ios::binary);
         }
 
-        logger->info("Using input wav " + d_input_file);
+        logger->info("Using input wav %s", d_input_file.c_str());
 
         // SSTV Blocks
         satdump::ndsp::FIRBlock<float> bpf;

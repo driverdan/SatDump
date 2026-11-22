@@ -182,7 +182,7 @@ namespace inmarsat
                         }
                         else
                         {
-                            logger->debug(pkt_type_to_name(pkt_id));
+                            logger->debug("%s", pkt_type_to_name(pkt_id).c_str());
                         }
                         break;
                     }
@@ -192,7 +192,7 @@ namespace inmarsat
                         std::string name = pkt_type_to_name(pkt_id);
                         if (name.find("Reserved") == std::string::npos)
                             final_pkt["msg_name"] = name;
-                        logger->info("Packet : " + name);
+                        logger->info("Packet : %s", name.c_str());
                     }
 
                     final_pkt["timestamp"] = time(0);

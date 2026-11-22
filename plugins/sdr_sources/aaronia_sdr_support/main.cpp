@@ -28,7 +28,7 @@ public:
 
         if (!std::filesystem::exists(rtsa_api_path))
         {
-            logger->info("Couldn't find RTSA API at  '" + rtsa_api_path + "', not loading!");
+            logger->info("Couldn't find RTSA API at  '%s', not loading!", rtsa_api_path.c_str());
             return;
         }
 

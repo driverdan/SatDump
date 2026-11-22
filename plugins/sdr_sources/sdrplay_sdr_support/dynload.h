@@ -44,7 +44,7 @@ private:
 public:
     SDRPlayApiInstance(std::string path)
     {
-        logger->trace("Loading SDRPlay API from " + path + "...");
+        logger->trace("Loading SDRPlay API from %s...", path.c_str());
 
         dynlib = dlopen(path.c_str(), RTLD_LAZY);
         if (!dynlib)

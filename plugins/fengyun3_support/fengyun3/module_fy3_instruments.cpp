@@ -139,7 +139,7 @@ namespace fengyun3
             if (d_dump_mersi)
             {
                 std::string mersi_path = d_output_file_hint.substr(0, d_output_file_hint.rfind('/')) + "/mersi.bin";
-                logger->debug("Dumping mersi to " + mersi_path);
+                logger->debug("Dumping mersi to %s", mersi_path.c_str());
                 mersi_bin.open(mersi_path, std::ios::binary);
             }
 
@@ -485,7 +485,7 @@ namespace fengyun3
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
 
             if (d_satellite == FY_3E) // XEUVI

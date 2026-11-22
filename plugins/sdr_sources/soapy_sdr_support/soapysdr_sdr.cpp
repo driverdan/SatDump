@@ -15,7 +15,7 @@ void SoapySdrSource::set_params()
 
     // Antenna
     soapy_dev->setAntenna(SOAPY_SDR_RX, channel_id, antenna_list[antenna_id]);
-    logger->debug("Set SoapySDR Antenna to " + antenna_list[antenna_id]);
+    logger->debug("Set SoapySDR Antenna to %s", antenna_list[antenna_id].c_str());
 
     // Bandwidth Option
     if (manual_bandwidth)

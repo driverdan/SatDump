@@ -205,7 +205,7 @@ namespace nc2pro
             skip_this:
                 pluginIterator.increment(iteratorError);
                 if (iteratorError)
-                    logger->critical(iteratorError.message());
+                    logger->critical("%s", iteratorError.message().c_str());
             }
         }
 

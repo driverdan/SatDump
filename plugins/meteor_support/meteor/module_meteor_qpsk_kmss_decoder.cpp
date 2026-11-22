@@ -143,8 +143,8 @@ namespace meteor
         data_out = std::ofstream(d_output_file_hint + ".frm", std::ios::binary);
         d_output_file = d_output_file_hint + ".frm";
 
-        logger->info("Using input data " + d_input_file);
-        logger->info("Decoding to " + d_output_file_hint + ".frm");
+        logger->info("Using input data %s", d_input_file.c_str());
+        logger->info("Decoding to %s.frm", d_output_file_hint.c_str());
 
         satdump::SoftSymbolReader soft_reader(data_in, input_fifo, input_data_type, d_parameters);
 
@@ -270,8 +270,7 @@ namespace meteor
             {
                 lastTime = time(NULL);
                 std::string deframer_state = ""; // def->getState() == 0 ? "NOSYNC" : (def->getState() == 2 || def->getState() == 6 ? "SYNCING" : "SYNCED");
-                logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%, Deframer : " + deframer_state +
-                             ", Frames : " + std::to_string(frame_count));
+                logger->info("Progress %f%%, Deframer : %s, Frames : %d", round(((double)progress / (double)filesize) * 1000.0) / 10.0, deframer_state.c_str(), frame_count);
             }
         }
 
