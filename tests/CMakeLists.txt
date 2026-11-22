@@ -78,6 +78,7 @@ satdump_add_plugin_tests(rtltcp_support sdr_sources/rtltcp_support)
 satdump_add_plugin_tests(remote_sdr_support sdr_sources/remote_sdr_support)
 satdump_add_plugin_tests(xrit_support xrit_support)
 satdump_add_plugin_tests(goes_support goes_support)
+satdump_add_plugin_tests(fengyun2_support fengyun2_support)
 
 # Lets tests load files shipped in the repository (e.g. resources/)
 target_compile_definitions(satdump_tests PRIVATE SATDUMP_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

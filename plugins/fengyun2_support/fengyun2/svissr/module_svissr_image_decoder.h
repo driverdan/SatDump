@@ -8,6 +8,7 @@
 #include "image/svissr_reader.h"
 #include "logger.h"
 #include "pipeline/modules/base/filestream_to_filestream.h"
+#include <atomic>
 #include <thread>
 
 namespace fengyun_svissr
@@ -50,7 +51,7 @@ namespace fengyun_svissr
 
         // Utils values
         bool backwardScan;
-        bool writingImage = false;
+        std::atomic<bool> writingImage = false;
         int valid_lines;
         float approx_progess;
         bool apply_correction;
@@ -68,6 +69,10 @@ namespace fengyun_svissr
             image::Image image4; /* IR1 Long wave IR 10.3-11.3 μm */
             image::Image image5; /* IR2 Split window 11.5-12.5 μm */
 
+            // Subcommunication state of this disk, taken from the decoder when the disk ends
+            std::vector<MinorFrame> subcommunication_frames;
+            std::vector<std::vector<uint8_t>> detector_telemetry_stats;
+
             std::string directory;
         };
 
@@ -79,10 +84,15 @@ namespace fengyun_svissr
         std::vector<std::shared_ptr<SVISSRBuffer>> images_queue;
         std::thread images_queue_thread;
 
-        bool images_thread_should_run;
+        std::atomic<bool> images_thread_should_run = false;
+        bool images_queue_empty()
+        {
+            std::lock_guard<std::mutex> lock(images_queue_mtx);
+            return images_queue.empty();
+        }
         void image_saving_thread_f()
         {
-            while (images_thread_should_run || images_queue.size() > 0)
+            while (images_thread_should_run || !images_queue_empty())
             {
                 images_queue_mtx.lock();
                 bool has_images = images_queue.size() > 0;
@@ -122,6 +132,7 @@ namespace fengyun_svissr
 
         // Subcommunication block handling
         void save_subcom_frame();
+        void take_subcom_state(SVISSRBuffer &buffer);
         std::vector<MinorFrame> subcommunication_frames; /* 25 2097 byte groups forming a full subcommunication frame */
         MinorFrame current_subcom_frame;                 /* A full subcommunication frame */
         std::vector<Group> group_retransmissions;        /* Retransmissions of a given group */

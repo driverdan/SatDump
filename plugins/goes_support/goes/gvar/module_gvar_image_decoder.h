@@ -5,6 +5,7 @@
 #include "image/sounder_reader.h"
 #include "image/visible_reader.h"
 #include "pipeline/modules/base/filestream_to_filestream.h"
+#include <atomic>
 #include <thread>
 
 namespace goes
@@ -46,7 +47,8 @@ namespace goes
             std::atomic<uint64_t> progress;
 
             // Utils values
-            bool isImageInProgress, isSavingInProgress;
+            bool isImageInProgress;
+            std::atomic<bool> isSavingInProgress;
             float approx_progess;
 
             // Image readers
@@ -58,7 +60,7 @@ namespace goes
             // Async image writing
             std::string directory;
             std::string directory_snd;
-            bool writeImagesAync = false;
+            std::atomic<bool> writeImagesAync = false;
             std::thread imageSavingThread;
             std::mutex imageVectorMutex;
             std::vector<GVARImages> imagesVector;

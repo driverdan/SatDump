@@ -57,6 +57,8 @@ namespace fengyun_svissr
             // deleteImageTexture(textureID);
         }
 
+        // process() stops the thread, unless it did not return
+        images_thread_should_run = false;
         if (images_queue_thread.joinable())
         {
             images_queue_thread.join();
@@ -234,6 +236,25 @@ namespace fengyun_svissr
     }
 
     /**
+     * @brief Hands the subcommunication state of the disk that just ended over to its buffer,
+     * and starts the next disk from scratch. Runs on the decoder thread, as the buffer may be
+     * written by the saving thread while the next disk is decoded.
+     *
+     * @param buffer
+     */
+    void SVISSRImageDecoderModule::take_subcom_state(SVISSRBuffer &buffer)
+    {
+        buffer.subcommunication_frames = std::move(subcommunication_frames);
+        buffer.detector_telemetry_stats = std::move(detector_telemetry_stats);
+
+        // Ensures we have no leftovers from subcom handling
+        subcommunication_frames.clear();
+        current_subcom_frame.clear();
+        group_retransmissions.clear();
+        detector_telemetry_stats.clear();
+    }
+
+    /**
      * @brief Processes the received products
      *
      * @param buffer
@@ -294,10 +315,10 @@ namespace fengyun_svissr
         bool process_subcom_data = false;
 
         // Ensures we can and should decode it in the first place
-        logger->debug("Pulled %d subcommunication frames", subcommunication_frames.size());
-        if (!subcommunication_frames.empty())
+        logger->debug("Pulled %d subcommunication frames", buffer.subcommunication_frames.size());
+        if (!buffer.subcommunication_frames.empty())
         {
-            final_subcom_frame = satdump::majority_law_vec(subcommunication_frames);
+            final_subcom_frame = satdump::majority_law_vec(buffer.subcommunication_frames);
 
             // - Integrity check -
             int errors = get_spare_errors(final_subcom_frame);
@@ -481,7 +502,7 @@ namespace fengyun_svissr
                 logger->debug("Processing satellite telemetry...");
                 std::string active_sensor = (Calib_2_block[10] & 0b1) == 1 ? "Primary" : "Backup";
 
-                uint8_t active_detectors = satdump::majority_law_vec(detector_telemetry_stats)[0];
+                uint8_t active_detectors = satdump::majority_law_vec(buffer.detector_telemetry_stats)[0];
                 std::string telemetry_data = SVISSRTelemetryDumper::dump_telemetry_to_JSON(*orbit_attitude_block, attitude_prediction_data, orbit_prediction_data, active_sensor, active_detectors);
                 write_telemetry(unix_timestamp, telemetry_data);
             }
@@ -559,12 +580,9 @@ namespace fengyun_svissr
         buffer.image4.clear();
         buffer.image5.clear();
 
-        // Ensures we have no leftovers from subcom handling
-        subcommunication_frames.clear();
-        current_subcom_frame.clear();
-        group_retransmissions.clear();
+        buffer.subcommunication_frames.clear();
+        buffer.detector_telemetry_stats.clear();
         final_subcom_frame.clear();
-        detector_telemetry_stats.clear();
 
         writingImage = false;
     }
@@ -784,6 +802,7 @@ namespace fengyun_svissr
 
                 buffer->scid = satdump::most_common(scid_stats.begin(), scid_stats.end(), 0);
                 scid_stats.clear();
+                take_subcom_state(*buffer);
 
                 buffer->directory = directory;
 
@@ -837,16 +856,13 @@ namespace fengyun_svissr
 
                 buffer->scid = satdump::most_common(scid_stats.begin(), scid_stats.end(), 0);
                 scid_stats.clear();
+                take_subcom_state(*buffer);
 
                 buffer->directory = directory;
 
                 images_queue_mtx.lock();
                 images_queue.push_back(buffer);
                 images_queue_mtx.unlock();
-
-                images_thread_should_run = false;
-                if (images_queue_thread.joinable())
-                    images_queue_thread.join();
             }
             else
             {
@@ -867,11 +883,20 @@ namespace fengyun_svissr
 
                 buffer->scid = satdump::most_common(scid_stats.begin(), scid_stats.end(), 0);
                 scid_stats.clear();
+                take_subcom_state(*buffer);
 
                 buffer->directory = directory;
 
                 writeImages(*buffer);
             }
+        }
+
+        // Saves what is left in the queue, and stops the thread even when no disk was in progress
+        if (is_live)
+        {
+            images_thread_should_run = false;
+            if (images_queue_thread.joinable())
+                images_queue_thread.join();
         }
     }
 

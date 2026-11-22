@@ -2,6 +2,7 @@
 
 #include "common/ccsds/ccsds.h"
 #include "image/image.h"
+#include <atomic>
 #include <string>
 #include <thread>
 #include <mutex>
@@ -26,8 +27,8 @@ namespace meteosat
 
         private:
             std::thread compositeGeneratorThread;
-            bool can_make_composites;
-            bool composite_th_should_run = true;
+            bool can_make_composites = false;
+            std::atomic<bool> composite_th_should_run = true;
             void compositeThreadFunc();
 
             std::mutex compo_queue_mtx;
