@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <mutex>
 #include <string>
 
 namespace satdump
@@ -112,6 +113,9 @@ namespace satdump
             img.init(img.depth(), d_width, d_height, img.channels());
             for (int c = 0; c < d_channels; c++)
             {
+                // Progress, shared by the threads of the loop below
+                std::mutex progress_mtx;
+                int64_t rows_done = 0;
 #pragma omp parallel for
                 for (int64_t y = 0; y < (int64_t)d_height; y++)
                 {
@@ -171,7 +175,11 @@ namespace satdump
                     }
 
                     if (p != nullptr)
-                        *p = c * (1.0 / (float)img.channels()) + ((float(y) / float(d_height)) / (float)d_channels);
+                    {
+                        // Rows end in any order, so count them rather than using y
+                        std::lock_guard<std::mutex> lock(progress_mtx);
+                        *p = c * (1.0 / (float)img.channels()) + ((float(rows_done++) / float(d_height)) / (float)d_channels);
+                    }
                 }
             }
         }
