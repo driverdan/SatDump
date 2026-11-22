@@ -291,7 +291,9 @@ namespace
                                       started = true;
                                       return writer ? rb.write(&sample, 1) : rb.read(&sample, 1);
                                   });
-        REQUIRE(test_helpers::waitUntil([&]() { return started.load(); }, dsp_test::kTimeout, std::chrono::microseconds(0)));
+        // Not a REQUIRE: nothing may throw before the thread has been stopped and released, or the future's
+        // destructor would wait for it forever
+        bool did_start = test_helpers::waitUntil([&]() { return started.load(); }, dsp_test::kTimeout, std::chrono::microseconds(0));
 
         if (writer)
             rb.stopWriter();
@@ -306,7 +308,7 @@ namespace
             else
                 rb.write(full.data(), 1);
         }
-        return released && blocked.get() == -1;
+        return did_start && released && blocked.get() == -1;
     }
 } // namespace
 
