@@ -122,6 +122,13 @@ namespace goes
                 throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
         }
 
+        /**
+         * @brief Save a file as received, in its xRIT form
+         *
+         * @param file The file
+         * @param path Directory to save it in
+         * @throws std::exception if the file or its directory cannot be written
+         */
         void GOESLRITDataDecoderModule::saveLRITFile(satdump::xrit::XRITFile &file, std::string path)
         {
             if (!std::filesystem::exists(path))
@@ -142,8 +149,12 @@ namespace goes
 
             // Write file out
             std::ofstream fileo(path + "/" + current_filename, std::ios::binary);
+            if (!fileo)
+                throw std::runtime_error("cannot open " + path + "/" + current_filename + ": " + strerror(errno));
             fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
             fileo.close();
+            if (!fileo)
+                throw std::runtime_error("cannot write " + path + "/" + current_filename + ": " + strerror(errno));
         }
 
         void GOESLRITDataDecoderModule::processLRITFile(satdump::xrit::XRITFile &file)
@@ -207,9 +218,14 @@ namespace goes
                     int offset = primary_header.total_header_length;
 
                     // Write file out
-                    std::ofstream fileo(directory + "/IMAGES/" + current_filename + ".gif", std::ios::binary);
+                    std::string path = directory + "/IMAGES/" + current_filename + ".gif";
+                    std::ofstream fileo(path, std::ios::binary);
+                    if (!fileo)
+                        throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                     fileo.write((char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
                     fileo.close();
+                    if (!fileo)
+                        throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                 }
                 else // Write raw image dats
                 {
@@ -334,16 +350,29 @@ namespace goes
                 int offset = primary_header.total_header_length;
 
                 // Write file out
-                std::ofstream fileo(directory + "/Admin Messages/" + clean_filename + ".txt", std::ios::binary);
+                std::string path = directory + "/Admin Messages/" + clean_filename + ".txt";
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
             // Check if this is DCS data
             else if (primary_header.file_type_code == 130)
             {
                 int offset = primary_header.total_header_length;
-                if (parse_dcs && (file.vcid != 32 || !processDCS(&file.lrit_data.data()[offset], file.lrit_data.size() - offset)))
-                    saveLRITFile(file, directory + "/DCS/Unknown");
+                // A failure here must not lose the copy in DCS_LRIT
+                try
+                {
+                    if (parse_dcs && (file.vcid != 32 || !processDCS(&file.lrit_data.data()[offset], file.lrit_data.size() - offset)))
+                        saveLRITFile(file, directory + "/DCS/Unknown");
+                }
+                catch (const std::exception &e)
+                {
+                    logger->error("Could not process DCS file %s! %s", current_filename.c_str(), e.what());
+                }
                 if (write_dcs)
                     saveLRITFile(file, directory + "/DCS_LRIT");
             }

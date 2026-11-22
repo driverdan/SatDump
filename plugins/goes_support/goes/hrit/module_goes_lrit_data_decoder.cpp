@@ -225,11 +225,27 @@ namespace goes
 
                 std::vector<satdump::xrit::XRITFile> files = lrit_demux.work(cadu);
 
+                // A file that cannot be written is lost, but the decoder carries on with the next
                 for (auto &file : files)
                 {
-                    processLRITFile(file);
-                    if (write_lrit)
-                        saveLRITFile(file, directory + "/LRIT");
+                    try
+                    {
+                        processLRITFile(file);
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger->error("Could not process file %s! %s", file.filename.c_str(), e.what());
+                    }
+
+                    try
+                    {
+                        if (write_lrit)
+                            saveLRITFile(file, directory + "/LRIT");
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger->error("Could not write LRIT file %s! %s", file.filename.c_str(), e.what());
+                    }
                 }
             }
 

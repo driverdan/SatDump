@@ -624,7 +624,15 @@ namespace goes
                 int imagesCount = imagesVector.size();
                 if (imagesCount > 0)
                 {
-                    writeImages(imagesVector[0], directory);
+                    // An exception would end the program from this thread with the mutex held
+                    try
+                    {
+                        writeImages(imagesVector[0], directory);
+                    }
+                    catch (std::exception &e)
+                    {
+                        logger->error("Could not write images to %s! %s", directory.c_str(), e.what());
+                    }
                     imagesVector.erase(imagesVector.begin(), imagesVector.begin() + 1);
                 }
                 imageVectorMutex.unlock();

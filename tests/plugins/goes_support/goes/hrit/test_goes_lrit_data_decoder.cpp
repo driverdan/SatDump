@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <catch2/generators/catch_generators.hpp>
 #include <thread>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 // The decoder is given the CADUs of LRIT files sent by xrit_support/xrit_test_helpers.h, and
 // must write the right files in the output directory. Unless stated otherwise it is set up
@@ -266,6 +269,20 @@ namespace
         }
         return lines;
     }
+
+    // Makes a directory read only while it is in scope
+    struct ReadOnlyDir
+    {
+        std::filesystem::path dir;
+        std::filesystem::perms saved;
+
+        ReadOnlyDir(const std::filesystem::path &d) : dir(d), saved(std::filesystem::status(d).permissions())
+        {
+            std::filesystem::permissions(dir, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write,
+                                         std::filesystem::perm_options::remove);
+        }
+        ~ReadOnlyDir() { std::filesystem::permissions(dir, saved); }
+    };
 
     // 0, 1, 2... with some lines replaced
     std::vector<int> linesWith(std::map<int, int> replaced, int count = LINES)
@@ -588,6 +605,190 @@ TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write an EMWIN fi
     CHECK(env.log.contains("Could not write EMWIN file A_EMWIN-RADALLUS.PNG! ", slog::LOG_ERROR));
     CHECK(env.log.contains("Could not write EMWIN file A_EMWIN-FXUS61KB.txt! ", slog::LOG_ERROR));
     CHECK(env.read("Admin Messages/A-MSG-0001.txt") == "still here");
+}
+
+// The same for the other kinds of file: the file is lost, with one error naming it, and the
+// file after it is still saved
+TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot write a file", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    auto params = hritParams();
+    Mux mux;
+    std::filesystem::create_directories(env.out);
+
+    std::string gif = "GIF89a, or so the decoder is told";
+    Bytes gif_file = lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 1), annotationRecord("CHART.lrit"), noaaRecord(1, 0, 0, 5)}, Bytes(gif.begin(), gif.end()));
+    Bytes message = textFile("A-MSG-0001.lrit", "a message");
+    std::string error; // Expected once
+    std::vector<std::string> saved;
+
+    SECTION("Admin Messages is a file")
+    {
+        writeBytes(env.path("Admin Messages"), {0}); // A file, so no directory can be made in it
+        mux.add(VCID, packetize(message, APID, 0));
+        mux.add(VCID, packetize(gif_file, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file A-MSG-0001.lrit! ";
+        saved = {"Admin Messages", "IMAGES/CHART.lrit.gif"};
+    }
+
+#ifndef _WIN32
+    SECTION("Admin Messages cannot be created")
+    {
+        if (geteuid() == 0)
+            SKIP("root can write anywhere");
+
+        // The output directory is read only, the image directories are already there
+        std::filesystem::create_directories(env.path("IMAGES/Unknown"));
+        ReadOnlyDir read_only(env.out);
+        mux.add(VCID, packetize(message, APID, 0));
+        mux.add(VCID, packetize(gif_file, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file A-MSG-0001.lrit! filesystem error: cannot create directory: Permission denied";
+        saved = {"IMAGES/CHART.lrit.gif"};
+    }
+#endif
+
+    SECTION("a message cannot be opened")
+    {
+        std::filesystem::create_directories(env.path("Admin Messages/A-MSG-0001.txt")); // A directory where the file would go
+        mux.add(VCID, packetize(message, APID, 0));
+        mux.add(VCID, packetize(gif_file, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file A-MSG-0001.lrit! cannot open " + env.path("Admin Messages/A-MSG-0001.txt") + ": ";
+        saved = {"IMAGES/CHART.lrit.gif"};
+    }
+
+#ifdef __linux__
+    SECTION("a message cannot be written")
+    {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
+        std::filesystem::create_directories(env.path("Admin Messages"));
+        std::filesystem::create_symlink("/dev/full", env.path("Admin Messages/A-MSG-0001.txt")); // Opens, but every write fails
+        mux.add(VCID, packetize(message, APID, 0));
+        mux.add(VCID, packetize(gif_file, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file A-MSG-0001.lrit! cannot write " + env.path("Admin Messages/A-MSG-0001.txt") + ": ";
+        saved = {"IMAGES/CHART.lrit.gif"};
+    }
+#endif
+
+    SECTION("a GIF cannot be opened")
+    {
+        std::filesystem::create_directories(env.path("IMAGES/CHART.lrit.gif"));
+        mux.add(VCID, packetize(gif_file, APID, 0));
+        mux.add(VCID, packetize(message, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file CHART.lrit! cannot open " + env.path("IMAGES/CHART.lrit.gif") + ": ";
+        saved = {"Admin Messages/A-MSG-0001.txt"};
+    }
+
+    SECTION("an image cannot be saved")
+    {
+        std::filesystem::create_directories(env.path("IMAGES/CHART.lrit.png"));
+        mux.add(VCID, riceImagePackets(riceImageHeaders("CHART.lrit"), imageLines(), APID));
+        mux.add(VCID, packetize(message, APID, 100));
+        decode(env, mux, params);
+        error = "Could not process file CHART.lrit! cannot open " + env.path("IMAGES/CHART.lrit.png") + ": ";
+        saved = {"Admin Messages/A-MSG-0001.txt"};
+    }
+
+#ifdef __linux__
+    SECTION("an image cannot be written")
+    {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
+        std::filesystem::create_directories(env.path("IMAGES"));
+        std::filesystem::create_symlink("/dev/full", env.path("IMAGES/CHART.lrit.png"));
+        mux.add(VCID, riceImagePackets(riceImageHeaders("CHART.lrit"), imageLines(), APID));
+        mux.add(VCID, packetize(message, APID, 100));
+        decode(env, mux, params);
+        error = "Could not process file CHART.lrit! cannot write " + env.path("IMAGES/CHART.lrit.png");
+        saved = {"Admin Messages/A-MSG-0001.txt"};
+    }
+#endif
+
+    SECTION("LRIT is a file, with write_lrit")
+    {
+        params["write_lrit"] = true;
+        writeBytes(env.path("LRIT"), {0});
+        mux.add(VCID, packetize(message, APID, 0));
+        mux.add(VCID, packetize(textFile("A-MSG-0002.lrit", "another message"), APID, 10));
+        decode(env, mux, params);
+        error = "Could not write LRIT file A-MSG-0001.lrit! ";
+        CHECK(env.log.contains("Could not write LRIT file A-MSG-0002.lrit! ", slog::LOG_ERROR));
+        saved = {"Admin Messages/A-MSG-0001.txt", "Admin Messages/A-MSG-0002.txt", "LRIT"};
+    }
+
+    SECTION("a DCS file cannot be opened, with write_dcs")
+    {
+        params["write_dcs"] = true;
+        std::filesystem::create_directories(env.path("DCS_LRIT/pH-24123120000-A.lrit"));
+        mux.add(VCID, packetize(lritFile(130, {annotationRecord("pH-24123120000-A.lrit"), noaaRecord(8, 0, 0, 0)}, randomBytes(300, 1)), APID, 0));
+        mux.add(VCID, packetize(message, APID, 10));
+        decode(env, mux, params);
+        error = "Could not process file pH-24123120000-A.lrit! cannot open " + env.path("DCS_LRIT/pH-24123120000-A.lrit") + ": ";
+        saved = {"Admin Messages/A-MSG-0001.txt"};
+    }
+
+    INFO(env.log.dump());
+    CHECK(env.log.contains(error, slog::LOG_ERROR));
+    std::string log = env.log.dump();
+    size_t pos = log.find(error);
+    CHECK((pos != std::string::npos && log.find(error, pos + 1) == std::string::npos));
+    CHECK(env.files() == saved);
+}
+
+// A segmented image that cannot be saved does not hold up the images after it
+TEST_CASE("GOESLRITDataDecoderModule carries on when it cannot save a segmented image", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    DecoderEnv env;
+    Mux mux;
+
+    // Two full disk images of channel 13, ten minutes apart, in 2 segments of 8 lines
+    const int segments = 2, seg_lines = 8;
+    auto segment = [&](const std::string &time, int seg, int seq)
+    {
+        std::string ancillary = "Time of frame start = 2024-05-02T" + time + ".7Z;Satellite = G16;Instrument = FM1;Channel = 13;Region = Full Disk;";
+        Bytes headers = lritHeaders(0,
+                                    {imageStructureRecord(8, COLUMNS, seg_lines, 1), annotationRecord("OR_ABI-L2-CMIPF-M6C13_G16_s" + time.substr(0, 2) + time.substr(3, 2) + ".lrit"),
+                                     timeStampRecord(24228, 43220000), ancillaryTextRecord(ancillary), noaaRecord(16, 13, 0, 1),
+                                     segmentIdentificationRecord(7, seg, 0, seg * seg_lines, segments, COLUMNS, segments * seg_lines)},
+                                    0);
+        mux.add(VCID, riceImagePackets(headers, imageLines(seg_lines, seg * seg_lines), APID, seq));
+    };
+
+    // The directory of the first image is a file
+    std::string first = "IMAGES/GOES-16/Full Disk/2024-05-02_12-00-20";
+    std::string second = "IMAGES/GOES-16/Full Disk/2024-05-02_12-10-20/";
+    std::filesystem::create_directories(env.path("IMAGES/GOES-16/Full Disk"));
+    writeBytes(env.path(first), {0});
+
+    SECTION("complete images, saved as soon as they are")
+    {
+        segment("12:00:20", 0, 0);
+        segment("12:00:20", 1, 100);
+        segment("12:10:20", 0, 200);
+        segment("12:10:20", 1, 300);
+    }
+
+    // The first image is saved when the next one starts, the second at the end
+    SECTION("incomplete images")
+    {
+        segment("12:00:20", 0, 0);
+        segment("12:10:20", 1, 100);
+    }
+
+    mux.add(VCID, packetize(textFile("A-MSG-0001.lrit", "still here"), APID, 400));
+    decode(env, mux);
+
+    INFO(env.log.dump());
+    CHECK(env.files() == std::vector<std::string>{"Admin Messages/A-MSG-0001.txt", first, second + "G16_13_20240502T121020Z.png", second + "product.cbor"});
+    std::string error = "Could not save image OR_ABI-L2-CMIPF-M6C13_G16_s1200.lrit! ";
+    CHECK(env.log.contains(error, slog::LOG_ERROR));
+    std::string log = env.log.dump();
+    CHECK(log.find(error, log.find(error) + 1) == std::string::npos);
 }
 
 TEST_CASE("GOESLRITDataDecoderModule unpacks EMWIN files at their real size", "[plugins][goes_support][goes_lrit_data_decoder]")

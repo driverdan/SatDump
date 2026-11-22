@@ -6,6 +6,7 @@
  */
 
 #include "image/svissr_reader.h"
+#include "logger.h"
 #include "pipeline/modules/base/filestream_to_filestream.h"
 #include <thread>
 
@@ -93,7 +94,16 @@ namespace fengyun_svissr
                     auto img = images_queue[0];
                     images_queue.erase(images_queue.begin());
                     images_queue_mtx.unlock();
-                    writeImages(*img);
+                    // An exception would end the program from this thread
+                    try
+                    {
+                        writeImages(*img);
+                    }
+                    catch (std::exception &e)
+                    {
+                        logger->error("Could not write SVISSR images! %s", e.what());
+                        writingImage = false;
+                    }
                     continue;
                 }
 

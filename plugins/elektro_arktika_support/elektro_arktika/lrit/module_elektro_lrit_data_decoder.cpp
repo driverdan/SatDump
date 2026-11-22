@@ -44,8 +44,18 @@ namespace elektro
 
                 std::vector<satdump::xrit::XRITFile> files = lrit_demux.work(cadu);
 
+                // A file that cannot be written is lost, but the decoder carries on with the next
                 for (auto &file : files)
-                    processLRITFile(file);
+                {
+                    try
+                    {
+                        processLRITFile(file);
+                    }
+                    catch (const std::exception &e)
+                    {
+                        logger->error("Could not process file %s! %s", file.filename.c_str(), e.what());
+                    }
+                }
             }
 
             cleanup();

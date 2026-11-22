@@ -1,6 +1,8 @@
+#include "cli_test_helpers.h"
 #include "image/image_saving_thread.h"
 #include "image/image_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
 
 using satdump::image::Image;
 namespace img = satdump::image;
@@ -40,4 +42,23 @@ TEST_CASE("image::ImageSavingThread flushes its queue on destruction", "[image][
     CHECK(image_test::samePixels(ra, expected_a));
     REQUIRE(rb.channels() == 3);
     CHECK(image_test::samePixels(rb, b));
+}
+
+TEST_CASE("image::ImageSavingThread goes on with its queue when an image cannot be saved", "[image][image_saving_thread]")
+{
+    cli_test::LogCapture log;
+    image_test::TempDir dir;
+    std::string bad = dir.file("bad.png");
+    std::filesystem::create_directories(bad); // A directory where the file goes
+    Image in = image_test::makePattern(8, 4, 4, 1);
+    {
+        img::ImageSavingThread saver(true);
+        saver.push(in, bad);
+        saver.push(in, dir.file("good.png"));
+    }
+    INFO(log.dump());
+    CHECK(log.contains("Could not save image " + bad + "! cannot open " + bad, slog::LOG_ERROR));
+    Image out;
+    img::load_png(out, dir.file("good.png"));
+    CHECK(image_test::samePixels(out, in));
 }

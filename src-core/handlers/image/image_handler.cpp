@@ -294,12 +294,20 @@ namespace satdump
                     // TODOREWORK!!!!
                     std::string save_type = "png";
                     satdump_cfg.tryAssignValueFromSatDumpGeneral(save_type, "image_format");
-                    std::string default_path = satdump_cfg.getValueFromSatDumpDirectories<std::string>("default_image_output_directory");
-                    std::string saved_at = save_image_dialog(getSaneName(), default_path, _("Save Image"), &getImage(), &save_type);
-                    if (saved_at == "")
-                        logger->info(_("Save cancelled"));
-                    else
-                        logger->info(_("Saved current image at %s"), saved_at.c_str());
+                    // An exception would end the program from this thread, and leave the flags set
+                    try
+                    {
+                        std::string default_path = satdump_cfg.getValueFromSatDumpDirectories<std::string>("default_image_output_directory");
+                        std::string saved_at = save_image_dialog(getSaneName(), default_path, _("Save Image"), &getImage(), &save_type);
+                        if (saved_at == "")
+                            logger->info(_("Save cancelled"));
+                        else
+                            logger->info(_("Saved current image at %s"), saved_at.c_str());
+                    }
+                    catch (std::exception &e)
+                    {
+                        logger->error(_("Could not save image! %s"), e.what());
+                    }
                     file_save_thread_running = false;
                     set_is_processing(false);
                 };

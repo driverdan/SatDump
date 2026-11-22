@@ -1,5 +1,7 @@
 #include "../io.h"
+#include "core/exception.h"
 #include "logger.h"
+#include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <png.h>
@@ -25,7 +27,7 @@ namespace satdump
 
             FILE *fp = fopen(file.c_str(), "wb");
             if (!fp)
-                abort();
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
 
             png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
             if (!png)
@@ -35,8 +37,18 @@ namespace satdump
             if (!info)
                 abort();
 
+            // Allocated before setjmp(), so that the error path below can free it
+            png_byte *const image_row = new png_byte[img.typesize() * d_channels * d_width];
+            memset(image_row, 0, img.typesize() * d_channels * d_width);
+
+            // A write error (a full disk...) comes back here
             if (setjmp(png_jmpbuf(png)))
-                abort();
+            {
+                delete[] image_row;
+                png_destroy_write_struct(&png, &info);
+                fclose(fp);
+                throw satdump_exception("cannot write " + file);
+            }
 
             png_init_io(png, fp);
 
@@ -56,9 +68,6 @@ namespace satdump
 
             // Write row-per-row to save up on memory
             {
-                png_byte *const image_row = new png_byte[img.typesize() * d_channels * d_width];
-                memset(image_row, 0, img.typesize() * d_channels * d_width);
-
                 if (d_depth == 8)
                 {
                     for (size_t row = 0; row < d_height; row++)
@@ -79,13 +88,13 @@ namespace satdump
                         png_write_row(png, image_row);
                     }
                 }
-
-                delete[] image_row;
             }
 
             png_write_end(png, NULL);
-            fclose(fp);
+            delete[] image_row;
             png_destroy_write_struct(&png, &info);
+            if (fclose(fp) != 0)
+                throw satdump_exception("cannot write " + file + ": " + strerror(errno));
         }
 
         void load_png(Image &img, std::string file, bool disableIndexing)

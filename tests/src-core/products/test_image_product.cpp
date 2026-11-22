@@ -1,8 +1,10 @@
+#include "cli_test_helpers.h"
 #include "common/calibration.h"
 #include "products/image_product.h"
 #include "products/products_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <filesystem>
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
@@ -406,4 +408,85 @@ TEST_CASE("ImageProduct save falls back to PNG without a configured format", "[p
     p.images.push_back(holder(0, "0", patternImage(8, 3, 3, 1)));
     p.save(dir.str());
     CHECK(std::filesystem::exists(dir.path / "channel_0.png"));
+}
+
+namespace
+{
+    // How many times text appears in everything logged
+    int countLogged(cli_test::LogCapture &log, const std::string &text)
+    {
+        std::string all = log.dump();
+        int n = 0;
+        for (size_t pos = all.find(text); pos != std::string::npos; pos = all.find(text, pos + 1))
+            n++;
+        return n;
+    }
+} // namespace
+
+// The images are saved in an OpenMP loop, where an exception that leaves the loop ends the
+// program. This must hold with and without OpenMP
+TEST_CASE("ImageProduct save goes on when an image cannot be saved", "[products][image_product]")
+{
+    ConfigGuard cfg;
+    cli_test::LogCapture log;
+    TempDir dir("image_product_fail");
+    std::string ext;
+
+    SECTION("an image cannot be opened")
+    {
+        ext = "png";
+        std::filesystem::create_directories(dir.path / "channel_bad.png"); // A directory where the file goes
+    }
+
+#ifdef __linux__
+    SECTION("an image cannot be written")
+    {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
+        ext = "jpg"; // A JPEG write error was silent before
+        std::filesystem::create_symlink("/dev/full", dir.path / "channel_bad.jpg");
+    }
+#endif
+
+    products_test::setProductFormat(ext);
+    ImageProduct p;
+    p.instrument_name = "failing";
+    p.images.push_back(holder(0, "1", patternImage(8, 64, 64, 1)));
+    p.images.push_back(holder(1, "bad", patternImage(8, 64, 64, 2)));
+    p.images.push_back(holder(2, "3", patternImage(8, 64, 64, 3)));
+    CHECK_NOTHROW(p.save(dir.str()));
+
+    // The other images and the product file are saved
+    CHECK(std::filesystem::exists(dir.path / ("channel_1." + ext)));
+    CHECK(std::filesystem::exists(dir.path / ("channel_3." + ext)));
+    REQUIRE(std::filesystem::exists(dir.path / "product.cbor"));
+    ImageProduct q;
+    q.load((dir.path / "product.cbor").string());
+    CHECK(q.images.size() == 3);
+
+    // Logged once, with the file, and summed up once
+    INFO(log.dump());
+    CHECK(countLogged(log, "Could not save image " + dir.str() + "/channel_bad." + ext + "! ") == 1);
+    CHECK(countLogged(log, "Could not save 1 image(s) of the product in " + dir.str() + "!") == 1);
+    CHECK(log.contains("Could not save 1 image(s) of the product in " + dir.str() + "!", slog::LOG_ERROR));
+}
+
+TEST_CASE("ImageProduct save as a matrix goes on when the image cannot be saved", "[products][image_product]")
+{
+    ConfigGuard cfg;
+    cli_test::LogCapture log;
+    products_test::setProductFormat("png");
+    TempDir dir("image_matrix_fail");
+    std::filesystem::create_directories(dir.path / "channel_0.png");
+
+    ImageProduct p;
+    p.instrument_name = "matrix";
+    p.save_as_matrix = true;
+    for (int i = 0; i < 3; i++)
+        p.images.push_back(holder(i, std::to_string(i), patternImage(16, 6, 4, i + 1)));
+    CHECK_NOTHROW(p.save(dir.str()));
+    CHECK(std::filesystem::exists(dir.path / "product.cbor"));
+    INFO(log.dump());
+    CHECK(countLogged(log, "Could not save image " + dir.str() + "/channel_0.png! ") == 1);
+    CHECK(countLogged(log, "Could not save 1 image(s) of the product in " + dir.str() + "!") == 1);
 }
