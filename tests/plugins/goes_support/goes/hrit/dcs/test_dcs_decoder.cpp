@@ -290,6 +290,22 @@ TEST_CASE("Bad PDT and HADS lines are skipped and leave the DCP list usable", "[
         CHECK(DCPLoader::list().count(0xABCDEF56) == 1);
     }
 
+    SECTION("a HADS line with another latitude, then a longitude that is not a number")
+    {
+        // The latitude is read before the longitude fails: it must not be kept either
+        std::string line = hadsLine("ABCDEF12");
+        line.replace(line.find("|58 22 53|-134 38 46|"), 21, "|40 00 00|XX 38 46|");
+        f.pdt(pdtLine("ABCDEF12") + "\n");
+        f.hads(line + "\n");
+        f.load();
+        CHECK(f.log.contains("Error parsing HADS line"));
+        REQUIRE(DCPLoader::list().size() == 1);
+        auto &dcp = DCPLoader::list().at(0xABCDEF12);
+        CHECK_THAT(dcp->lat, Catch::Matchers::WithinAbs(58 + 22 / 60.0 + 53 / 3600.0, 1e-4));
+        CHECK_THAT(dcp->lon, Catch::Matchers::WithinAbs(-(134 + 38 / 60.0 + 46 / 3600.0), 1e-4));
+        CHECK(dcp->description == "TEST STATION");
+    }
+
     SECTION("HADS lines that are blank, or have too few fields")
     {
         f.hads("\n" + std::string("ABCDEF12") + "\n" + "ABCDEF34|TEST1|NWS| AK|AJK|58 22 53|-134 38 46|005200|60\n" + hadsLine("ABCDEF56") + "\n");
