@@ -42,14 +42,17 @@ namespace slog
     template <typename... T>
     std::string vformat(const char *fmt, T &&...args)
     {
-        // Allocate a buffer on the stack that's big enough for us almost
-        // all the time.
+        // Start with a buffer that's big enough for us almost all the time.
         size_t size = 1024;
         std::vector<char> buf;
         buf.resize(size);
 
         // Try to snprintf into our buffer. It returns the length it would
         // have needed (excluding the NUL), or a negative value on error.
+        // This is the C99 behaviour of snprintf/vsnprintf on every toolchain
+        // we build with, including MSVC since VS2015 (UCRT). Only the
+        // Microsoft-specific _snprintf/_vsnprintf return -1 when the output
+        // does not fit, so do not switch to those.
         int needed = snprintf(buf.data(), size, fmt, args...);
 
         if (needed < 0)
@@ -64,7 +67,7 @@ namespace slog
         else
         {
             // snprintf reported that it wanted to write more characters
-            // than we allotted.  So do a malloc of the right size and try again.
+            // than we allotted.  So grow to the right size and try again.
             // This doesn't happen very often if we chose our initial size
             // well.
             buf.resize((size_t)needed + 1);
