@@ -323,3 +323,22 @@ TEST_CASE("FileSink attached to a Logger receives messages", "[logger]")
     CHECK(content.find("(C) attached 99\n") != std::string::npos);
     CHECK(content.find("below sink level") == std::string::npos);
 }
+
+// A string literal format picks the const char * overloads, which carry the printf format
+// attribute. They must format exactly like the std::string ones.
+TEST_CASE("Logger formats a C string format like a std::string one", "[logger]")
+{
+    LoggerWithSink t;
+    const char *cfmt = "%s=%d";
+    std::string sfmt = "%s=%d";
+    t.logger.info(cfmt, "a", 1);
+    t.logger.info(sfmt, "a", 1);
+    t.logger.notice("%zu %lld", (size_t)1 << 40, -3LL);
+    t.logger.info(std::string("concatenated ") + "%d", 4);
+    REQUIRE(t.sink->msgs.size() == 4);
+    CHECK(t.sink->msgs[0].str == "a=1");
+    CHECK(t.sink->msgs[1].str == "a=1");
+    CHECK(t.sink->msgs[2].str == "1099511627776 -3");
+    CHECK(t.sink->msgs[2].lvl == slog::LOG_NOTICE);
+    CHECK(t.sink->msgs[3].str == "concatenated 4");
+}

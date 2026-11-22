@@ -8,6 +8,14 @@
 #include <stdarg.h>
 #include <string>
 
+// Lets GCC and Clang check the printf format of a logger call against its arguments (-Wformat).
+// Index 1 is the implicit "this", so the format is argument 2 and the values start at 3.
+#if defined(__GNUC__) || defined(__clang__)
+#define SLOG_PRINTF_FORMAT(fmt_idx, first_arg) __attribute__((format(printf, fmt_idx, first_arg)))
+#else
+#define SLOG_PRINTF_FORMAT(fmt_idx, first_arg)
+#endif
+
 namespace slog
 {
     // Logger log level
@@ -103,6 +111,58 @@ namespace slog
             va_end(args);
         }
         void critical(std::string fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_CRIT, fmt, args);
+            va_end(args);
+        }
+
+        // The same for a C string format, which a string literal picks over the std::string
+        // overload. Only this one can carry the format attribute.
+        SLOG_PRINTF_FORMAT(2, 3) void trace(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_TRACE, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void debug(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_DEBUG, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void info(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_INFO, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void notice(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_NOTICE, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void warn(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_WARN, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void error(const char *fmt, ...)
+        {
+            va_list args;
+            va_start(args, fmt);
+            logf(LOG_ERROR, fmt, args);
+            va_end(args);
+        }
+        SLOG_PRINTF_FORMAT(2, 3) void critical(const char *fmt, ...)
         {
             va_list args;
             va_start(args, fmt);
