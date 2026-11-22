@@ -132,7 +132,10 @@ namespace
                 });
             if (!test_helpers::waitUntil([&] { return done->load(); }))
             {
-                // Still waiting for dcp_mtx, which it will never get
+                // Still waiting for dcp_mtx, which it will never get. dcp_mtx stays locked for the
+                // rest of the run (it cannot be unlocked from another thread), so the tests that
+                // decode DCS files after this one would wait on it too: their results are not to
+                // be trusted once this has failed.
                 loader.detach();
                 FAIL("loadDCPs() did not return");
             }
@@ -263,6 +266,28 @@ TEST_CASE("Bad PDT and HADS lines are skipped and leave the DCP list usable", "[
         // Not left in the list half filled
         CHECK(DCPLoader::list().count(0xABCDEF12) == 0);
         CHECK(DCPLoader::list().size() == 2);
+    }
+
+    SECTION("HADS lines whose latitude is not a number")
+    {
+        std::string bad_lat = "|58 22 53|";
+        auto badLatitude = [&](const std::string &address)
+        {
+            std::string line = hadsLine(address);
+            return line.replace(line.find(bad_lat), bad_lat.size(), "|XX 22 53|");
+        };
+        f.pdt(pdtLine("ABCDEF12") + "\n");
+        f.hads(badLatitude("ABCDEF12") + "\n" + badLatitude("ABCDEF34") + "\n" + hadsLine("ABCDEF56") + "\n");
+        f.load();
+        CHECK(f.log.contains("Error parsing HADS line"));
+        REQUIRE(DCPLoader::list().size() == 2);
+        // The DCP of the PDT file is left as it was
+        auto &dcp = DCPLoader::list().at(0xABCDEF12);
+        CHECK(dcp->description == "TEST STATION");
+        CHECK(dcp->pe_info.empty());
+        // And the one only in HADS is not added half filled
+        CHECK(DCPLoader::list().count(0xABCDEF34) == 0);
+        CHECK(DCPLoader::list().count(0xABCDEF56) == 1);
     }
 
     SECTION("HADS lines that are blank, or have too few fields")
