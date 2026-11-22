@@ -231,14 +231,27 @@ namespace
             });
     }
 
-    // A thread pool for the tests below. The holder is never freed, so that a failed test does not
-    // hang in the pool's destructor (which waits for every module thread): destroyPool() destroys the pool itself.
-    std::shared_ptr<std::unique_ptr<ctpl::thread_pool>> makePool()
+    // Keeps a copy of a shared_ptr that only release() frees. The tests below hold what the module
+    // threads use this way (the live pipeline and the thread pool): a test that fails while a module
+    // thread may still be blocked leaves the copy behind, so that nothing is destroyed under that
+    // thread, and the pool's destructor (which waits for every module thread) does not hang the run.
+    template <typename T>
+    class KeptUntilReleased
     {
-        auto tp = std::make_shared<std::unique_ptr<ctpl::thread_pool>>(std::make_unique<ctpl::thread_pool>(4));
-        new std::shared_ptr<std::unique_ptr<ctpl::thread_pool>>(tp);
-        return tp;
-    }
+    private:
+        std::shared_ptr<T> *copy;
+
+    public:
+        KeptUntilReleased(std::shared_ptr<T> ptr) : copy(new std::shared_ptr<T>(ptr)) {}
+        void release()
+        {
+            delete copy;
+            copy = nullptr;
+        }
+    };
+
+    // A thread pool for the tests below, which destroyPool() destroys
+    std::shared_ptr<std::unique_ptr<ctpl::thread_pool>> makePool() { return std::make_shared<std::unique_ptr<ctpl::thread_pool>>(std::make_unique<ctpl::thread_pool>(4)); }
 
     // Stops the live pipeline, bounded by a timeout. False if it hung. error is what stop() threw.
     bool stopLive(std::shared_ptr<pl::LivePipeline> live, std::string &error)
@@ -495,7 +508,9 @@ TEST_CASE("LivePipeline reports a module that throws and keeps the others runnin
     auto tp = makePool();
     auto stream = std::make_shared<dsp::stream<complex_t>>();
     auto live = std::make_shared<pl::LivePipeline>(p, nlohmann::json::object(), env.dir.str());
-    new std::shared_ptr<pl::LivePipeline>(live); // Never freed: its module threads use it, and on a failure they may still run
+    // Only freed once every module thread has ended: on a failure they may still run
+    KeptUntilReleased<std::unique_ptr<ctpl::thread_pool>> keep_tp(tp);
+    KeptUntilReleased<pl::LivePipeline> keep_live(live);
     live->start(stream, **tp);
 
     const std::string message = "Module " + failed + " failed! " + failed + " broke";
@@ -509,6 +524,8 @@ TEST_CASE("LivePipeline reports a module that throws and keeps the others runnin
     CHECK(error == failed + " broke");
     // Every module thread has ended
     REQUIRE(destroyPool(tp));
+    keep_live.release();
+    keep_tp.release();
 
     INFO(log.dump());
     CHECK(log.contains(message, slog::LOG_ERROR));
@@ -529,7 +546,9 @@ TEST_CASE("LivePipeline::stop does not throw when no module failed", "[pipeline]
     auto tp = makePool();
     auto stream = std::make_shared<dsp::stream<complex_t>>();
     auto live = std::make_shared<pl::LivePipeline>(p, nlohmann::json::object(), env.dir.str());
-    new std::shared_ptr<pl::LivePipeline>(live); // Never freed, as above
+    // Only freed once every module thread has ended, as above
+    KeptUntilReleased<std::unique_ptr<ctpl::thread_pool>> keep_tp(tp);
+    KeptUntilReleased<pl::LivePipeline> keep_live(live);
     live->start(stream, **tp);
 
     // The sink reads everything, so this does not block
@@ -539,6 +558,8 @@ TEST_CASE("LivePipeline::stop does not throw when no module failed", "[pipeline]
     REQUIRE(stopLive(live, error));
     CHECK(error == "");
     REQUIRE(destroyPool(tp));
+    keep_live.release();
+    keep_tp.release();
 
     INFO(log.dump());
     CHECK_FALSE(log.contains("failed!"));
