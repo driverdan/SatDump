@@ -1,3 +1,4 @@
+#include "cli_test_helpers.h"
 #include "core/exception.h"
 #include "pipeline/pipeline.h"
 #include "pipeline/pipeline_test_helpers.h"
@@ -44,6 +45,38 @@ namespace
         for (auto &c : callsOf("process"))
             ids.push_back(c.id);
         return ids;
+    }
+
+    // Runs the pipeline from baseband on a thread of its own, bounded by a timeout.
+    // Returns false if it hung. error is "threw: <message>" if it threw.
+    bool runStreamingPair(const pl::Pipeline &p, const RunEnv &env, std::string &error)
+    {
+        auto result = std::make_shared<std::string>();
+        bool finished = runBounded(
+            [p = pl::Pipeline(p), input = env.input, out = env.out, result]() mutable
+            {
+                try
+                {
+                    p.run(input, out, {}, "baseband");
+                }
+                catch (std::exception &e)
+                {
+                    *result = std::string("threw: ") + e.what();
+                }
+            });
+        if (finished)
+            error = *result;
+        return finished;
+    }
+
+    // How many times text appears in everything logged
+    int countLogged(cli_test::LogCapture &log, const std::string &text)
+    {
+        std::string all = log.dump();
+        int n = 0;
+        for (size_t pos = all.find(text); pos != std::string::npos; pos = all.find(text, pos + 1))
+            n++;
+        return n;
     }
 } // namespace
 
@@ -321,4 +354,81 @@ TEST_CASE("Pipeline::run tolerates a trailing level without a module", "[pipelin
     std::string final_file;
     CHECK_NOTHROW(p.run(env.input, env.out, {}, "baseband", false, nullptr, nullptr, &final_file));
     CHECK(final_file == env.out + "/unit_trailing_unit_a.bin");
+}
+
+// The first two modules of a baseband pipeline run on threads of their own (pipeline_run.cpp).
+// An exception from either one used to end the program (std::terminate). It must instead make
+// the pipeline fail like a later module does, without leaving the other module blocked on the FIFO.
+// The FIFO is made small (10000 bytes) and the source writes more than it holds, so it blocks if nobody reads.
+TEST_CASE("Pipeline::run fails when one of the two streaming modules throws", "[pipeline][pipeline_run]")
+{
+    cli_test::LogCapture log;
+    RunEnv env;
+    test_helpers::ValueGuard<int> fifo_size(dsp::RING_BUF_SZ, 10000);
+    const long big = 100000;
+    std::string error;
+
+    SECTION("the second module throws while the first one still writes")
+    {
+        pl::modules_registry.push_back(failingSourceEntry("unit_src", big, false));
+        pl::modules_registry.push_back(failingSinkEntry("unit_sink", 1000));
+        pl::modules_registry.push_back(recordingEntry("unit_c"));
+        auto p = makePipeline("unit_fail", {{"baseband", "", {}, ""}, {"soft", "unit_src", {}, ""}, {"frames", "unit_sink", {}, ""}, {"products", "unit_c", {}, ""}});
+
+        REQUIRE(runStreamingPair(p, env, error));
+        INFO(log.dump());
+        CHECK(error == "threw: unit_sink broke");
+        CHECK(countLogged(log, "Module unit_sink failed! unit_sink broke") == 1);
+        // The first module was not left blocked, and ran to the end of its input
+        CHECK(streamStats("unit_src")->done);
+        CHECK(streamStats("unit_src")->written == big);
+        CHECK(streamStats("unit_sink")->read == 1000);
+        // The pipeline stopped there: unit_c is not run (the first two run concurrently, so their order is not fixed)
+        CHECK(processedIds().size() == 2);
+    }
+
+    SECTION("the first module throws while the second one reads")
+    {
+        pl::modules_registry.push_back(failingSourceEntry("unit_src", 1500, true));
+        pl::modules_registry.push_back(failingSinkEntry("unit_sink", -1));
+        pl::modules_registry.push_back(recordingEntry("unit_c"));
+        auto p = makePipeline("unit_fail", {{"baseband", "", {}, ""}, {"soft", "unit_src", {}, ""}, {"frames", "unit_sink", {}, ""}, {"products", "unit_c", {}, ""}});
+
+        REQUIRE(runStreamingPair(p, env, error));
+        INFO(log.dump());
+        CHECK(error == "threw: unit_src broke");
+        CHECK(countLogged(log, "Module unit_src failed! unit_src broke") == 1);
+        // The second module was stopped as usual, after it read everything that was written
+        CHECK(streamStats("unit_sink")->done);
+        CHECK(readFile(env.out + "/unit_fail_unit_sink.bin") == "1500");
+        CHECK(processedIds().size() == 2);
+    }
+
+    SECTION("both modules throw")
+    {
+        pl::modules_registry.push_back(failingSourceEntry("unit_src", big, true));
+        pl::modules_registry.push_back(failingSinkEntry("unit_sink", 0));
+        auto p = makePipeline("unit_fail", {{"baseband", "", {}, ""}, {"soft", "unit_src", {}, ""}, {"frames", "unit_sink", {}, ""}});
+
+        REQUIRE(runStreamingPair(p, env, error));
+        INFO(log.dump());
+        // Both are logged, and the first module's error is the one thrown
+        CHECK(error == "threw: unit_src broke");
+        CHECK(countLogged(log, "Module unit_src failed! unit_src broke") == 1);
+        CHECK(countLogged(log, "Module unit_sink failed! unit_sink broke") == 1);
+        CHECK(streamStats("unit_src")->written == big);
+    }
+
+    SECTION("neither module throws")
+    {
+        pl::modules_registry.push_back(failingSourceEntry("unit_src", big, false));
+        pl::modules_registry.push_back(failingSinkEntry("unit_sink", -1));
+        auto p = makePipeline("unit_fail", {{"baseband", "", {}, ""}, {"soft", "unit_src", {}, ""}, {"frames", "unit_sink", {}, ""}});
+
+        REQUIRE(runStreamingPair(p, env, error));
+        INFO(log.dump());
+        CHECK(error == "");
+        CHECK(readFile(env.out + "/unit_fail_unit_sink.bin") == std::to_string(big));
+        CHECK_FALSE(log.contains("failed!"));
+    }
 }

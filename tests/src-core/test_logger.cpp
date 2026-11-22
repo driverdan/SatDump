@@ -1,4 +1,5 @@
 #include "common/utils.h" // timegm on MSVC
+#include "helpers/guards.h"
 #include "helpers/temp_files.h"
 #include "logger.h"
 #include <catch2/catch_test_macros.hpp>
@@ -12,6 +13,14 @@
 // sinks. Note that Logger::add_sink replays the process-wide init buffer (messages logged before
 // completeLoggerInit(), which the test main never calls), so recording sinks are cleared after
 // being added.
+
+// The init buffer is made of data symbols of satdump_core that no header declares, so they are not
+// exported from the Windows DLL: the test that uses them is skipped with MSVC
+#ifndef _MSC_VER
+// Defined (non-static) in logger.cpp
+extern std::vector<slog::LogMsg> init_log_buffer;
+extern bool init_buffer_active;
+#endif
 
 namespace
 {
@@ -101,6 +110,63 @@ TEST_CASE("Logger drops messages below its level", "[logger]")
     t.logger.critical("nothing gets through");
     CHECK(t.sink->msgs.empty());
 }
+
+namespace
+{
+    void logf_at(slog::Logger &l, slog::LogLevel lvl, std::string fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        l.logf(lvl, fmt, args);
+        va_end(args);
+    }
+} // namespace
+
+// LOG_OFF is only a threshold. A message logged at it would index one past the end of every
+// sink's level tables (colors, log_schar, colors_win, log_lvls_a), so it must not reach a sink
+TEST_CASE("Logger drops messages logged at LOG_OFF", "[logger]")
+{
+    LoggerWithSink t;
+    t.logger.log(slog::LOG_OFF, std::string("off string"));
+    t.logger.log(slog::LOG_OFF, 5);
+    logf_at(t.logger, slog::LOG_OFF, "off %d", 1);
+    CHECK(t.sink->msgs.empty());
+
+    // Also when the logger and the sink are set to LOG_OFF, where `lvl >= level` holds
+    t.logger.set_level(slog::LOG_OFF);
+    t.sink->set_level(slog::LOG_OFF);
+    t.logger.log(slog::LOG_OFF, std::string("off string"));
+    CHECK(t.sink->msgs.empty());
+
+    // Valid levels still get through afterwards
+    t.logger.set_level(slog::LOG_TRACE);
+    t.sink->set_level(slog::LOG_TRACE);
+    t.logger.critical("c");
+    REQUIRE(t.sink->msgs.size() == 1);
+    CHECK(t.sink->msgs[0].lvl == slog::LOG_CRIT);
+}
+
+// The init buffer is replayed into every sink added later, so a LOG_OFF message must not be
+// buffered either. Buffering stops for good after 1000 messages from any logger of the process,
+// so the test turns it back on, with an empty buffer, to always check the replay. This needs
+// data symbols of satdump_core that are not exported from the Windows DLL
+#ifndef _MSC_VER
+TEST_CASE("Logger does not replay LOG_OFF messages to sinks added later", "[logger]")
+{
+    test_helpers::ValueGuard<std::vector<slog::LogMsg>> buffer_guard(init_log_buffer, std::vector<slog::LogMsg>());
+    test_helpers::ValueGuard<bool> active_guard(init_buffer_active, true);
+
+    slog::Logger l;
+    l.log(slog::LOG_OFF, std::string("logged at off, must not be replayed"));
+    l.info("replayed");
+
+    auto late = std::make_shared<RecordingSink>();
+    l.add_sink(late);
+    REQUIRE(late->msgs.size() == 1);
+    CHECK(late->msgs[0].str == "replayed");
+    CHECK(late->msgs[0].lvl == slog::LOG_INFO);
+}
+#endif
 
 TEST_CASE("Logger printf-style formatting", "[logger]")
 {
@@ -322,4 +388,64 @@ TEST_CASE("FileSink attached to a Logger receives messages", "[logger]")
     std::string content = readFile(base + ".log");
     CHECK(content.find("(C) attached 99\n") != std::string::npos);
     CHECK(content.find("below sink level") == std::string::npos);
+}
+
+// A string literal format picks the const char * overloads, which carry the printf format
+// attribute. They must format exactly like the std::string ones.
+TEST_CASE("Logger formats a C string format like a std::string one", "[logger]")
+{
+    LoggerWithSink t;
+    const char *cfmt = "%s=%d";
+    std::string sfmt = "%s=%d";
+    t.logger.info(cfmt, "a", 1);
+    t.logger.info(sfmt, "a", 1);
+    t.logger.notice("%zu %lld", (size_t)1 << 40, -3LL);
+    t.logger.info(std::string("concatenated ") + "%d", 4);
+    REQUIRE(t.sink->msgs.size() == 4);
+    CHECK(t.sink->msgs[0].str == "a=1");
+    CHECK(t.sink->msgs[1].str == "a=1");
+    CHECK(t.sink->msgs[2].str == "1099511627776 -3");
+    CHECK(t.sink->msgs[2].lvl == slog::LOG_NOTICE);
+    CHECK(t.sink->msgs[3].str == "concatenated 4");
+}
+
+// The other tests here pass string literals, which now go to the const char * overloads. The
+// std::string overloads still serve every "..." + x call, so they keep their own checks.
+TEST_CASE("Logger std::string format overloads log at their own level", "[logger]")
+{
+    LoggerWithSink t;
+    std::string fmt = "%d%%";
+    t.logger.trace(fmt, 0);
+    t.logger.debug(fmt, 1);
+    t.logger.info(fmt, 2);
+    t.logger.notice(fmt, 3);
+    t.logger.warn(fmt, 4);
+    t.logger.error(fmt, 5);
+    t.logger.critical(fmt, 6);
+
+    REQUIRE(t.sink->msgs.size() == 7);
+    const slog::LogLevel expected[] = {slog::LOG_TRACE, slog::LOG_DEBUG, slog::LOG_INFO, slog::LOG_NOTICE, slog::LOG_WARN, slog::LOG_ERROR, slog::LOG_CRIT};
+    for (int i = 0; i < 7; i++)
+    {
+        CHECK(t.sink->msgs[i].lvl == expected[i]);
+        CHECK(t.sink->msgs[i].str == std::to_string(i) + "%");
+    }
+}
+
+TEST_CASE("Logger std::string format keeps every character around 1024 characters", "[logger]")
+{
+    LoggerWithSink t;
+    std::string fmt = "%s";
+    for (size_t len : {1023, 1024, 1025})
+    {
+        std::string exact(len, 'x');
+        t.logger.info(fmt, exact.c_str());
+        t.logger.info("%s", exact.c_str());
+    }
+    REQUIRE(t.sink->msgs.size() == 6);
+    for (int i = 0; i < 3; i++)
+    {
+        CHECK(t.sink->msgs[2 * i].str == std::string(1023 + i, 'x'));
+        CHECK(t.sink->msgs[2 * i].str == t.sink->msgs[2 * i + 1].str);
+    }
 }

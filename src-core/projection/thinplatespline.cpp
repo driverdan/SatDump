@@ -211,7 +211,7 @@ namespace satdump
                 }
                 catch (std::exception const &e)
                 {
-                    logger->error(e.what());
+                    logger->error("%s", e.what());
                     // CPLError(CE_Failure, CPLE_AppDefined,
                     //          "GDALLinearSystemSolve: %s", e.what());
                     return false;

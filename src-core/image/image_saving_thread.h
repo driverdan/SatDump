@@ -3,6 +3,7 @@
 #include "image.h"
 #include "io.h"
 #include "logger.h"
+#include <atomic>
 #include <mutex>
 #include <thread>
 
@@ -17,10 +18,15 @@ namespace satdump
             std::vector<std::pair<Image, std::string>> queue;
             std::mutex queue_mutex;
 
-            bool thread_should_run = true;
+            std::atomic<bool> thread_should_run = true;
+            bool queue_is_empty()
+            {
+                std::lock_guard<std::mutex> lock(queue_mutex);
+                return queue.empty();
+            }
             void actual_saving_thread()
             {
-                while (thread_should_run || queue.size() > 0)
+                while (thread_should_run || !queue_is_empty())
                 {
                     queue_mutex.lock();
                     bool has_images = queue.size() > 0;

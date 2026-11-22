@@ -169,6 +169,11 @@ namespace slog
 
     void Logger::log(LogLevel lvl, std::string v)
     {
+        // LOG_OFF is only a threshold for set_level(). Drop it and anything out of
+        // range here, before buffering, as every sink indexes its level tables with it
+        if ((int)lvl < LOG_TRACE || (int)lvl >= LOG_OFF)
+            return;
+
         sink_mtx.lock();
         LogMsg m;
         m.str = v;

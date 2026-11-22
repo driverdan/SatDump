@@ -89,7 +89,7 @@ namespace satdump
                         char *err = NULL;
                         if (sqlite3_exec(h->db, sql.c_str(), NULL, 0, &err))
                         {
-                            logger->error(err);
+                            logger->error("%s", err);
                             sqlite3_free(err);
                         }
                     }
@@ -157,7 +157,7 @@ namespace satdump
                     char *err = NULL;
                     if (sqlite3_exec(h->db, sql.c_str(), NULL, 0, &err))
                     {
-                        logger->error(err);
+                        logger->error("%s", err);
                         sqlite3_free(err);
                     }
                 }

@@ -18,6 +18,20 @@ namespace satdump
         //  Identifcation done from file data
         ////////////////////////////////////////
 
+        // A MSG / Elektro segment whose planned end segment is before its planned start belongs to an
+        // image of no segments, it cannot be placed in it: keep the file as an image of its own
+        static void keepMSGSegmentAloneIfNoSegments(XRITFileInfo &i, XRITFile &file)
+        {
+            if (!file.hasHeader<msg::SegmentIdentificationHeader>())
+                return;
+            auto segment_id_header = file.getHeader<msg::SegmentIdentificationHeader>();
+            if (segment_id_header.planned_end_segment >= segment_id_header.planned_start_segment)
+                return;
+            logger->warn("File %s has its planned end segment (%d) before its planned start segment (%d), saving it as an image of its own", file.filename.c_str(),
+                         segment_id_header.planned_end_segment, segment_id_header.planned_start_segment);
+            i.seg_groupid.clear();
+        }
+
         bool identifyElektroFile(XRITFileInfo &i, XRITFile &file)
         {
             i.filename = file.filename;
@@ -59,6 +73,7 @@ namespace satdump
                 i.channel = std::to_string(file.getHeader<msg::SegmentIdentificationHeader>().channel_id + 1);
                 i.seg_groupid = i.groupid + "_" + i.channel;
             }
+            keepMSGSegmentAloneIfNoSegments(i, file);
 
             if (file.all_headers.count(ImageStructureRecord::TYPE))
                 i.bit_depth = file.getHeader<ImageStructureRecord>().bit_per_pixel;
@@ -117,6 +132,7 @@ namespace satdump
                 i.channel = std::to_string(file.getHeader<msg::SegmentIdentificationHeader>().channel_id);
                 i.seg_groupid = i.groupid + "_" + i.channel;
             }
+            keepMSGSegmentAloneIfNoSegments(i, file);
 
             if (file.all_headers.count(ImageStructureRecord::TYPE))
                 i.bit_depth = file.getHeader<ImageStructureRecord>().bit_per_pixel;

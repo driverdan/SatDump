@@ -89,7 +89,7 @@ When one of these is fixed, add a regular test for it and remove the entry.
 
 | Location | Problem | Effect |
 |---|---|---|
-| `pipeline/live_pipeline.cpp:174` | In client mode `stop()` dereferences the first module's input buffer, which `start_client` never sets for `network_client`. | Null dereference. |
+| `pipeline/live_pipeline.cpp:179` | In client mode `stop()` dereferences the first module's input buffer, which `start_client` never sets for `network_client`. | Null dereference. |
 | `handlers/handler.h:57` | `delSubHandler` on a handler that is not a child, or twice on the same one, calls `erase(end())`. | Undefined behaviour. |
 | `pipeline/modules/xrit/module_s2udp_xrit_cadu_extractor.cpp:69` | `payload[40..43]` is read before the `payload.size() >= 1024` check. | Out-of-bounds read on short payloads. |
 | `handlers/image/image_handler.cpp:99` | `~ImageHandler` explicitly calls `ProcessingHandler::~ProcessingHandler()`, so the base destructor runs twice. | Undefined behaviour; harmless in practice so far. |
@@ -113,7 +113,6 @@ When one of these is fixed, add a regular test for it and remove the entry.
 | `db/kepler/kepler_utils.cpp:34-68` | For values with no short decimal form (such as 1/3) `strLE` grows its multiplier until `(int)(val * 10^mult)` overflows. | Undefined conversion. |
 | `libs/predict` `predict_parse_tle` | Reads `line[51]` and `line[60]` past the end of short lines, and never returns NULL for bad input, so `tleToKepler` cannot fail. | Out-of-bounds read. |
 | `db/iers/iers_handler.cpp` | `IERSInfo::time` is never set, and `leap_seconds` is left uninitialised when there is no leap-second row. | Uninitialised read. |
-| `logger.cpp` | Logging at `LOG_OFF` indexes past the colour and tag tables. | Out-of-bounds read. |
 
 ## src-cli
 

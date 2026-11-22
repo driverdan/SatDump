@@ -2,6 +2,7 @@
 #include "core/exception.h"
 #include "logger.h"
 #include "pipeline/module.h"
+#include <exception>
 
 namespace satdump
 {
@@ -69,7 +70,7 @@ namespace satdump
                 [=](int)
                 {
                     logger->info("Start processing...");
-                    modules[0]->process();
+                    runModuleThread(modules[0]);
                 }));
 
             // Init whatever's in the middle
@@ -85,7 +86,7 @@ namespace satdump
                     [=](int)
                     {
                         logger->info("Start processing...");
-                        modules[i]->process();
+                        runModuleThread(modules[i]);
                     }));
             }
 
@@ -102,7 +103,7 @@ namespace satdump
                     [=](int)
                     {
                         logger->info("Start processing...");
-                        modules[num]->process();
+                        runModuleThread(modules[num]);
                     }));
             }
         }
@@ -133,7 +134,7 @@ namespace satdump
                     [=](int)
                     {
                         logger->info("Start processing...");
-                        modules[i]->process();
+                        runModuleThread(modules[i]);
                     }));
             }
 
@@ -150,7 +151,7 @@ namespace satdump
                     [=](int)
                     {
                         logger->info("Start processing...");
-                        modules[num]->process();
+                        runModuleThread(modules[num]);
                     }));
             }
         }
@@ -158,6 +159,10 @@ namespace satdump
         void LivePipeline::stop()
         {
             logger->info("Stop processing");
+
+            // A module that failed was logged when it did, and its exception is in its future.
+            // All modules are stopped before the first one is thrown, so that none is left running.
+            std::exception_ptr error;
             for (int i = 0; i < (int)modules.size(); i++)
             {
                 std::shared_ptr<ProcessingModule> mod = modules[i];
@@ -175,8 +180,19 @@ namespace satdump
                     mod->input_fifo->stopWriter();
                 }
                 mod->stop();
-                module_futs[i].get();
+                try
+                {
+                    module_futs[i].get();
+                }
+                catch (...)
+                {
+                    if (!error)
+                        error = std::current_exception();
+                }
             }
+
+            if (error)
+                std::rethrow_exception(error);
         }
 
         std::string LivePipeline::getOutputFile()

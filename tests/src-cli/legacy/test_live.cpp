@@ -372,6 +372,86 @@ TEST_CASE("main_live multi VFO mode runs one pipeline per VFO", "[cli][legacy][l
     CHECK(built[0].params["unit_vfo"] != built[1].params["unit_vfo"]);
 }
 
+namespace
+{
+    // Live module whose process() throws at once
+    class CliLiveFailingModule : public CliLiveModule
+    {
+    public:
+        using CliLiveModule::CliLiveModule;
+        void process() { throw std::runtime_error("unit_cli_live_bad broke"); }
+        std::string getIDM() { return "unit_cli_live_bad"; }
+    };
+
+    // Adds the pipeline unit_cli_live_bad, made of the failing module
+    void addFailingPipeline()
+    {
+        pl::modules_registry.push_back({"unit_cli_live_bad", nlohmann::json::object(), [](std::string in, std::string hint, nlohmann::json params) -> std::shared_ptr<pl::ProcessingModule>
+                                        { return std::make_shared<CliLiveFailingModule>(in, hint, params); }});
+        pl::Pipeline p;
+        p.id = "unit_cli_live_bad";
+        p.name = "Unit CLI Live Bad";
+        p.live = true;
+        p.steps = {{"baseband", "", {}, ""}, {"soft", "unit_cli_live_bad", {}, ""}};
+        p.live_cfg.normal_live = {1};
+        pl::pipelines.push_back(p);
+    }
+
+    // Runs the command on a thread of its own, bounded by a timeout. False if it hung.
+    // error is what it threw. On a timeout env is left to the thread, which still uses it.
+    bool runLiveBounded(std::shared_ptr<LiveEnv> env, const std::string &pipeline, std::vector<std::string> flags, std::string &error)
+    {
+        auto result = std::make_shared<std::string>();
+        bool finished = runBounded(
+            [env, pipeline, flags, result]()
+            {
+                try
+                {
+                    env->run(pipeline, flags);
+                }
+                catch (std::exception &e)
+                {
+                    *result = e.what();
+                }
+            });
+        if (finished)
+            error = *result;
+        return finished;
+    }
+} // namespace
+
+// A live module that fails is logged when it does, and the command still stops every module,
+// then reports the failure through the exception that LivePipeline::stop() throws
+TEST_CASE("main_live reports a live module that throws", "[cli][legacy][live]")
+{
+    auto env = std::make_shared<LiveEnv>();
+    addFailingPipeline();
+    live_should_exit = true;
+    std::string error;
+
+    SECTION("one pipeline") { REQUIRE(runLiveBounded(env, "unit_cli_live_bad", env->flags(), error)); }
+
+    SECTION("multi VFO mode, where the failing VFO is stopped first")
+    {
+        std::string vfos = env->dir.file("vfos.json");
+        writeFile(vfos, R"({
+            "vfo_a": {"frequency": 137090000, "pipeline": "unit_cli_live_bad", "parameters": {}},
+            "vfo_b": {"frequency": 137110000, "pipeline": "unit_cli_live", "parameters": {}}
+        })");
+
+        REQUIRE(runLiveBounded(env, "unit_cli_live", plus(env->flags(), {"--multi_vfo", vfos}), error));
+
+        INFO(env->log.dump());
+        // The other VFO is stopped too, or the thread pool waits for it forever
+        CHECK(env->log.contains("Stopped VFO vfo_a", slog::LOG_INFO));
+        CHECK(env->log.contains("Stopped VFO vfo_b", slog::LOG_INFO));
+    }
+
+    INFO(env->log.dump());
+    CHECK(error == "unit_cli_live_bad broke");
+    CHECK(env->log.contains("Module unit_cli_live_bad failed! unit_cli_live_bad broke", slog::LOG_ERROR));
+}
+
 #ifndef _WIN32
 namespace
 {

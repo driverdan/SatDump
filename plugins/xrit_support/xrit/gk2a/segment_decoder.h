@@ -57,7 +57,7 @@ namespace satdump
                     return;
                 if (data.height() + pos > image.height() || data.width() != seg_width)
                 {
-                    logger->error("Image of the wrong size! %dx%d | %dx%d | %d/%d", seg_width, seg_height, data.width(), data.height(), data.height() + pos, image.height());
+                    logger->error("Image of the wrong size! %dx%d | %zux%zu | %zu/%zu", seg_width, seg_height, data.width(), data.height(), data.height() + pos, image.height());
                     return;
                 }
                 image::imemcpy(image, seg_width * pos, data, 0, data.size());

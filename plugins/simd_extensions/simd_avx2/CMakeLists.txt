@@ -17,7 +17,10 @@ if(ANDROID)
     endif()
 endif()
 
-if(CXX_HAS_AVX_2)
+# FindAVX only sets CXX_HAS_AVX_2 (its second attempt, with -mavx) when its first attempt,
+# without any flag, fails. With -march=native in the C flags the first attempt succeeds on
+# a CPU that has AVX, so also accept its overall AVX2 result there.
+if(CXX_HAS_AVX_2 OR (UNIX AND CXX_AVX2_FOUND))
     message("Found AVX2 features, enabling AVX2 plugin")
 
     file(GLOB_RECURSE simd_avx2_CPPS *.cpp)
