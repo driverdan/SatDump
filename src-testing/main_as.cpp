@@ -49,12 +49,12 @@ void print(std::string &msg)
 
 namespace namelog
 {
-    void trace(std::string &f) { logger->trace("[AngelScript] " + f); }
-    void debug(std::string &f) { logger->debug("[AngelScript] " + f); }
-    void info(std::string &f) { logger->info("[AngelScript] " + f); }
-    void warn(std::string &f) { logger->warn("[AngelScript] " + f); }
-    void error(std::string &f) { logger->error("[AngelScript] " + f); }
-    void critical(std::string &f) { logger->critical("[AngelScript] " + f); }
+    void trace(std::string &f) { logger->trace("[AngelScript] %s", f.c_str()); }
+    void debug(std::string &f) { logger->debug("[AngelScript] %s", f.c_str()); }
+    void info(std::string &f) { logger->info("[AngelScript] %s", f.c_str()); }
+    void warn(std::string &f) { logger->warn("[AngelScript] %s", f.c_str()); }
+    void error(std::string &f) { logger->error("[AngelScript] %s", f.c_str()); }
+    void critical(std::string &f) { logger->critical("[AngelScript] %s", f.c_str()); }
 }
 
 #include "nlohmann/json.hpp"
