@@ -92,7 +92,7 @@ namespace elektro_arktika
                 imageBuffer2[counter * 6004 + i] = msuLineBuffer[i * 2 + 1] << 6;
             }
 
-            uint64_t data_time = data[10] << 32 | data[11] << 24 | data[12] << 16 | data[13] << 8 | data[14];
+            uint64_t data_time = (uint64_t)data[10] << 32 | (uint64_t)data[11] << 24 | (uint64_t)data[12] << 16 | (uint64_t)data[13] << 8 | (uint64_t)data[14];
             //  data_time = 0;
             double timestamp = data_time / 256.0; //.56570155902006;
             timestamp += 1735204808.2837029;
