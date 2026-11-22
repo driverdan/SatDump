@@ -124,7 +124,7 @@ protected:
                 }
                 catch (std::runtime_error &e)
                 {
-                    logger->trace(e.what());
+                    logger->trace("%s", e.what());
                 }
             }
         }

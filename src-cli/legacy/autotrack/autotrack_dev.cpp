@@ -36,7 +36,7 @@ void AutoTrackApp::start_device()
     }
     catch (std::runtime_error &e)
     {
-        logger->error(e.what());
+        logger->error("%s", e.what());
     }
 }
 

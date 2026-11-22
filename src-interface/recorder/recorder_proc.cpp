@@ -112,7 +112,7 @@ namespace satdump
         catch (std::runtime_error &e)
         {
             sdr_error.set_message(style::theme.red, e.what());
-            logger->error(e.what());
+            logger->error("%s", e.what());
         }
     }
 
@@ -200,7 +200,7 @@ namespace satdump
             catch (std::runtime_error &e)
             {
                 error.set_message(style::theme.red, e.what());
-                logger->error(e.what());
+                logger->error("%s", e.what());
             }
         }
         else

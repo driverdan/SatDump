@@ -155,7 +155,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
             catch (std::runtime_error &e)
             {
                 if (dependencies_layers == (max_dependencies_layers - 1))
-                    logger->error(e.what());
+                    logger->error("%s", e.what());
                 really_failed.push_back(s);
             }
         }

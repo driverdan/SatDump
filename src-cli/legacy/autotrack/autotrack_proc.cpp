@@ -28,7 +28,7 @@ void AutoTrackApp::start_processing()
     }
     catch (std::runtime_error &e)
     {
-        logger->error(e.what());
+        logger->error("%s", e.what());
     }
 
     live_pipeline_mtx.unlock();
