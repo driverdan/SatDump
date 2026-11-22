@@ -908,7 +908,7 @@ TEST_CASE("GOESLRITDataDecoderModule pads a short uncompressed image without a N
     }
 }
 
-TEST_CASE("GOESLRITDataDecoderModule does not save an image smaller than its image structure record says that it does not bring to its size", "[plugins][goes_support][goes_lrit_data_decoder]")
+TEST_CASE("GOESLRITDataDecoderModule does not save a compressed image that is neither Rice nor GIF and is smaller than its size", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     // Compressed, but neither Rice nor GIF
     DecoderEnv env;
