@@ -8,7 +8,9 @@
 #include "base/dsp_buffer.h"
 #include "core/exception.h"
 #include "dsp/base/stream.h"
+#include "logger.h"
 #include "nlohmann/json.hpp"
+#include <cstdlib>
 #include <exception>
 #include <mutex>
 #include <thread>
@@ -219,7 +221,11 @@ namespace satdump
             virtual ~Block()
             {
                 if (blk_should_run || blk_th.joinable())
-                    throw satdump_exception("Block wasn't properly stopped before destructor was called!");
+                {
+                    // A destructor cannot throw, and the running thread cannot be stopped from here
+                    logger->critical("Block %s wasn't properly stopped before its destructor was called!", d_id.c_str());
+                    std::abort();
+                }
             }
 
         public:
