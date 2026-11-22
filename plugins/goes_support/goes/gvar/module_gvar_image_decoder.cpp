@@ -606,6 +606,11 @@ namespace goes
 
         GVARImageDecoderModule::~GVARImageDecoderModule()
         {
+            // process() only stops the saving thread at its end, not when it leaves through an exception
+            writeImagesAync = false;
+            if (imageSavingThread.joinable())
+                imageSavingThread.join();
+
             delete[] frame;
 
             if (textureID != 0)
@@ -618,8 +623,12 @@ namespace goes
         void GVARImageDecoderModule::writeImagesThread()
         {
             logger->info("Started saving thread...");
-            while (writeImagesAync)
+            while (true)
             {
+                // Read before the queue: process() queues its images before it clears the flag, so the
+                // images still queued then are saved before the thread ends
+                bool keep_running = writeImagesAync;
+
                 imageVectorMutex.lock();
                 int imagesCount = imagesVector.size();
                 if (imagesCount > 0)
@@ -636,7 +645,14 @@ namespace goes
                     imagesVector.erase(imagesVector.begin(), imagesVector.begin() + 1);
                 }
                 imageVectorMutex.unlock();
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+
+                // Only wait when the queue was empty, so that the next queued image is not delayed
+                if (imagesCount == 0)
+                {
+                    if (!keep_running)
+                        break;
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
             }
         }
 
