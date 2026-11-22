@@ -342,3 +342,44 @@ TEST_CASE("Logger formats a C string format like a std::string one", "[logger]")
     CHECK(t.sink->msgs[2].lvl == slog::LOG_NOTICE);
     CHECK(t.sink->msgs[3].str == "concatenated 4");
 }
+
+// The other tests here pass string literals, which now go to the const char * overloads. The
+// std::string overloads still serve every "..." + x call, so they keep their own checks.
+TEST_CASE("Logger std::string format overloads log at their own level", "[logger]")
+{
+    LoggerWithSink t;
+    std::string fmt = "%d%%";
+    t.logger.trace(fmt, 0);
+    t.logger.debug(fmt, 1);
+    t.logger.info(fmt, 2);
+    t.logger.notice(fmt, 3);
+    t.logger.warn(fmt, 4);
+    t.logger.error(fmt, 5);
+    t.logger.critical(fmt, 6);
+
+    REQUIRE(t.sink->msgs.size() == 7);
+    const slog::LogLevel expected[] = {slog::LOG_TRACE, slog::LOG_DEBUG, slog::LOG_INFO, slog::LOG_NOTICE, slog::LOG_WARN, slog::LOG_ERROR, slog::LOG_CRIT};
+    for (int i = 0; i < 7; i++)
+    {
+        CHECK(t.sink->msgs[i].lvl == expected[i]);
+        CHECK(t.sink->msgs[i].str == std::to_string(i) + "%");
+    }
+}
+
+TEST_CASE("Logger std::string format keeps every character around 1024 characters", "[logger]")
+{
+    LoggerWithSink t;
+    std::string fmt = "%s";
+    for (size_t len : {1023, 1024, 1025})
+    {
+        std::string exact(len, 'x');
+        t.logger.info(fmt, exact.c_str());
+        t.logger.info("%s", exact.c_str());
+    }
+    REQUIRE(t.sink->msgs.size() == 6);
+    for (int i = 0; i < 3; i++)
+    {
+        CHECK(t.sink->msgs[2 * i].str == std::string(1023 + i, 'x'));
+        CHECK(t.sink->msgs[2 * i].str == t.sink->msgs[2 * i + 1].str);
+    }
+}
