@@ -64,11 +64,13 @@ TEST_CASE("identifyXRITFIle groups the segments of a MSG or Elektro image", "[pl
 {
     auto [filename, type] = GENERATE(std::make_pair(MSG_FILENAME, xr::XRIT_MSG_SEVIRI), std::make_pair(ELEKTRO_FILENAME, xr::XRIT_ELEKTRO_MSUGS));
     uint16_t planned_end = GENERATE(8, 10); // A single segment, or several
+    cli_test::LogCapture log;
     auto file = parsedFile(lritFile(0, {imageStructureRecord(8, 16, 4, 0), annotationRecord(filename), msgSegmentIdentificationRecord(1, 8, 8, planned_end)}, Bytes(64, 1)));
     auto info = xr::identifyXRITFIle(file);
 
     CHECK(info.type == type);
     CHECK(info.seg_groupid != "");
+    CHECK_FALSE(log.contains("planned end segment"));
 }
 
 TEST_CASE("identifyXRITFIle keeps a MSG or Elektro segment whose planned end segment is before its start as an image of its own", "[plugins][xrit_support][identify]")

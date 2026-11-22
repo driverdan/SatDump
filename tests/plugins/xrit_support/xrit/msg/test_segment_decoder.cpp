@@ -33,6 +33,21 @@ TEST_CASE("MSGSegmentedImageDecoder places a segment by its number from the plan
     CHECK(decoder.image.get(16 * 4) == 3);
 }
 
+TEST_CASE("MSGSegmentedImageDecoder ignores a segment whose number is outside the planned segments", "[plugins][xrit_support][msg_segment_decoder]")
+{
+    // An image of segments 2 and 3
+    uint16_t segment = GENERATE(0, 1, 4, 65535);
+    auto file = msgSegment(segment, 2, 3);
+    xr::MSGSegmentedImageDecoder decoder(file);
+    decoder.pushSegment(file);
+
+    REQUIRE(decoder.image.size() == 16 * 8);
+    CHECK_FALSE(decoder.hasData());
+    CHECK_FALSE(decoder.isComplete());
+    CHECK(decoder.image.get(0) == 0);
+    CHECK(decoder.image.get(16 * 8 - 1) == 0);
+}
+
 TEST_CASE("MSGSegmentedImageDecoder ignores the segments of an image whose planned end segment is before its start", "[plugins][xrit_support][msg_segment_decoder]")
 {
     // The image has end - start + 1 segments. identifyXRITFIle does not give such a segment a
