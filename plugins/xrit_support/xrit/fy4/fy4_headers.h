@@ -117,25 +117,19 @@ namespace satdump
                     record_length = data[1] << 8 | data[2];
                     projection_name = std::string((char *)&data[3], (char *)&data[3 + 32]);
 
-                    ((float *)&column_scaling_factor)[3] = data[35];
-                    ((float *)&column_scaling_factor)[2] = data[36];
-                    ((float *)&column_scaling_factor)[1] = data[37];
-                    ((float *)&column_scaling_factor)[0] = data[38];
+                    // Big-endian IEEE 754 single precision floats
+                    auto get_float = [](uint8_t *d)
+                    {
+                        uint32_t v = (uint32_t)d[0] << 24 | (uint32_t)d[1] << 16 | (uint32_t)d[2] << 8 | (uint32_t)d[3];
+                        float f;
+                        std::memcpy(&f, &v, sizeof(f));
+                        return f;
+                    };
 
-                    ((float *)&line_scaling_factor)[3] = data[39];
-                    ((float *)&line_scaling_factor)[2] = data[40];
-                    ((float *)&line_scaling_factor)[1] = data[41];
-                    ((float *)&line_scaling_factor)[0] = data[42];
-
-                    ((float *)&column_offset)[3] = data[43];
-                    ((float *)&column_offset)[2] = data[44];
-                    ((float *)&column_offset)[1] = data[45];
-                    ((float *)&column_offset)[0] = data[46];
-
-                    ((float *)&line_offset)[3] = data[47];
-                    ((float *)&line_offset)[2] = data[48];
-                    ((float *)&line_offset)[1] = data[49];
-                    ((float *)&line_offset)[0] = data[50];
+                    column_scaling_factor = get_float(&data[35]);
+                    line_scaling_factor = get_float(&data[39]);
+                    column_offset = get_float(&data[43]);
+                    line_offset = get_float(&data[47]);
 
                     column_scalar = line_scalar = 0.0;
                 }
