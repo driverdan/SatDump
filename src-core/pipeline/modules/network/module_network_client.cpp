@@ -53,7 +53,7 @@ namespace satdump
                     nng_socket sock;
                     nng_dialer dialer;
 
-                    logger->info("Opening TCP socket on " + std::string("tcp://" + address + ":" + std::to_string(port)));
+                    logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
 
                     nng_sub0_open_raw(&sock);
                     nng_dialer_create(&dialer, sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());
