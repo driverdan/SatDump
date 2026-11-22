@@ -91,7 +91,7 @@ struct internal_state {
     uint32_t xmax;
 
      /* length of uncompressed input block should be the longest
-        possible block */
+        legal block */
     uint32_t in_blklen;
 
     /* length of output block in bytes */

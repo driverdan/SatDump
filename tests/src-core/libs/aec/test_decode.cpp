@@ -310,26 +310,27 @@ TEST_CASE("aec_decode reports split blocks whose fundamental sequences use up th
 
 TEST_CASE("aec_decode does not read after the input of a corrupt GOES HRIT line", "[libs][aec]")
 {
-    // #49: 64 bytes of one byte followed by zeros, for each value of that byte, with the settings
-    // of the GOES HRIT decoder. With 8, 16 and 32 pixels per block, the decoder read after the
-    // input for 208 of the 256 values.
+    // #49: 128 bytes of one byte followed by zeros, for each value of that byte, with the settings
+    // of the GOES HRIT decoder. The decoder read after the input for 208 of the 256 values. 128
+    // bytes is enough for the fast path with every block size (80 bytes with 64 pixels per block).
     unsigned int pixels_per_block = GENERATE(8, 16, 32, 64);
     AecConfig c = {8, pixels_per_block, (5424 + pixels_per_block - 1) / pixels_per_block, AEC_DATA_MSB | AEC_DATA_PREPROCESS};
+    const size_t size = 128;
 
     int read_after_input = 0, errors = 0;
     for (int first = 0; first < 256; first++)
     {
         // Longer than what the decoder read from it to fill the line
-        std::vector<uint8_t> in = withGuard({(uint8_t)first}, 64, 8192);
+        std::vector<uint8_t> in = withGuard({(uint8_t)first}, size, 8192);
         std::vector<uint8_t> out(c.rsi * pixels_per_block);
         aec_stream strm = makeStream(c);
         strm.next_in = in.data();
-        strm.avail_in = 64;
+        strm.avail_in = size;
         strm.next_out = out.data();
         strm.avail_out = out.size();
         REQUIRE(aec_decode_init(&strm) == AEC_OK);
         int status = aec_decode(&strm, AEC_FLUSH);
-        if (strm.avail_in > 64) // Wrapped around
+        if (strm.avail_in > size) // Wrapped around
             read_after_input++;
         if (status == AEC_DATA_ERROR)
             errors++;
@@ -337,5 +338,38 @@ TEST_CASE("aec_decode does not read after the input of a corrupt GOES HRIT line"
     }
     CHECK(read_after_input == 0);
     // The others end without error, as input that runs out does
-    CHECK(errors == (pixels_per_block == 64 ? 0 : 160));
+    CHECK(errors == 160);
+}
+
+TEST_CASE("aec_decode reports second extension blocks beyond the end of its table", "[libs][aec]")
+{
+    // A fundamental sequence above 90 has no entry in the second extension table. The check in
+    // the fast path compared against the size of the table in bytes and the slow path had none,
+    // so before #49 was fixed such a block read past the decoder state (not tested on master).
+    unsigned int fs = GENERATE(90, 91, 200);
+    bool fast_path = GENERATE(true, false);
+
+    BitWriter w;
+    w.put(0, 3); // Option ID of a low entropy block, for 8 bit samples
+    w.put(1, 1); // Second extension
+    for (unsigned int i = 0; i < fs; i++)
+        w.put(0, 1);
+    w.put(1, 1);
+    // The fast path needs (32 * 8 + 3) / 8 + 16 = 48 bytes of input
+    std::vector<uint8_t> in = w.bytes;
+    if (fast_path)
+        in.resize(64, 0);
+    REQUIRE((in.size() >= 48) == fast_path);
+
+    std::vector<uint8_t> out(32);
+    aec_stream strm = makeStream({8, 32, 1, 0});
+    strm.next_in = in.data();
+    strm.avail_in = in.size();
+    strm.next_out = out.data();
+    strm.avail_out = out.size();
+    REQUIRE(aec_decode_init(&strm) == AEC_OK);
+    // 90 is the last entry of the table: the rest of the block is then decoded from the zeros, or
+    // ends with the input
+    CHECK(aec_decode(&strm, AEC_FLUSH) == (fs > 90 ? AEC_DATA_ERROR : AEC_OK));
+    aec_decode_end(&strm);
 }

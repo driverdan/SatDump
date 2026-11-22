@@ -696,7 +696,9 @@ static int m_error(struct aec_stream *strm)
 {
     /* Stay in error state. Resuming after a data error could leave
        a partial block in rsi_buffer and overrun it. As upstream
-       libaec 4dda29b. */
+       libaec 4dda29b. This is also what makes the M_ERROR of
+       m_split() safe: it has already advanced state->rsip past the
+       reference sample, where upstream decodes into a local rsip. */
     return M_ERROR;
 }
 
