@@ -53,8 +53,8 @@ TEST_CASE("GOESSegmentedImageDecoder ignores a segment smaller than its own imag
     // of 2 segments of 16 x 4
     cli_test::LogCapture log;
     xr::XRITFile file;
-    file.lrit_data = lritFile(0, {imageStructureRecord(8, 65535, 65535, 0), annotationRecord("GOES_SEGMENT.lrit"), noaaRecord(16, 13, 0, 0), segmentIdentificationRecord(1, 0, 0, 0, 2, 16, 8)},
-                              Bytes(16 * 4, 1));
+    file.lrit_data =
+        lritFile(0, {imageStructureRecord(8, 65535, 65535, 0), annotationRecord("GOES_SEGMENT.lrit"), noaaRecord(16, 13, 0, 0), segmentIdentificationRecord(1, 0, 0, 0, 2, 16, 8)}, Bytes(16 * 4, 1));
     file.parseHeaders();
     xr::GOESSegmentedImageDecoder decoder(file);
     REQUIRE(decoder.image.size() == 16 * 8);
