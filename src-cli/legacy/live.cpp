@@ -26,7 +26,7 @@ int main_live(int argc, char *argv[])
 {
     if (argc < 5) // Check overall command
     {
-        logger->error("Usage : " + std::string(argv[0]) + " live [pipeline_id] [output_file_or_directory] [additional options as required]");
+        logger->error("Usage : %s live [pipeline_id] [output_file_or_directory] [additional options as required]", argv[0]);
         logger->error("Extra options (examples. Any parameter used in modules or sources can be used here) :");
         logger->error(" --samplerate [baseband_samplerate] --baseband_format [f32/s16/s8/u8] --dc_block --iq_swap");
         logger->error(" --source [airspy/rtlsdr/etc] --gain 20 --bias");
@@ -58,7 +58,7 @@ int main_live(int argc, char *argv[])
 
         if (!pipeline.has_value())
         {
-            logger->critical("Pipeline " + downlink_pipeline + " does not exist!");
+            logger->critical("Pipeline %s does not exist!", downlink_pipeline.c_str());
             return 1;
         }
 
@@ -74,7 +74,7 @@ int main_live(int argc, char *argv[])
         }
         catch (std::exception &e)
         {
-            logger->error("Fatal error running pipeline/device : " + std::string(e.what()));
+            logger->error("Fatal error running pipeline/device : %s", e.what());
             return 1;
         }
 
@@ -142,7 +142,7 @@ int main_live(int argc, char *argv[])
         dsp::SourceDescriptor selected_src;
 
         for (dsp::SourceDescriptor src : source_tr)
-            logger->debug("Device " + src.name);
+            logger->debug("Device %s", src.name.c_str());
 
         // Try to find it and check it's usable
         bool src_found = false;
@@ -198,7 +198,7 @@ int main_live(int argc, char *argv[])
             }
             catch (std::exception &e)
             {
-                logger->error("Fatal error running pipeline/device : " + std::string(e.what()));
+                logger->error("Fatal error running pipeline/device : %s", e.what());
                 return 1;
             }
 
@@ -238,7 +238,7 @@ int main_live(int argc, char *argv[])
                 splitter_vfo->set_vfo_enabled(cfg.key(), true);
 
                 all_pipelines.emplace(cfg.key(), live_pipeline);
-                logger->info("Added VFO for " + cfg.key() + " at %f", final_shift);
+                logger->info("Added VFO for %s at %f", cfg.key().c_str(), final_shift);
             }
 
             // If requested, boot up webserver
@@ -309,7 +309,7 @@ int main_live(int argc, char *argv[])
                         error = std::current_exception();
                 }
                 splitter_vfo->del_vfo(e.first);
-                logger->info("Stopped VFO " + e.first);
+                logger->info("Stopped VFO %s", e.first.c_str());
             }
             if (error)
                 std::rethrow_exception(error);
@@ -321,7 +321,7 @@ int main_live(int argc, char *argv[])
 
             if (!pipeline.has_value())
             {
-                logger->critical("Pipeline " + downlink_pipeline + " does not exist!");
+                logger->critical("Pipeline %s does not exist!", downlink_pipeline.c_str());
                 return 1;
             }
 
@@ -380,7 +380,7 @@ int main_live(int argc, char *argv[])
             }
             catch (std::exception &e)
             {
-                logger->error("Fatal error running pipeline/device : " + std::string(e.what()));
+                logger->error("Fatal error running pipeline/device : %s", e.what());
                 return 1;
             }
 
@@ -441,7 +441,7 @@ int main_live(int argc, char *argv[])
                     int start_level = pipeline->live_cfg.normal_live[pipeline->live_cfg.normal_live.size() - 1];
                     std::string input_level = pipeline->steps[start_level].level;
 
-                    logger->critical(input_level);
+                    logger->critical("%s", input_level.c_str());
 
                     try
                     {
@@ -449,7 +449,7 @@ int main_live(int argc, char *argv[])
                     }
                     catch (std::exception &e)
                     {
-                        logger->error("Fatal error running pipeline : " + std::string(e.what()));
+                        logger->error("Fatal error running pipeline : %s", e.what());
                     }
                 }
             }

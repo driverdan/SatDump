@@ -11,7 +11,7 @@ int main_offline(int argc, char *argv[])
 {
     if (argc < 5) // Check overall command
     {
-        logger->error("Usage : " + std::string(argv[0]) + " [pipeline_id] [input_level] [input_file] [output_file_or_directory] [additional options as required]");
+        logger->error("Usage : %s [pipeline_id] [input_level] [input_file] [output_file_or_directory] [additional options as required]", argv[0]);
         logger->error("Extra options (examples. Any parameter used in modules can be used here) :");
         logger->error(" --samplerate [baseband_samplerate] --baseband_format [cf32/cs16/cs8/cu8] --dc_block --iq_swap");
         logger->error("Sample command :");
@@ -36,9 +36,9 @@ int main_offline(int argc, char *argv[])
     // exit(0);
 
     // Print some useful info
-    logger->info("Starting processing pipeline " + downlink_pipeline + "...");
-    logger->debug("Input file (" + input_level + ") : " + input_file);
-    logger->debug("Output file : " + output_file);
+    logger->info("Starting processing pipeline %s...", downlink_pipeline.c_str());
+    logger->debug("Input file (%s) : %s", input_level.c_str(), input_file.c_str());
+    logger->debug("Output file : %s", output_file.c_str());
 
     // Create output dir
     if (!std::filesystem::exists(output_file))
@@ -53,7 +53,7 @@ int main_offline(int argc, char *argv[])
     }
     catch (std::exception &e)
     {
-        logger->error("Fatal error running pipeline : " + std::string(e.what()));
+        logger->error("Fatal error running pipeline : %s", e.what());
         return 1;
     }
 

@@ -89,7 +89,7 @@ void AutoTrackApp::start_recording()
 
     std::string filename = d_output_folder + "/" + prepareBasebandFileName(satdump::getTime(), get_samplerate(), frequency_hz);
     std::string recorder_filename = file_sink->start_recording(filename, get_samplerate());
-    logger->info("Recording to " + recorder_filename);
+    logger->info("Recording to %s", recorder_filename.c_str());
     is_recording = true;
 }
 

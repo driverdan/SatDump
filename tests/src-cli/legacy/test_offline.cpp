@@ -209,3 +209,20 @@ TEST_CASE("main_offline does nothing for an input level the pipeline does not ha
     CHECK(std::filesystem::is_directory(env.out));
     CHECK(std::filesystem::is_empty(env.out));
 }
+
+// The input and output paths used to be part of the logger's format, so a '%' in them was
+// interpreted: "%%" was logged as "%" (and "%s" or "%n" would read arguments that were never
+// passed)
+TEST_CASE("main_offline logs paths with a '%' as written", "[cli][legacy][offline]")
+{
+    OfflineEnv env;
+    std::string input = env.dir.file("in_100%%.raw");
+    std::string out = env.dir.file("out_100%%");
+    writeFile(input, "DATA");
+
+    CHECK(env.run({"unit_cli_offline", "baseband", input, out}) == 0);
+
+    INFO(env.log.dump());
+    CHECK(env.log.contains("Input file (baseband) : " + input, slog::LOG_DEBUG));
+    CHECK(env.log.contains("Output file : " + out, slog::LOG_DEBUG));
+}
