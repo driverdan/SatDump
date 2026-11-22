@@ -186,8 +186,9 @@ namespace jpss
                 double qterm = quadratic_factor * (4 * pow((cnorm - 0.5), 2) - 1);
                 tk_rad = tk_rad + qterm;
 
-                // Antenna reflector emission correction for scene
-                tk_rad = Calculate_Sa_scene(ich, angle_sc, tk_rad, prt_vshelf_rad);
+                // Antenna reflector emission correction for scene, which needs the shelf temperature
+                if (base_plate_temp != -1)
+                    tk_rad = Calculate_Sa_scene(ich, angle_sc, tk_rad, prt_vshelf_rad);
             }
 
             // Earth scene antenna pattern correction in radiance
@@ -203,7 +204,7 @@ namespace jpss
             double eps = atmsSdrCoeffsPtr.reflectorEmissivity[ich]; // emissivity
             double TwistAngle = 0.0;                                // twistangle
 
-            if (ich == 1 || ich == 2 || ich == 16)
+            if (ich == 0 || ich == 1 || ich == 15) // QV channels 1, 2 and 16 (ich is 0-based)
             {
                 double sin2theta = pow((sin(ang_rad + TwistAngle)), 2);
                 return eps * (reflectorRadiance - PRTtargetRadiance) + (1 - eps) * eps * (reflectorRadiance - PRTtargetRadiance) * sin2theta;
@@ -226,7 +227,7 @@ namespace jpss
             double eh = eps;
             double sin2theta = pow((sin(ang_rad + TwistAngle)), 2);
             double cos2theta = pow((cos(ang_rad + TwistAngle)), 2);
-            if (ich == 1 || ich == 2 || ich == 16)
+            if (ich == 0 || ich == 1 || ich == 15) // QV channels 1, 2 and 16 (ich is 0-based)
             {
                 var1 = (1 - eh) * (1 - eh * sin2theta);
                 var2 = eh * (1 + (1 - eh) * sin2theta);
