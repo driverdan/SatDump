@@ -39,10 +39,7 @@ TEST_CASE("GK2ALRITDataDecoderModule saves the files it does not decode", "[plug
     CHECK_FALSE(env.log.contains("", slog::LOG_ERROR));
 }
 
-// Bug: module_gk2a_lrit_data_decoder_proc.cpp:115,123: the type of an additional file is
-// kept with a "/" after it ("ANT/") and is then compared with "ANT", so the text files of
-// type ANT are saved as .bin instead of .txt (#54).
-TEST_CASE("GK2ALRITDataDecoderModule saves additional files of type ANT as text", "[plugins][gk2a_support][gk2a_lrit_data_decoder][!shouldfail]")
+TEST_CASE("GK2ALRITDataDecoderModule saves additional files of type ANT as text", "[plugins][gk2a_support][gk2a_lrit_data_decoder]")
 {
     NoKeys keys;
     DecoderEnv env;
@@ -52,6 +49,38 @@ TEST_CASE("GK2ALRITDataDecoderModule saves additional files of type ANT as text"
 
     INFO(env.log.dump());
     CHECK(env.files() == std::vector<std::string>{"ADD/ANT/COMS_ANT_0001.txt"});
+    CHECK(env.read("ADD/ANT/COMS_ANT_0001.txt") == "ants");
+}
+
+TEST_CASE("GK2ALRITDataDecoderModule names additional PNG and GIF files from their signature", "[plugins][gk2a_support][gk2a_lrit_data_decoder]")
+{
+    NoKeys keys;
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_IMG_0001.lrit")}, Bytes{0x89, 'P', 'N', 'G'}), APID, 0));
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_IMG_0002.lrit")}, Bytes{'G', 'I', 'F', '8', '9', 'a'}), APID, 10));
+    env.decode<gk2a::lrit::GK2ALRITDataDecoderModule>(mux, gk2aParams());
+
+    INFO(env.log.dump());
+    CHECK(env.files() == std::vector<std::string>{"ADD/IMG/COMS_IMG_0001.png", "ADD/IMG/COMS_IMG_0002.gif"});
+}
+
+// The signature checks look at the first 4 bytes of the data field: shorter files are kept
+// as they are
+TEST_CASE("GK2ALRITDataDecoderModule saves additional files shorter than a signature", "[plugins][gk2a_support][gk2a_lrit_data_decoder]")
+{
+    NoKeys keys;
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_BIN_0001.lrit")}, Bytes{'G', 'I', 'F'}), APID, 0));
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_BIN_0002.lrit")}, Bytes{0x89, 'P'}), APID, 10));
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_BIN_0003.lrit")}, Bytes{}), APID, 20));
+    env.decode<gk2a::lrit::GK2ALRITDataDecoderModule>(mux, gk2aParams());
+
+    INFO(env.log.dump());
+    CHECK(env.files() == std::vector<std::string>{"ADD/BIN/COMS_BIN_0001.gif", "ADD/BIN/COMS_BIN_0002.bin", "ADD/BIN/COMS_BIN_0003.bin"});
+    CHECK(env.read("ADD/BIN/COMS_BIN_0002.bin") == "\x89P");
+    CHECK(env.read("ADD/BIN/COMS_BIN_0003.bin").empty());
 }
 
 // A file that cannot be written is lost, with one error naming it, and the file after it is

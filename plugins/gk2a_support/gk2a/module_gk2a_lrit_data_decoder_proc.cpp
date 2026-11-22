@@ -110,17 +110,22 @@ namespace gk2a
                 std::vector<std::string> header_parts = satdump::splitString(current_filename, '_');
 
                 // Get type name
-                std::string name = "";
+                std::string type = "";
                 if (header_parts.size() >= 2)
-                    name = header_parts[1] + "/";
+                    type = header_parts[1];
+                std::string name = type.empty() ? "" : type + "/";
+
+                // The data field, after the headers
+                size_t data_size = file.lrit_data.size() > (size_t)offset ? file.lrit_data.size() - offset : 0;
+                const char *data = data_size > 0 ? (char *)file.lrit_data.data() + offset : nullptr;
 
                 // Get extension
                 std::string extension = "bin";
-                if (std::string((char *)&file.lrit_data[offset + 1], 3) == "PNG")
+                if (data_size >= 4 && std::string(data + 1, 3) == "PNG")
                     extension = "png";
-                else if (std::string((char *)&file.lrit_data[offset], 3) == "GIF")
+                else if (data_size >= 3 && std::string(data, 3) == "GIF")
                     extension = "gif";
-                else if (name == "ANT")
+                else if (type == "ANT")
                     extension = "txt";
 
                 if (!std::filesystem::exists(directory + "/ADD/" + name))
@@ -133,7 +138,7 @@ namespace gk2a
                 std::ofstream fileo(path, std::ios::binary);
                 if (!fileo)
                     throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
-                fileo.write((char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
+                fileo.write(data, data_size);
                 fileo.close();
                 if (!fileo)
                     throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
