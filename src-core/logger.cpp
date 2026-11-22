@@ -30,9 +30,19 @@ SATDUMP_DLL std::shared_ptr<slog::Logger> logger;
 
 // We need a place to buffer log messages during initialization
 // to make sure the messages end up in log sinks added later in
-// the initialization process
+// the initialization process. The buffer is shared by every Logger, each
+// with its own sink_mtx, so it has a mutex of its own. Lock order:
+// a Logger's sink_mtx first, then init_buffer_mtx
 std::vector<slog::LogMsg> init_log_buffer;
 bool init_buffer_active = true;
+static std::mutex init_buffer_mtx;
+
+// completeLoggerInit() without the lock, for callers that hold init_buffer_mtx
+static void clearInitBuffer()
+{
+    init_log_buffer.clear();
+    init_buffer_active = false;
+}
 
 namespace slog
 {
@@ -190,14 +200,17 @@ namespace slog
         m.lvl = lvl;
 
         // Push to init buffer to dump to sinks added later
-        if (init_buffer_active)
         {
-            // Once 1000 messages have been logged, assume all sinks have
-            // been attached and we were not notified. Stop buffering
-            if (init_log_buffer.size() >= 1000)
-                completeLoggerInit();
-            else
-                init_log_buffer.push_back(m);
+            std::lock_guard<std::mutex> lock(init_buffer_mtx);
+            if (init_buffer_active)
+            {
+                // Once 1000 messages have been logged, assume all sinks have
+                // been attached and we were not notified. Stop buffering
+                if (init_log_buffer.size() >= 1000)
+                    clearInitBuffer();
+                else
+                    init_log_buffer.push_back(m);
+            }
         }
 
         // Push to current sinks
@@ -262,8 +275,11 @@ namespace slog
     void Logger::add_sink(std::shared_ptr<LoggerSink> sink)
     {
         sink_mtx.lock();
-        for (LogMsg &msg : init_log_buffer)
-            sink->receive(msg);
+        {
+            std::lock_guard<std::mutex> lock(init_buffer_mtx);
+            for (LogMsg &msg : init_log_buffer)
+                sink->receive(msg);
+        }
         sinks.push_back(sink);
         sink_mtx.unlock();
     }
@@ -344,8 +360,8 @@ void initFileSink()
 
 void completeLoggerInit()
 {
-    init_log_buffer.clear();
-    init_buffer_active = false;
+    std::lock_guard<std::mutex> lock(init_buffer_mtx);
+    clearInitBuffer();
 }
 
 void setConsoleLevel(slog::LogLevel level)
