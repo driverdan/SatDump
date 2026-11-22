@@ -28,12 +28,12 @@ namespace satdump
             int seg_size = 0;
 
         public:
-            void init(int max_seg, int max_width, int max_height)
+            void init(const std::string &filename, int max_seg, int max_width, size_t max_height)
             {
-                seg_count = max_seg;
+                // Without an image, every segment is ignored
+                seg_count = initImage(filename, 8, max_width, max_height) ? max_seg : 0;
                 segments_done = std::vector<bool>(seg_count, false);
-                image.init(8, max_width, max_height, 1);
-                seg_size = max_seg > 0 ? int(max_height / max_seg) * max_width : 0; // With 0 segments, every segment is ignored
+                seg_size = seg_count > 0 ? int(max_height / seg_count) * max_width : 0; // With 0 segments, every segment is ignored
             }
 
             GOESSegmentedImageDecoder(XRITFile &file)
@@ -41,11 +41,11 @@ namespace satdump
                 goes::SegmentIdentificationHeader segment_id_header = file.getHeader<goes::SegmentIdentificationHeader>();
 
                 if (segment_id_header.max_row > 0)
-                    init(segment_id_header.max_segment, segment_id_header.max_column, segment_id_header.max_row);
+                    init(file.filename, segment_id_header.max_segment, segment_id_header.max_column, segment_id_header.max_row);
                 else
                 {
                     ImageStructureRecord image_structure_record = file.getHeader<ImageStructureRecord>();
-                    init(segment_id_header.max_segment, segment_id_header.max_column, segment_id_header.max_segment * image_structure_record.lines_count);
+                    init(file.filename, segment_id_header.max_segment, segment_id_header.max_column, (size_t)segment_id_header.max_segment * image_structure_record.lines_count);
                 }
             }
 
@@ -67,7 +67,7 @@ namespace satdump
                 goes::NOAALRITHeader noaa_header = file.getHeader<goes::NOAALRITHeader>();
                 ImageStructureRecord image_structure_record = file.getHeader<ImageStructureRecord>();
 
-                if (file.lrit_data.size() - primary_header.total_header_length < image_structure_record.columns_count * image_structure_record.lines_count)
+                if (file.lrit_data.size() - primary_header.total_header_length < (size_t)image_structure_record.columns_count * image_structure_record.lines_count)
                 {
                     logger->info("Image is too small compared to its header!");
                     return;

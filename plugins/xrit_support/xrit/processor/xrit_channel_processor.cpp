@@ -80,6 +80,14 @@ namespace satdump
                     wip_img->imageStatus = RECEIVING;
                 }
 
+                // The headers gave an empty image, or one too large to allocate, which the
+                // decoder logged: the segment is dropped, and the next one builds a new decoder
+                if (segDecoder->image.size() == 0)
+                {
+                    wip_img->imageStatus = IDLE;
+                    return;
+                }
+
                 segDecoder->pushSegment(file);
 
                 // If the UI is active, update texture

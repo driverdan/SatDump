@@ -1,3 +1,4 @@
+#include "cli_test_helpers.h"
 #include "xrit_support/xrit/goes/segment_decoder.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
@@ -44,4 +45,22 @@ TEST_CASE("GOESSegmentedImageDecoder ignores the segments of an image of 0 segme
     decoder.pushSegment(file);
 
     CHECK_FALSE(decoder.hasData());
+}
+
+TEST_CASE("GOESSegmentedImageDecoder ignores a segment smaller than its own image structure record says", "[plugins][xrit_support][goes_segment_decoder]")
+{
+    // The segment claims 65535 x 65535 pixels, which used to be an int product, in an image
+    // of 2 segments of 16 x 4
+    cli_test::LogCapture log;
+    xr::XRITFile file;
+    file.lrit_data = lritFile(0, {imageStructureRecord(8, 65535, 65535, 0), annotationRecord("GOES_SEGMENT.lrit"), noaaRecord(16, 13, 0, 0), segmentIdentificationRecord(1, 0, 0, 0, 2, 16, 8)},
+                              Bytes(16 * 4, 1));
+    file.parseHeaders();
+    xr::GOESSegmentedImageDecoder decoder(file);
+    REQUIRE(decoder.image.size() == 16 * 8);
+    decoder.pushSegment(file);
+
+    INFO(log.dump());
+    CHECK_FALSE(decoder.hasData());
+    CHECK(log.contains("Image is too small compared to its header!", slog::LOG_INFO));
 }
