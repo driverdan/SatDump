@@ -190,8 +190,9 @@ namespace goes
 
             lrit_demux.onFinalizeData = [this](satdump::xrit::XRITFile &file) -> void
             {
-                // On image data, make sure buffer contains the right amount of data
-                if (file.hasHeader<satdump::xrit::ImageStructureRecord>() && file.hasHeader<satdump::xrit::PrimaryHeader>() && file.hasHeader<NOAALRITHeader>())
+                // On image data, make sure buffer contains the right amount of data. Without a
+                // NOAA header, the image is not Rice compressed (the header reads as zeros)
+                if (file.hasHeader<satdump::xrit::ImageStructureRecord>() && file.hasHeader<satdump::xrit::PrimaryHeader>())
                 {
                     satdump::xrit::PrimaryHeader primary_header = file.getHeader<satdump::xrit::PrimaryHeader>();
                     satdump::xrit::ImageStructureRecord image_header = file.getHeader<satdump::xrit::ImageStructureRecord>();
