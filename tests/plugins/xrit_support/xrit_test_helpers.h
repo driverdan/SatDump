@@ -107,6 +107,20 @@ namespace xrit_test
         return record(128, c);
     }
 
+    // Type 128, MSG / Elektro specific: place of a segment in its image, from the planned start
+    // segment to the planned end segment
+    inline Bytes msgSegmentIdentificationRecord(uint8_t channel, uint16_t segment, uint16_t planned_start, uint16_t planned_end)
+    {
+        Bytes c;
+        put16(c, 324); // Spacecraft ID
+        c.push_back(channel);
+        put16(c, segment);
+        put16(c, planned_start);
+        put16(c, planned_end);
+        c.push_back(0); // Compression
+        return record(128, c);
+    }
+
     // Type 129, NOAA specific: product, and the compression of the data field (0 none,
     // 1 Rice, 5 GIF, 10 ZIP)
     inline Bytes noaaRecord(uint16_t product_id, uint16_t product_subid, uint16_t parameter, uint8_t compression)

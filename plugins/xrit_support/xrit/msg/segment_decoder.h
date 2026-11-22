@@ -44,9 +44,18 @@ namespace satdump
                 ImageStructureRecord image_structure_record = file.getHeader<ImageStructureRecord>();
                 msg::SegmentIdentificationHeader segment_id_header = file.getHeader<msg::SegmentIdentificationHeader>();
 
-                init(image_structure_record.bit_per_pixel > 8 ? 16 : 8,                                   //
-                     segment_id_header.planned_end_segment - segment_id_header.planned_start_segment + 1, //
-                     image_structure_record.columns_count,                                                //
+                // With the end before the start, the image has no segments, and every segment is ignored
+                int max_seg = segment_id_header.planned_end_segment - segment_id_header.planned_start_segment + 1;
+                if (max_seg <= 0)
+                {
+                    logger->warn("File %s has its planned end segment (%d) before its planned start segment (%d), its segments are ignored", file.filename.c_str(),
+                                 segment_id_header.planned_end_segment, segment_id_header.planned_start_segment);
+                    max_seg = 0;
+                }
+
+                init(image_structure_record.bit_per_pixel > 8 ? 16 : 8, //
+                     max_seg,                                           //
+                     image_structure_record.columns_count,              //
                      image_structure_record.lines_count);
             }
 
