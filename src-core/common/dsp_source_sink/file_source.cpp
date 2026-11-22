@@ -106,7 +106,7 @@ void FileSource::start()
     baseband_reader.set_file(file_path, baseband_type);
     baseband_reader.should_repeat = true;
 
-    logger->debug("Opening %s filesize " PRIu64, file_path.c_str(), baseband_reader.filesize);
+    logger->debug("Opening %s filesize %" PRIu64, file_path.c_str(), baseband_reader.filesize);
 
     is_started = true;
 }

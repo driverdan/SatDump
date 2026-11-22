@@ -129,7 +129,7 @@ void AirspyHFSource::set_frequency(uint64_t frequency)
     if (is_started)
     {
         airspyhf_set_freq(airspyhf_dev_obj, frequency);
-        logger->debug("Set AirspyHF frequency to %d", frequency);
+        logger->debug("Set AirspyHF frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

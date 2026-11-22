@@ -27,16 +27,14 @@ namespace satdump
             int seg_height = 0, seg_width = 0;
 
         public:
-            void init(int bit_depth, int max_seg, int segment_width, int segment_height)
+            void init(const std::string &filename, int bit_depth, int max_seg, int segment_width, int segment_height)
             {
-                seg_count = max_seg;
+                // Without an image, every segment is ignored
+                seg_count = initImage(filename, bit_depth, segment_width, (size_t)segment_height * max_seg) ? max_seg : 0;
                 segments_done.resize(seg_count, false);
 
-                image = image::Image(bit_depth, segment_width, segment_height * max_seg, 1);
                 seg_height = segment_height;
                 seg_width = segment_width;
-
-                image.fill(0);
             }
 
             MSGSegmentedImageDecoder(XRITFile &file)
@@ -53,7 +51,8 @@ namespace satdump
                     max_seg = 0;
                 }
 
-                init(image_structure_record.bit_per_pixel > 8 ? 16 : 8, //
+                init(file.filename,                                     //
+                     image_structure_record.bit_per_pixel > 8 ? 16 : 8, //
                      max_seg,                                           //
                      image_structure_record.columns_count,              //
                      image_structure_record.lines_count);

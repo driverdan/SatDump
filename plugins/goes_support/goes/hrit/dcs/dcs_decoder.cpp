@@ -128,6 +128,10 @@ namespace goes
                 {
                     try
                     {
+                        // A line must reach the data format field. Every field after it is checked before use.
+                        if (pdt_line.size() <= field_offsets[10])
+                            throw std::runtime_error("line too short");
+
                         std::shared_ptr<DCP> new_dcp = std::make_shared<DCP>();
 
                         // Agency
@@ -154,7 +158,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[14])
                         {
                             int desc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     desc_last_pos = last_pos;
                             if (desc_last_pos != 0)
@@ -168,7 +172,7 @@ namespace goes
                         // Lat and Lon
                         // This is supposed to be in Degrees, Minutes, and seconds, but some PDTs report it as a decimal.
                         // Often does not report correctly for West or East. These are all upstream errors.
-                        if (pdt_line.size() >= field_offsets[16])
+                        if (pdt_line.size() >= field_offsets[17])
                         {
                             // Correct format
                             if (pdt_line[field_offsets[16] + 1] == '0' || (pdt_line[field_offsets[16] + 1] == '1' && pdt_line[field_offsets[16] + 2] < '9'))
@@ -199,7 +203,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[18])
                         {
                             int manu_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     manu_last_pos = last_pos;
                             if (manu_last_pos != 0)
@@ -214,7 +218,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[19])
                         {
                             int model_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     model_last_pos = last_pos;
                             if (model_last_pos != 0)
@@ -229,7 +233,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[22])
                         {
                             int nmc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     nmc_last_pos = last_pos;
                             if (nmc_last_pos != 0)
@@ -243,9 +247,9 @@ namespace goes
                         // SHEF Codes in this file are mostly wrong - ignore!
 
                         // Finish up
-                        dcp_mtx.lock();
-                        dcp_list[std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16)] = new_dcp;
-                        dcp_mtx.unlock();
+                        uint32_t device_address = std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16);
+                        std::lock_guard<std::mutex> lock(dcp_mtx);
+                        dcp_list[device_address] = new_dcp;
                     }
                     catch (std::exception &e)
                     {
@@ -290,49 +294,36 @@ namespace goes
 
                     try
                     {
-                        std::shared_ptr<DCP> this_dcp;
+                        // Up to the description
+                        if (hads_tokens.size() < 10)
+                            throw std::runtime_error("too few fields");
+
                         uint32_t device_address = std::stoul(hads_tokens[0], nullptr, 16);
 
-                        dcp_mtx.lock();
-                        if (dcp_list.count(device_address) > 0)
-                            this_dcp = dcp_list[device_address];
-
-                        // DADDs should have all DCPs... but they do not. Fill in extras HADS has
-                        else
-                        {
-                            this_dcp = std::make_shared<DCP>();
-                            this_dcp->agency = hads_tokens[2];
-                            this_dcp->state = hads_tokens[3];
-                            dcp_list[device_address] = this_dcp;
-
-                            // Other info
-                            this_dcp->transmit_interval = std::stoi(hads_tokens[8]);
-                        }
-                        dcp_mtx.unlock();
+                        // The whole line is read before the DCP is changed or added
+                        DCP hads_dcp;
 
                         // Latitude
                         std::stringstream degree_stream;
                         std::string degree_str;
                         degree_stream = std::stringstream(hads_tokens[5]);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat = std::stof(degree_str);
+                        hads_dcp.lat = std::stof(degree_str);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat += (std::stof(degree_str) / 60.0f) * (this_dcp->lat > 0 ? 1 : -1);
+                        hads_dcp.lat += (std::stof(degree_str) / 60.0f) * (hads_dcp.lat > 0 ? 1 : -1);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat += (std::stof(degree_str) / 3600.0f) * (this_dcp->lat > 0 ? 1 : -1);
+                        hads_dcp.lat += (std::stof(degree_str) / 3600.0f) * (hads_dcp.lat > 0 ? 1 : -1);
 
                         // Longitude
                         degree_stream = std::stringstream(hads_tokens[6]);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon = std::stof(degree_str);
+                        hads_dcp.lon = std::stof(degree_str);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon += (std::stof(degree_str) / 60.0f) * (this_dcp->lon > 0 ? 1 : -1);
+                        hads_dcp.lon += (std::stof(degree_str) / 60.0f) * (hads_dcp.lon > 0 ? 1 : -1);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon += (std::stof(degree_str) / 3600.0f) * (this_dcp->lon > 0 ? 1 : -1);
+                        hads_dcp.lon += (std::stof(degree_str) / 3600.0f) * (hads_dcp.lon > 0 ? 1 : -1);
 
-                        this_dcp->description = hads_tokens[9];
-
-                        for (size_t i = 11; i < hads_tokens.size() - 5; i += 5)
+                        for (size_t i = 11; i + 5 < hads_tokens.size(); i += 5)
                         {
                             if (hads_tokens[i] == "")
                                 break;
@@ -348,8 +339,30 @@ namespace goes
                             else
                                 new_info.name = hads_tokens[i];
 
-                            this_dcp->pe_info.emplace_back(new_info);
+                            hads_dcp.pe_info.emplace_back(new_info);
                         }
+
+                        std::shared_ptr<DCP> this_dcp;
+                        std::lock_guard<std::mutex> lock(dcp_mtx);
+                        if (dcp_list.count(device_address) > 0)
+                            this_dcp = dcp_list[device_address];
+
+                        // DADDs should have all DCPs... but they do not. Fill in extras HADS has
+                        else
+                        {
+                            this_dcp = std::make_shared<DCP>();
+                            this_dcp->agency = hads_tokens[2];
+                            this_dcp->state = hads_tokens[3];
+
+                            // Other info
+                            this_dcp->transmit_interval = std::stoi(hads_tokens[8]);
+                            dcp_list[device_address] = this_dcp;
+                        }
+
+                        this_dcp->lat = hads_dcp.lat;
+                        this_dcp->lon = hads_dcp.lon;
+                        this_dcp->description = hads_tokens[9];
+                        this_dcp->pe_info.insert(this_dcp->pe_info.end(), hads_dcp.pe_info.begin(), hads_dcp.pe_info.end());
                     }
                     catch (std::exception&)
                     {

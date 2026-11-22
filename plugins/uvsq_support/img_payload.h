@@ -86,7 +86,7 @@ namespace uvsq
                 int valid = 0;
                 for (auto v : p.second.c)
                     valid += int(v);
-                logger->info("Image ID %d, Got %d/%d Chunks, Time %s", p.first, valid, p.second.c.size(), satdump::timestamp_to_string(timestamp).c_str());
+                logger->info("Image ID %d, Got %d/%zu Chunks, Time %s", p.first, valid, p.second.c.size(), satdump::timestamp_to_string(timestamp).c_str());
 
                 // std::ofstream(directory + "/" + std::to_string(p.first) + ".jpg").write((char *)p.second.p.data(), p.second.p.size());
 

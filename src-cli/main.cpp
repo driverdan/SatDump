@@ -28,8 +28,9 @@ int main(int argc, char *argv[])
     int v = h.parse(argc, argv);
     if (v != 0)
         return v;
-    h.run();
+    // run() logs the error of a command that threw, and returns true for it
+    bool failed = h.run();
 
     satdump::exitSatDump();
-    return 0;
+    return failed ? 1 : 0;
 }

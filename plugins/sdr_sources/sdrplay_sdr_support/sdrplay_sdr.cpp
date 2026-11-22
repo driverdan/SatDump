@@ -319,7 +319,7 @@ void SDRPlaySource::set_frequency(uint64_t frequency)
     {
         channel_params->tunerParams.rfFreq.rfHz = frequency;
         api.sdrplay_api_Update(sdrplay_dev.dev, sdrplay_dev.tuner, sdrplay_api_Update_Tuner_Frf, sdrplay_api_Update_Ext1_None);
-        logger->debug("Set SDRPlay frequency to %d", d_frequency);
+        logger->debug("Set SDRPlay frequency to %llu", (unsigned long long)d_frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

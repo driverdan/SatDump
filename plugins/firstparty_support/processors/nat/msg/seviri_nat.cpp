@@ -140,7 +140,7 @@ namespace satdump
             uint8_t *header_ptr = buf + 38 + headerpos;
             int hoffset = 1 + 60134 + 700 + 326058 + 101 + 72;
 
-            logger->critical("-------------------------- %d", headerpos);
+            logger->critical("-------------------------- %ld", headerpos);
 
             double calibration_slope[12];
             double calibration_offset[12];

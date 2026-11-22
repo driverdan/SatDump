@@ -154,7 +154,7 @@ void MiriSdrSource::set_frequency(uint64_t frequency)
     if (is_started)
     {
         mirisdr_set_center_freq(mirisdr_dev_obj, frequency);
-        logger->debug("Set MiriSDR frequency to %d", frequency);
+        logger->debug("Set MiriSDR frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

@@ -78,7 +78,7 @@ namespace satdump
             is_open = true;
 
             airspy_set_samplerate(airspy_dev_obj, p_samplerate);
-            logger->debug("Set Airspy samplerate to %d", p_samplerate);
+            logger->debug("Set Airspy samplerate to %.0f", p_samplerate);
 
             airspy_set_packing(airspy_dev_obj, 1);
             airspy_set_sample_type(airspy_dev_obj, AIRSPY_SAMPLE_FLOAT32_IQ);

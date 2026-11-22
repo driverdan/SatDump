@@ -875,6 +875,50 @@ TEST_CASE("GOESLRITDataDecoderModule saves the images of unknown imagers as they
     }
 }
 
+TEST_CASE("GOESLRITDataDecoderModule pads a short uncompressed image without a NOAA header to its size", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // 2 lines of an image of LINES lines
+    DecoderEnv env;
+    auto params = hritParams();
+    Mux mux;
+    Bytes pixels;
+    for (int y = 0; y < 2; y++)
+        for (uint8_t p : linePixels(y))
+            pixels.push_back(p);
+    Bytes file = lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 0), annotationRecord("CHART.lrit")}, pixels);
+    size_t headers = file.size() - pixels.size();
+    mux.add(VCID, packetize(file, APID));
+
+    SECTION("raw file")
+    {
+        params["write_images"] = false;
+        params["write_lrit"] = true;
+        decode(env, mux, params);
+        REQUIRE(env.exists("LRIT/CHART.lrit"));
+        CHECK(std::filesystem::file_size(env.path("LRIT/CHART.lrit")) == headers + COLUMNS * LINES);
+    }
+
+    SECTION("image")
+    {
+        decode(env, mux, params);
+        REQUIRE(env.files() == std::vector<std::string>{"IMAGES/CHART.lrit.png"});
+        std::vector<int> lines = {0, 1};
+        lines.resize(LINES, -1); // Zeros
+        CHECK(savedLines(env.path("IMAGES/CHART.lrit.png")) == lines);
+    }
+}
+
+TEST_CASE("GOESLRITDataDecoderModule does not save a compressed image that is neither Rice nor GIF and is smaller than its size", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // Compressed, but neither Rice nor GIF
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(lritFile(0, {imageStructureRecord(8, COLUMNS, LINES, 1), annotationRecord("CHART.lrit"), noaaRecord(1, 0, 0, 2)}, Bytes(COLUMNS, 1)), APID));
+    decode(env, mux);
+    CHECK(env.files().empty());
+    CHECK(env.log.contains("File CHART.lrit is smaller than its 64x24 image, not saving it as an image", slog::LOG_ERROR));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule decompresses Rice compressed images", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;
