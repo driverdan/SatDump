@@ -2,7 +2,9 @@
 #include "../meta.h"
 #include "projection/standard/proj_json.h"
 #include "image/geotiff/geotiff.h"
+#include "core/exception.h"
 #include "logger.h"
+#include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -28,7 +30,10 @@ namespace satdump
             }
 
             TIFF *tif = TIFFOpen(file.c_str(), "w");
-            if (tif)
+            if (!tif)
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
+
+            bool write_failed = false;
             {
                 TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, d_width);
                 TIFFSetField(tif, TIFFTAG_IMAGELENGTH, d_height);
@@ -72,7 +77,10 @@ namespace satdump
                     }
 
                     if (TIFFWriteScanline(tif, buf, y, 0) < 0)
+                    {
+                        write_failed = true;
                         break;
+                    }
                 }
 
                 _TIFFfree(buf);
@@ -93,8 +101,14 @@ namespace satdump
                     }
                 }
 
+                // TIFFClose() does not tell whether what it writes out made it to the file
+                if (!TIFFFlush(tif))
+                    write_failed = true;
                 TIFFClose(tif);
             }
+
+            if (write_failed)
+                throw satdump_exception("cannot write " + file);
         }
 
         void load_tiff(Image &img, std::string file)

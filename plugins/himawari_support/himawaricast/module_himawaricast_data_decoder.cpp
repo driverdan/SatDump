@@ -10,9 +10,12 @@
 #include "libs/bzlib_utils.h"
 #include "logger.h"
 #include "xrit/processor/xrit_channel_processor_render.h"
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 namespace himawari
 {
@@ -156,9 +159,14 @@ namespace himawari
                                             if (!std::filesystem::exists(directory + "/LRIT"))
                                                 std::filesystem::create_directories(directory + "/LRIT");
 
-                                            std::ofstream output_himawari_file(directory + "/LRIT/" + file.name);
+                                            std::string path = directory + "/LRIT/" + file.name;
+                                            std::ofstream output_himawari_file(path, std::ios::binary);
+                                            if (!output_himawari_file)
+                                                throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                                             output_himawari_file.write((char *)file.data.data(), file.data.size());
                                             output_himawari_file.close();
+                                            if (!output_himawari_file)
+                                                throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                                         }
                                     }
                                     else
@@ -168,9 +176,14 @@ namespace himawari
                                         if (!std::filesystem::exists(directory + "/ADD"))
                                             std::filesystem::create_directories(directory + "/ADD");
 
-                                        std::ofstream output_himawari_file(directory + "/ADD/" + file.name);
+                                        std::string path = directory + "/ADD/" + file.name;
+                                        std::ofstream output_himawari_file(path, std::ios::binary);
+                                        if (!output_himawari_file)
+                                            throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                                         output_himawari_file.write((char *)file.data.data(), file.data.size());
                                         output_himawari_file.close();
+                                        if (!output_himawari_file)
+                                            throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                                     }
                                 }
                                 catch (std::exception &e)

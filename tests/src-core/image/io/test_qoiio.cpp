@@ -2,7 +2,9 @@
 #include "image/io.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
+using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
@@ -69,3 +71,34 @@ TEST_CASE("image::save_qoi refuses empty images", "[image][io][qoi]")
     img::save_qoi(empty, dir.file("empty.qoi"));
     CHECK_FALSE(std::filesystem::exists(dir.file("empty.qoi")));
 }
+
+TEST_CASE("image::save_qoi throws when the file cannot be opened", "[image][io][qoi]")
+{
+    image_test::TempDir dir;
+    std::string path = dir.file("dir.qoi");
+    std::filesystem::create_directories(path); // A directory where the file goes
+    Image in = image_test::makeGradient(8, 4, 4, 1);
+    CHECK_THROWS_WITH(img::save_qoi(in, path), ContainsSubstring("cannot open " + path));
+}
+
+#ifdef __linux__
+TEST_CASE("image::save_qoi throws when the file cannot be written", "[image][io][qoi]")
+{
+    if (!std::filesystem::exists("/dev/full"))
+        SKIP("No /dev/full");
+
+    // A small image fails when the file is closed, a large one while it is written
+    auto size = GENERATE(4, 512);
+    INFO("size " << size);
+    Image in = image_test::makePattern(8, size, size, 3);
+    CHECK_THROWS_WITH(img::save_qoi(in, "/dev/full"), ContainsSubstring("cannot write /dev/full"));
+
+    // Nothing is left in a bad state for the next save
+    image_test::TempDir dir;
+    std::string path = dir.file("after.qoi");
+    img::save_qoi(in, path);
+    Image out;
+    img::load_qoi(out, path);
+    CHECK(image_test::sameShape(out, in));
+}
+#endif

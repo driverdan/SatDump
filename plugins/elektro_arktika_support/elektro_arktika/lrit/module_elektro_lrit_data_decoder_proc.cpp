@@ -9,7 +9,11 @@
 #include "utils/string.h"
 #include "xrit/identify.h"
 #include "xrit/msg/decomp.h"
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <stdexcept>
 
 namespace elektro
 {
@@ -40,9 +44,14 @@ namespace elektro
                 logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
-                std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);
+                std::string path = directory + "/LRIT/" + file.filename;
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
         }
     } // namespace lrit

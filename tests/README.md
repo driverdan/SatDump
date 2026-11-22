@@ -69,6 +69,7 @@ This also defines `SATDUMP_TEST_PLUGIN_<TARGET>`, the path of the built plugin: 
 | --- | --- |
 | `helpers/ccsds_tx.h` | Reed-Solomon, randomization, NRZ-M and convolutional coding of CADUs, BPSK modulation, 8-bit I/Q |
 | `plugins/xrit_support/xrit_test_helpers.h` | LRIT / HRIT files, their source packets (Rice compressed image lines included) and virtual channels |
+| `plugins/xrit_support/xrit_decoder_test_helpers.h` | Runs the GK-2A, FengYun-4 and Elektro-L xRIT data decoders on such virtual channels, and lists what they wrote |
 | `plugins/sdr_sources/rtltcp_support/rtltcp_test_helpers.h` | A rtl_tcp server that plays samples back and records the commands it is sent |
 
 ## Conventions
