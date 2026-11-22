@@ -57,7 +57,7 @@ namespace satdump
                     }
                     catch (std::runtime_error &e)
                     {
-                        logger->error(e.what());
+                        logger->error("%s", e.what());
                     }
                 }
             }
@@ -81,7 +81,7 @@ namespace satdump
                 }
                 catch (std::runtime_error &e)
                 {
-                    logger->error(e.what());
+                    logger->error("%s", e.what());
                     break;
                 }
             }
@@ -98,7 +98,7 @@ namespace satdump
             }
             catch (std::runtime_error &e)
             {
-                logger->error(e.what());
+                logger->error("%s", e.what());
             }
         }
 
@@ -281,7 +281,7 @@ namespace satdump
                         }
                         catch (std::runtime_error &e)
                         {
-                            logger->error(e.what());
+                            logger->error("%s", e.what());
                         }
                     }
                 }

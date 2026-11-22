@@ -59,7 +59,7 @@ void RtAudioSink::start()
     }
     catch (std::exception &e)
     {
-        logger->error(e.what());
+        logger->error("%s", e.what());
     }
 }
 

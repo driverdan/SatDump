@@ -271,7 +271,7 @@ int main_live(int argc, char *argv[])
                     uint64_t elapsed_time = time(0) - start_time;
                     if (elapsed_time >= timeout)
                     {
-                        logger->warn("Timeout is over! (%ds >= %ds) Stopping.", elapsed_time, timeout);
+                        logger->warn("Timeout is over! (%llus >= %llus) Stopping.", (unsigned long long)elapsed_time, (unsigned long long)timeout);
                         break;
                     }
 
@@ -393,7 +393,7 @@ int main_live(int argc, char *argv[])
                     uint64_t elapsed_time = time(0) - start_time;
                     if (elapsed_time >= timeout)
                     {
-                        logger->warn("Timeout is over! (%ds >= %ds) Stopping.", elapsed_time, timeout);
+                        logger->warn("Timeout is over! (%llus >= %llus) Stopping.", (unsigned long long)elapsed_time, (unsigned long long)timeout);
                         break;
                     }
 

@@ -29,7 +29,7 @@ namespace rotator
         }
         catch (std::exception &e)
         {
-            logger->error(e.what());
+            logger->error("%s", e.what());
             disconnect();
             return "";
         }

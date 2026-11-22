@@ -311,7 +311,7 @@ namespace meteosat
                 lines += (scan_chunk_number - 11) * 2;
 
                 if (not_channels_lines != lines)
-                    logger->trace("bogus line: %d", lines - not_channels_lines);
+                    logger->trace("bogus line: %lld", (long long)lines - (long long)not_channels_lines);
 
                 for (int c = 0; c < 2; c++)
                 {
