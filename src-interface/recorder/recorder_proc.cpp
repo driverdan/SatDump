@@ -227,6 +227,11 @@ namespace satdump
                 failed = true;
                 logger->error("Error stopping pipeline : %s", e.what());
             }
+            catch (...)
+            {
+                failed = true;
+                logger->error("Error stopping pipeline!");
+            }
             is_stopping_processing = is_processing = false;
 
             // As with "satdump legacy live", the output of a failed pipeline is not processed further

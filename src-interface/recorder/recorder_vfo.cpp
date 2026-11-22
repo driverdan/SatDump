@@ -121,6 +121,11 @@ namespace satdump
                     failed = true;
                     logger->error("Error stopping VFO %s : %s", it->id.c_str(), e.what());
                 }
+                catch (...)
+                {
+                    failed = true;
+                    logger->error("Error stopping VFO %s!", it->id.c_str());
+                }
             }
 
             if (it->file_sink)

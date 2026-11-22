@@ -324,6 +324,7 @@ TEST_CASE("AutoTrackApp leaves the source stopped when idle if asked to", "[cli]
         CHECK(httpRequest(port, "/api").ok);
     }
 }
+
 namespace
 {
     const int NORAD_GEO = 99002;
@@ -352,24 +353,32 @@ namespace
         return lon > 180 ? lon - 360 : lon;
     }
 
-    // Live module that throws as soon as it is started
+    // Live module that throws as soon as it is started. It names an output file first, so that
+    // the pass would be processed further if a failed pipeline were not skipped.
     class AutotrackFailingModule : public satdump::pipeline::ProcessingModule
     {
     public:
         AutotrackFailingModule(std::string in, std::string hint, nlohmann::json params) : ProcessingModule(in, hint, params) {}
         std::vector<satdump::pipeline::ModuleDataType> getInputTypes() { return {satdump::pipeline::DATA_DSP_STREAM}; }
         std::vector<satdump::pipeline::ModuleDataType> getOutputTypes() { return {satdump::pipeline::DATA_FILE}; }
-        void process() { throw std::runtime_error("unit_cli_autotrack_bad broke"); }
+        void process()
+        {
+            d_output_file = d_output_file_hint + ".soft";
+            test_helpers::writeFile(d_output_file, "SOFT");
+            throw std::runtime_error("unit_cli_autotrack_bad broke");
+        }
         void drawUI(bool) {}
         std::string getIDM() { return "unit_cli_autotrack_bad"; }
     };
 
     // Tracks a geostationary satellite seen from the equator below it, so that its pass has
-    // already begun: the scheduler then starts it at once. Its live pipeline is made of the
-    // failing module.
+    // already begun: the scheduler then starts it at once. The live part of its pipeline is the
+    // failing module, and unit_cli_autotrack_frames would process its output after the pass.
     struct FailingLiveEnv : AutotrackEnv
     {
         pipeline_test::ModuleRegistryGuard reg;
+        pipeline_test::CallsGuard calls;
+        int port = test_helpers::closedPort();
 
         FailingLiveEnv()
         {
@@ -379,11 +388,12 @@ namespace
             satdump::pipeline::modules_registry.push_back({"unit_cli_autotrack_bad", nlohmann::json::object(),
                                                            [](std::string in, std::string hint, nlohmann::json params) -> std::shared_ptr<satdump::pipeline::ProcessingModule>
                                                            { return std::make_shared<AutotrackFailingModule>(in, hint, params); }});
+            satdump::pipeline::modules_registry.push_back(pipeline_test::recordingEntry("unit_cli_autotrack_frames"));
             satdump::pipeline::Pipeline p;
             p.id = "unit_cli_autotrack_bad";
             p.name = "Unit CLI Autotrack Bad";
             p.live = true;
-            p.steps = {{"baseband", "", {}, ""}, {"soft", "unit_cli_autotrack_bad", {}, ""}};
+            p.steps = {{"baseband", "", {}, ""}, {"soft", "unit_cli_autotrack_bad", {}, ""}, {"frames", "unit_cli_autotrack_frames", {}, ""}};
             p.live_cfg.normal_live = {1};
             satdump::pipeline::pipelines.push_back(p);
         }
@@ -393,6 +403,8 @@ namespace
             nlohmann::json s = AutotrackEnv::settings();
             s["qth"] = {{"lon", subSatelliteLongitude(keplers.stored(NORAD_GEO))}, {"lat", 0.0}, {"alt", 0}};
             s["tracked_objects"] = {{{"norad", NORAD_GEO}, {"frequency", 137100000}, {"live", true}, {"pipeline_name", "unit_cli_autotrack_bad"}}};
+            s["finish_processing"] = true;
+            s["http_server"] = loopback(port);
             return s;
         }
     };
@@ -406,26 +418,47 @@ TEST_CASE("AutoTrackApp stops a live pipeline whose module failed", "[cli][legac
     nlohmann::json settings = env.settings();
     std::filesystem::create_directories(env.out);
     std::string stop_error;
+    // Status of a started pipeline: of the pipeline, or of its VFO
+    std::function<bool(const nlohmann::json &)> started;
+    std::string vfo = std::to_string(NORAD_GEO) + "_137100000_live";
 
-    SECTION("single pipeline") { stop_error = "Error stopping pipeline : unit_cli_autotrack_bad broke"; }
+    SECTION("single pipeline")
+    {
+        stop_error = "Error stopping pipeline : unit_cli_autotrack_bad broke";
+        started = [](const nlohmann::json &status) { return status.contains("live_pipeline"); };
+    }
 
     SECTION("multi mode, one VFO per downlink")
     {
         settings["tracking"]["autotrack_cfg"] = {{"multi_mode", true}};
-        stop_error = "Error stopping VFO " + std::to_string(NORAD_GEO) + "_137100000_live : unit_cli_autotrack_bad broke";
+        stop_error = "Error stopping VFO " + vfo + " : unit_cli_autotrack_bad broke";
+        started = [vfo](const nlohmann::json &status) { return status.contains("vfos") && status["vfos"].contains(vfo) && status["vfos"][vfo].contains("live_pipeline"); };
     }
 
     {
         AutoTrackApp app(settings, settings["parameters"], env.out);
 
-        // The scheduler starts the pass, and with it the pipeline, from its own thread
+        // The scheduler starts the pass, and with it the pipeline, from its own thread. The
+        // status lists the pipeline only once start_processing() / add_vfo_live() are done, as
+        // it takes their mutex. Destroying the app before that would leave the pipeline running,
+        // and the destructor would hang (#97).
+        bool listed = test_helpers::waitUntil(
+            [&]()
+            {
+                nlohmann::json status = nlohmann::json::parse(httpRequest(env.port, "/api").body, nullptr, false);
+                return status.is_object() && started(status);
+            },
+            test_helpers::kTimeout, std::chrono::milliseconds(10));
         bool failed = test_helpers::waitUntil([&]() { return env.log.contains("Module unit_cli_autotrack_bad failed! unit_cli_autotrack_bad broke", slog::LOG_ERROR); });
         INFO(env.log.dump());
+        REQUIRE(listed);
         REQUIRE(failed);
         CHECK(env.log.contains("AOS!!!!!!!!!!!!!! " + std::to_string(NORAD_GEO)));
     }
 
+    // The destructor waits for the processing queued after the pass, so it would have run by now
     INFO(env.log.dump());
     CHECK(env.log.contains(stop_error, slog::LOG_ERROR));
+    CHECK(pipeline_test::callsOf("process").empty());
 }
 #endif

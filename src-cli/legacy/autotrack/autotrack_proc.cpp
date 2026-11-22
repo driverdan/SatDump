@@ -53,6 +53,11 @@ void AutoTrackApp::stop_processing()
             failed = true;
             logger->error("Error stopping pipeline : %s", e.what());
         }
+        catch (...)
+        {
+            failed = true;
+            logger->error("Error stopping pipeline!");
+        }
 
         // As with "satdump legacy live", the output of a failed pipeline is not processed further
         if (!failed && d_settings.contains("finish_processing") && d_settings["finish_processing"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
