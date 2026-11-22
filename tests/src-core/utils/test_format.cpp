@@ -1,5 +1,6 @@
 #include "utils/format.h"
 #include <catch2/catch_test_macros.hpp>
+#include <cstdio>
 #include <string>
 
 using namespace satdump;
@@ -21,15 +22,40 @@ TEST_CASE("svformat behaves like printf", "[utils][format]")
     CHECK(svformat("%02X%02X", 0xAB, 0x01) == "AB01");
 }
 
-// Bug: utils/format.h:63-65 when the output exceeds the initial 1024-byte buffer, svformat resizes
-// to the length snprintf reported, which leaves no room for the terminating NUL, so
-// the last character is dropped. [!shouldfail] keeps the suite green until that is
-// fixed, at which point this test starts failing and the tag should be removed.
-TEST_CASE("svformat handles output longer than its initial buffer", "[utils][format][!shouldfail]")
+TEST_CASE("svformat handles output longer than its initial buffer", "[utils][format]")
 {
     std::string big(2000, 'x');
     std::string formatted = svformat("%s", big.c_str());
 
     CHECK(formatted.size() == big.size());
     CHECK((formatted == big));
+}
+
+// The initial buffer is 1024 bytes, so 1023 characters plus the NUL is the most
+// that fits on the first try. 1024 and up must take the resize path.
+TEST_CASE("svformat keeps every character around the initial buffer size", "[utils][format]")
+{
+    for (size_t len : {1022, 1023, 1024, 1025, 2047, 2048})
+    {
+        CAPTURE(len);
+        std::string s(len - 1, 'x');
+        s += 'y'; // distinct last character, so a dropped one is visible
+        std::string formatted = svformat("%s", s.c_str());
+
+        CHECK(formatted.size() == len);
+        CHECK((formatted == s));
+    }
+}
+
+// In the "C" locale a wide character above 0xFF cannot be converted by %ls, so
+// snprintf fails with EILSEQ and returns a negative value.
+TEST_CASE("svformat returns an empty string when snprintf fails", "[utils][format]")
+{
+    const wchar_t bad[] = {(wchar_t)0x1234, 0};
+    if (snprintf(nullptr, 0, "%ls", bad) >= 0)
+        SKIP("this C library does not fail on an unconvertible %ls argument");
+
+    std::string formatted;
+    CHECK_NOTHROW(formatted = svformat("%ls", bad));
+    CHECK(formatted.empty());
 }

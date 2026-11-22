@@ -38,32 +38,36 @@ namespace satdump
     template <typename... T>
     std::string svformat(const char *fmt, T &&...args)
     {
-        // Allocate a buffer on the stack that's big enough for us almost
-        // all the time.
+        // Start with a buffer that's big enough for us almost all the time.
         size_t size = 1024;
         std::vector<char> buf;
         buf.resize(size);
 
-        // Try to vsnprintf into our buffer.
-        size_t needed = snprintf((char *)&buf[0], size, fmt, args...);
-        // NB. On Windows, vsnprintf returns -1 if the string didn't fit the
-        // buffer.  On Linux & OSX, it returns the length it would have needed.
+        // Try to snprintf into our buffer. It returns the length it would
+        // have needed (excluding the NUL), or a negative value on error.
+        // This is the C99 behaviour of snprintf on every toolchain we build
+        // with, including MSVC since VS2015 (UCRT). Only the Microsoft-specific
+        // _snprintf returns -1 when the output does not fit.
+        int needed = snprintf(buf.data(), size, fmt, args...);
 
-        if (needed <= size)
+        if (needed < 0)
+            return std::string();
+
+        // snprintf also needs room for the terminating NUL
+        if ((size_t)needed < size)
         {
             // It fit fine the first time, we're done.
-            return std::string(&buf[0]);
+            return std::string(buf.data(), needed);
         }
         else
         {
-            // vsnprintf reported that it wanted to write more characters
-            // than we allotted.  So do a malloc of the right size and try again.
+            // snprintf reported that it wanted to write more characters
+            // than we allotted.  So grow to the right size and try again.
             // This doesn't happen very often if we chose our initial size
             // well.
-            size = needed;
-            buf.resize(size);
-            needed = snprintf((char *)&buf[0], size, fmt, args...);
-            return std::string(&buf[0]);
+            buf.resize((size_t)needed + 1);
+            snprintf(buf.data(), buf.size(), fmt, args...);
+            return std::string(buf.data(), needed);
         }
     }
 } // namespace satdump
