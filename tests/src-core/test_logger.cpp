@@ -102,6 +102,58 @@ TEST_CASE("Logger drops messages below its level", "[logger]")
     CHECK(t.sink->msgs.empty());
 }
 
+namespace
+{
+    void logf_at(slog::Logger &l, slog::LogLevel lvl, std::string fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        l.logf(lvl, fmt, args);
+        va_end(args);
+    }
+} // namespace
+
+// LOG_OFF is only a threshold. A message logged at it would index one past the end of every
+// sink's level tables (colors, log_schar, colors_win, log_lvls_a), so it must not reach a sink
+TEST_CASE("Logger drops messages logged at LOG_OFF", "[logger]")
+{
+    LoggerWithSink t;
+    t.logger.log(slog::LOG_OFF, std::string("off string"));
+    t.logger.log(slog::LOG_OFF, 5);
+    logf_at(t.logger, slog::LOG_OFF, "off %d", 1);
+    CHECK(t.sink->msgs.empty());
+
+    // Also when the logger and the sink are set to LOG_OFF, where `lvl >= level` holds
+    t.logger.set_level(slog::LOG_OFF);
+    t.sink->set_level(slog::LOG_OFF);
+    t.logger.log(slog::LOG_OFF, std::string("off string"));
+    CHECK(t.sink->msgs.empty());
+
+    // Valid levels still get through afterwards
+    t.logger.set_level(slog::LOG_TRACE);
+    t.sink->set_level(slog::LOG_TRACE);
+    t.logger.critical("c");
+    REQUIRE(t.sink->msgs.size() == 1);
+    CHECK(t.sink->msgs[0].lvl == slog::LOG_CRIT);
+}
+
+// The init buffer is replayed into every sink added later, so a LOG_OFF message must not be
+// buffered either
+TEST_CASE("Logger does not replay LOG_OFF messages to sinks added later", "[logger]")
+{
+    slog::Logger l;
+    const std::string marker = "logged at off, must not be replayed";
+    l.log(slog::LOG_OFF, marker);
+
+    auto late = std::make_shared<RecordingSink>();
+    l.add_sink(late);
+    for (auto &m : late->msgs)
+    {
+        CHECK(m.str != marker);
+        CHECK(m.lvl < slog::LOG_OFF);
+    }
+}
+
 TEST_CASE("Logger printf-style formatting", "[logger]")
 {
     LoggerWithSink t;

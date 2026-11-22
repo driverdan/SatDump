@@ -113,7 +113,6 @@ When one of these is fixed, add a regular test for it and remove the entry.
 | `db/kepler/kepler_utils.cpp:34-68` | For values with no short decimal form (such as 1/3) `strLE` grows its multiplier until `(int)(val * 10^mult)` overflows. | Undefined conversion. |
 | `libs/predict` `predict_parse_tle` | Reads `line[51]` and `line[60]` past the end of short lines, and never returns NULL for bad input, so `tleToKepler` cannot fail. | Out-of-bounds read. |
 | `db/iers/iers_handler.cpp` | `IERSInfo::time` is never set, and `leap_seconds` is left uninitialised when there is no leap-second row. | Uninitialised read. |
-| `logger.cpp` | Logging at `LOG_OFF` indexes past the colour and tag tables. | Out-of-bounds read. |
 
 ## src-cli
 
