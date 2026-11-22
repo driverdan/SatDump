@@ -42,9 +42,20 @@ void AutoTrackApp::stop_processing()
         logger->trace("Stop pipeline...");
         is_processing = false;
         splitter->set_enabled("live", false);
-        live_pipeline->stop();
+        // stop() throws the error of a module that failed, once every module is stopped
+        bool failed = false;
+        try
+        {
+            live_pipeline->stop();
+        }
+        catch (std::exception &e)
+        {
+            failed = true;
+            logger->error("Error stopping pipeline : %s", e.what());
+        }
 
-        if (d_settings.contains("finish_processing") && d_settings["finish_processing"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
+        // As with "satdump legacy live", the output of a failed pipeline is not processed further
+        if (!failed && d_settings.contains("finish_processing") && d_settings["finish_processing"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
         {
             std::string input_file = live_pipeline->getOutputFile();
             satdump::pipeline::Pipeline selected_pipeline_ = selected_pipeline;

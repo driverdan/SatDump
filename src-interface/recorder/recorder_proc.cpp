@@ -216,10 +216,21 @@ namespace satdump
             is_stopping_processing = true;
             logger->trace("Stop pipeline...");
             splitter->set_enabled("live", false);
-            live_pipeline->stop();
+            // stop() throws the error of a module that failed, once every module is stopped
+            bool failed = false;
+            try
+            {
+                live_pipeline->stop();
+            }
+            catch (std::exception &e)
+            {
+                failed = true;
+                logger->error("Error stopping pipeline : %s", e.what());
+            }
             is_stopping_processing = is_processing = false;
 
-            if (satdump_cfg.main_cfg["user_interface"]["finish_processing_after_live"]["value"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
+            // As with "satdump legacy live", the output of a failed pipeline is not processed further
+            if (!failed && satdump_cfg.main_cfg["user_interface"]["finish_processing_after_live"]["value"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
             {
                 pipeline::Pipeline pipeline = pipeline_selector.selected_pipeline;
                 std::string input_file = live_pipeline->getOutputFile();

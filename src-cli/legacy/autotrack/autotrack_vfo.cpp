@@ -102,8 +102,20 @@ void AutoTrackApp::del_vfo(std::string id)
 
         splitter->set_vfo_enabled(it->id, false);
 
+        // stop() throws the error of a module that failed, once every module is stopped
+        bool failed = false;
         if (it->selected_pipeline.id != "")
-            it->live_pipeline->stop();
+        {
+            try
+            {
+                it->live_pipeline->stop();
+            }
+            catch (std::exception &e)
+            {
+                failed = true;
+                logger->error("Error stopping VFO %s : %s", it->id.c_str(), e.what());
+            }
+        }
 
         if (it->file_sink)
         {
@@ -114,7 +126,8 @@ void AutoTrackApp::del_vfo(std::string id)
 
         splitter->del_vfo(it->id);
 
-        if (it->selected_pipeline.id != "")
+        // As with "satdump legacy live", the output of a failed pipeline is not processed further
+        if (it->selected_pipeline.id != "" && !failed)
         {
             if (d_settings.contains("finish_processing") && d_settings["finish_processing"].get<bool>() && it->live_pipeline->getOutputFile().size() > 0)
             {

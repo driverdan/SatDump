@@ -2,6 +2,7 @@
 #include "helpers/kepler_db.h"
 #include "helpers/wait.h"
 #include "legacy/autotrack/autotrack.h"
+#include "libs/predict/predict.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include "satdump_vars.h"
 #include <catch2/catch_test_macros.hpp>
@@ -322,5 +323,109 @@ TEST_CASE("AutoTrackApp leaves the source stopped when idle if asked to", "[cli]
         CHECK(env.log.contains("Invalid file path", slog::LOG_ERROR));
         CHECK(httpRequest(port, "/api").ok);
     }
+}
+namespace
+{
+    const int NORAD_GEO = 99002;
+
+    // Geostationary satellite, with elements as of now
+    satdump::KeplerData geoSatellite()
+    {
+        satdump::KeplerData k = polarSatellite();
+        k.satellite_number = NORAD_GEO;
+        k.name = "UNIT GEO";
+        k.designator = "2020-002A";
+        k.inclination = 0.05;
+        k.eccentricity = 0.0001;
+        k.mean_motion = 1.00273791;
+        return k;
+    }
+
+    // Longitude in degrees of the point below the satellite right now
+    double subSatelliteLongitude(const satdump::TLE &tle)
+    {
+        predict_orbital_elements_t *elements = predict_parse_tle(tle.line1.c_str(), tle.line2.c_str());
+        predict_position pos;
+        predict_orbit(elements, &pos, predict_to_julian_double((double)time(0)));
+        predict_destroy_orbital_elements(elements);
+        double lon = pos.longitude * 180.0 / M_PI;
+        return lon > 180 ? lon - 360 : lon;
+    }
+
+    // Live module that throws as soon as it is started
+    class AutotrackFailingModule : public satdump::pipeline::ProcessingModule
+    {
+    public:
+        AutotrackFailingModule(std::string in, std::string hint, nlohmann::json params) : ProcessingModule(in, hint, params) {}
+        std::vector<satdump::pipeline::ModuleDataType> getInputTypes() { return {satdump::pipeline::DATA_DSP_STREAM}; }
+        std::vector<satdump::pipeline::ModuleDataType> getOutputTypes() { return {satdump::pipeline::DATA_FILE}; }
+        void process() { throw std::runtime_error("unit_cli_autotrack_bad broke"); }
+        void drawUI(bool) {}
+        std::string getIDM() { return "unit_cli_autotrack_bad"; }
+    };
+
+    // Tracks a geostationary satellite seen from the equator below it, so that its pass has
+    // already begun: the scheduler then starts it at once. Its live pipeline is made of the
+    // failing module.
+    struct FailingLiveEnv : AutotrackEnv
+    {
+        pipeline_test::ModuleRegistryGuard reg;
+
+        FailingLiveEnv()
+        {
+            keplers.add(geoSatellite());
+            satdump::db_keplers->all_ = {keplers.stored(NORAD_GEO)};
+
+            satdump::pipeline::modules_registry.push_back({"unit_cli_autotrack_bad", nlohmann::json::object(),
+                                                           [](std::string in, std::string hint, nlohmann::json params) -> std::shared_ptr<satdump::pipeline::ProcessingModule>
+                                                           { return std::make_shared<AutotrackFailingModule>(in, hint, params); }});
+            satdump::pipeline::Pipeline p;
+            p.id = "unit_cli_autotrack_bad";
+            p.name = "Unit CLI Autotrack Bad";
+            p.live = true;
+            p.steps = {{"baseband", "", {}, ""}, {"soft", "unit_cli_autotrack_bad", {}, ""}};
+            p.live_cfg.normal_live = {1};
+            satdump::pipeline::pipelines.push_back(p);
+        }
+
+        nlohmann::json settings()
+        {
+            nlohmann::json s = AutotrackEnv::settings();
+            s["qth"] = {{"lon", subSatelliteLongitude(keplers.stored(NORAD_GEO))}, {"lat", 0.0}, {"alt", 0}};
+            s["tracked_objects"] = {{{"norad", NORAD_GEO}, {"frequency", 137100000}, {"live", true}, {"pipeline_name", "unit_cli_autotrack_bad"}}};
+            return s;
+        }
+    };
+} // namespace
+
+// LivePipeline::stop() throws the error of a module that failed. AutoTrackApp stops its
+// pipelines from its destructor, where an exception ends the program (std::terminate).
+TEST_CASE("AutoTrackApp stops a live pipeline whose module failed", "[cli][legacy][autotrack]")
+{
+    FailingLiveEnv env;
+    nlohmann::json settings = env.settings();
+    std::filesystem::create_directories(env.out);
+    std::string stop_error;
+
+    SECTION("single pipeline") { stop_error = "Error stopping pipeline : unit_cli_autotrack_bad broke"; }
+
+    SECTION("multi mode, one VFO per downlink")
+    {
+        settings["tracking"]["autotrack_cfg"] = {{"multi_mode", true}};
+        stop_error = "Error stopping VFO " + std::to_string(NORAD_GEO) + "_137100000_live : unit_cli_autotrack_bad broke";
+    }
+
+    {
+        AutoTrackApp app(settings, settings["parameters"], env.out);
+
+        // The scheduler starts the pass, and with it the pipeline, from its own thread
+        bool failed = test_helpers::waitUntil([&]() { return env.log.contains("Module unit_cli_autotrack_bad failed! unit_cli_autotrack_bad broke", slog::LOG_ERROR); });
+        INFO(env.log.dump());
+        REQUIRE(failed);
+        CHECK(env.log.contains("AOS!!!!!!!!!!!!!! " + std::to_string(NORAD_GEO)));
+    }
+
+    INFO(env.log.dump());
+    CHECK(env.log.contains(stop_error, slog::LOG_ERROR));
 }
 #endif
