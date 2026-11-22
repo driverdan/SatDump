@@ -87,7 +87,7 @@ public:
         if (pkt_type == dsp::remote::PKT_TYPE_SAMPLERATEFBK)
         {
             samplerate_current = *((uint64_t *)&buffer[1]);
-            logger->debug("Samplerate sent %llu", samplerate_current);
+            logger->debug("Samplerate sent %llu", (unsigned long long)samplerate_current);
         }
 
         if (pkt_type == dsp::remote::PKT_TYPE_IQ)

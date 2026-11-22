@@ -69,7 +69,7 @@ void SDRPPServerSource::set_frequency(uint64_t frequency)
     if (is_open && is_connected)
     {
         client->setFrequency(frequency);
-        logger->debug("Set SDR++ Server frequency to %d", frequency);
+        logger->debug("Set SDR++ Server frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }
@@ -147,7 +147,7 @@ uint64_t SDRPPServerSource::get_samplerate()
         samplerate = client->getSampleRate();
     else
         samplerate = 0;
-    logger->debug("Got samplerate %d", samplerate);
+    logger->debug("Got samplerate %llu", (unsigned long long)samplerate);
     return samplerate;
 }
 

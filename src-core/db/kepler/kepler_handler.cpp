@@ -107,7 +107,7 @@ namespace satdump
             if (tles.size() == 1)
                 putKepler(tles[0]);
             else
-                logger->error("There should only be one Kepler per norad! %d (%d)", norad, tles.size());
+                logger->error("There should only be one Kepler per norad! %d (%zu)", norad, tles.size());
         }
 
         /*{

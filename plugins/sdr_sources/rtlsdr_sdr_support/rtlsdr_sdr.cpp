@@ -235,7 +235,7 @@ void RtlSdrSource::set_frequency(uint64_t frequency)
             logger->warn("Unable to set RTL-SDR frequency!");
         else if (attempts == 0)
         {
-            logger->debug("Set RTL-SDR frequency to %d", frequency);
+            logger->debug("Set RTL-SDR frequency to %llu", (unsigned long long)frequency);
 
             // This is a dirty patch! PLL might not lock on the first attempt if the frequency
             // is above ~1 GHz, tuning down then back up locks it! This is a librtlsdr bug,
@@ -248,7 +248,7 @@ void RtlSdrSource::set_frequency(uint64_t frequency)
             }
         }
         else
-            logger->debug("Set RTL-SDR frequency to %d (%d attempts!)", frequency, attempts + 1);
+            logger->debug("Set RTL-SDR frequency to %llu (%d attempts!)", (unsigned long long)frequency, attempts + 1);
     }
     DSPSampleSource::set_frequency(frequency);
 }

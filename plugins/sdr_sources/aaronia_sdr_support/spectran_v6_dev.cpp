@@ -193,7 +193,7 @@ namespace satdump
                     while (decim <= 128)
                     {
                         uint64_t samprate = SPECTRAN_SAMPLERATE_61_44M / decim;
-                        logger->info("%llu %llu", p_samplerate, samprate);
+                        logger->info("%.0f %llu", p_samplerate, (unsigned long long)samprate);
                         if (samprate == p_samplerate)
                         {
                             current_decimation = decim;
@@ -211,7 +211,7 @@ namespace satdump
                     while (decim <= 128)
                     {
                         uint64_t samprate = SPECTRAN_SAMPLERATE_92M / decim;
-                        logger->info("%llu %llu", p_samplerate, samprate);
+                        logger->info("%.0f %llu", p_samplerate, (unsigned long long)samprate);
                         if (samprate == p_samplerate)
                         {
                             current_decimation = decim;
