@@ -1,5 +1,6 @@
 #include "cli_test_helpers.h"
 #include "xrit_support/xrit/identify.h"
+#include "xrit_support/xrit/msg/msg_headers.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -71,6 +72,18 @@ TEST_CASE("identifyXRITFIle groups the segments of a MSG or Elektro image", "[pl
     CHECK(info.type == type);
     CHECK(info.seg_groupid != "");
     CHECK_FALSE(log.contains("planned end segment"));
+}
+
+TEST_CASE("identifyXRITFIle keeps a MSG or Elektro image without a segment identification header as an image of its own", "[plugins][xrit_support][identify]")
+{
+    // The segmented decoder could not place it. An Elektro name has a segment part
+    auto [filename, type] = GENERATE(std::make_pair(MSG_FILENAME, xr::XRIT_MSG_SEVIRI), std::make_pair(ELEKTRO_FILENAME, xr::XRIT_ELEKTRO_MSUGS));
+    auto file = parsedFile(lritFile(0, {imageStructureRecord(8, 16, 4, 0), annotationRecord(filename)}, Bytes(64, 1)));
+    auto info = xr::identifyXRITFIle(file);
+
+    CHECK(info.type == type);
+    CHECK(info.seg_groupid == "");
+    CHECK_FALSE(file.hasHeader<xr::msg::SegmentIdentificationHeader>());
 }
 
 TEST_CASE("identifyXRITFIle keeps a MSG or Elektro segment whose planned end segment is before its start as an image of its own", "[plugins][xrit_support][identify]")

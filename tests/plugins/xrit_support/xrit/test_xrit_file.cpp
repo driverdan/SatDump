@@ -1,4 +1,5 @@
 #include "xrit_support/xrit/goes/goes_headers.h"
+#include "xrit_support/xrit/msg/msg_headers.h"
 #include "xrit_support/xrit/xrit_file.h"
 #include "xrit_support/xrit_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
@@ -193,7 +194,7 @@ TEST_CASE("XRITFile::parseHeaders reads a file shorter than a primary header as 
     CHECK(f.getHeader<xr::PrimaryHeader>().record_length == (size >= 3 ? 16 : 0));
 }
 
-TEST_CASE("XRITFile::getHeader reads a text record from a file shorter than 3 bytes as zeros", "[plugins][xrit_support][xrit_file]")
+TEST_CASE("XRITFile::getHeader reads a record from a file shorter than 3 bytes as zeros", "[plugins][xrit_support][xrit_file]")
 {
     size_t size = GENERATE(1, 2);
     auto f = cutFileOf({4, 0x01, 0x02}, size); // Record length 0x0100 when the third byte is missing
@@ -201,10 +202,17 @@ TEST_CASE("XRITFile::getHeader reads a text record from a file shorter than 3 by
     f.parseHeaders();
     REQUIRE(f.all_headers.empty());
 
-    // No annotation, so this reads the record at offset 0
+    // The primary header is always read at offset 0
+    auto primary = f.getHeader<xr::PrimaryHeader>();
+    CHECK(primary.type == 4);
+    CHECK(primary.record_length == (size == 2 ? 0x0100 : 0));
+    CHECK(primary.total_header_length == 0);
+    CHECK(primary.data_field_length == 0);
+
+    // The file has no annotation
     auto annotation = f.getHeader<xr::AnnotationRecord>();
-    CHECK(annotation.record_length == (size == 2 ? 0x0100 : 0));
-    CHECK(annotation.annotation_text == std::string(size == 2 ? 0x0100 - 3 : 0, '\0'));
+    CHECK(annotation.record_length == 0);
+    CHECK(annotation.annotation_text == "");
 }
 
 TEST_CASE("XRITFile::parseHeaders stops at a record too short to hold its own length", "[plugins][xrit_support][xrit_file]")
@@ -232,4 +240,40 @@ TEST_CASE("XRITFile::parseHeaders in safe mode keeps the last record of a header
     f.parseHeaders(true);
     CHECK(f.all_headers == std::map<int, int>{{0, 0}, {4, 16}});
     CHECK(f.filename == "a.lrit");
+}
+
+TEST_CASE("XRITFile::getHeader reads a record the file does not have as zeros, and leaves it absent", "[plugins][xrit_support][xrit_file]")
+{
+    // Read from the primary header instead, the segment number and the product ID would hold
+    // bytes of its total header length
+    auto f = fileOf(lritFile(0, {imageStructureRecord(8, 64, 32, 0), annotationRecord("IMAGE.lrit")}, Bytes(64 * 32, 1)));
+    f.parseHeaders();
+    REQUIRE(f.all_headers == std::map<int, int>{{0, 0}, {1, 16}, {4, 25}});
+
+    auto segment = f.getHeader<xr::msg::SegmentIdentificationHeader>();
+    CHECK(segment.type == 0);
+    CHECK(segment.record_length == 0);
+    CHECK(segment.channel_id == 0);
+    CHECK(segment.segment_sequence_number == 0);
+    CHECK(segment.planned_start_segment == 0);
+    CHECK(segment.planned_end_segment == 0);
+
+    auto noaa = f.getHeader<xr::goes::NOAALRITHeader>();
+    CHECK(noaa.record_length == 0);
+    CHECK(noaa.product_id == 0);
+    CHECK(noaa.product_subid == 0);
+    CHECK(noaa.noaa_specific_compression == 0);
+
+    auto ancillary = f.getHeader<xr::goes::AncillaryTextRecord>();
+    CHECK(ancillary.ancillary_text == "");
+    CHECK(ancillary.meta.empty());
+
+    CHECK_FALSE(f.hasHeader<xr::msg::SegmentIdentificationHeader>());
+    CHECK_FALSE(f.hasHeader<xr::goes::NOAALRITHeader>());
+    CHECK_FALSE(f.hasHeader<xr::goes::AncillaryTextRecord>());
+    CHECK(f.all_headers == std::map<int, int>{{0, 0}, {1, 16}, {4, 25}});
+
+    // The records the file has are still read from their own bytes
+    CHECK(f.getHeader<xr::ImageStructureRecord>().columns_count == 64);
+    CHECK(f.getHeader<xr::AnnotationRecord>().annotation_text == "IMAGE.lrit");
 }

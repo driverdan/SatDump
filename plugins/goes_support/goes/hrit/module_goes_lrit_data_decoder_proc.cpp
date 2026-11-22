@@ -227,6 +227,12 @@ namespace goes
                     if (!fileo)
                         throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                 }
+                else if (file.lrit_data.size() < (size_t)primary_header.total_header_length + (size_t)image_structure_record.columns_count * image_structure_record.lines_count)
+                {
+                    // Only uncompressed and Rice compressed images are brought to their size
+                    logger->error("File %s is smaller than its %dx%d image, not saving it as an image", current_filename.c_str(), image_structure_record.columns_count,
+                                  image_structure_record.lines_count);
+                }
                 else // Write raw image dats
                 {
                     image::Image image(&file.lrit_data[primary_header.total_header_length], 8, image_structure_record.columns_count, image_structure_record.lines_count, 1);

@@ -190,8 +190,9 @@ namespace goes
 
             lrit_demux.onFinalizeData = [this](satdump::xrit::XRITFile &file) -> void
             {
-                // On image data, make sure buffer contains the right amount of data
-                if (file.hasHeader<satdump::xrit::ImageStructureRecord>() && file.hasHeader<satdump::xrit::PrimaryHeader>() && file.hasHeader<NOAALRITHeader>())
+                // On image data, make sure buffer contains the right amount of data. Without a
+                // NOAA header, the image is not Rice compressed (the header reads as zeros)
+                if (file.hasHeader<satdump::xrit::ImageStructureRecord>() && file.hasHeader<satdump::xrit::PrimaryHeader>())
                 {
                     satdump::xrit::PrimaryHeader primary_header = file.getHeader<satdump::xrit::PrimaryHeader>();
                     satdump::xrit::ImageStructureRecord image_header = file.getHeader<satdump::xrit::ImageStructureRecord>();
@@ -204,7 +205,7 @@ namespace goes
                         else if (fill_missing && file.lrit_data.size() > primary_header.total_header_length + image_header.columns_count)
                         {
                             // Fill remaining data with last line
-                            uint32_t to_fill = (image_header.lines_count * image_header.columns_count - (file.lrit_data.size() - file.total_header_length)) / image_header.columns_count;
+                            uint32_t to_fill = ((size_t)image_header.lines_count * image_header.columns_count - (file.lrit_data.size() - file.total_header_length)) / image_header.columns_count;
                             if (to_fill > 0 && to_fill <= (uint32_t)max_fill_lines)
                             {
                                 file.lrit_data.reserve(file.lrit_data.size() + to_fill * image_header.columns_count);
@@ -213,7 +214,7 @@ namespace goes
                             }
                         }
 
-                        uint32_t target_size = image_header.lines_count * image_header.columns_count + primary_header.total_header_length;
+                        size_t target_size = (size_t)primary_header.total_header_length + (size_t)image_header.columns_count * image_header.lines_count;
                         if (file.lrit_data.size() != target_size)
                             file.lrit_data.resize(target_size, 0);
                     }
