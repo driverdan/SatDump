@@ -704,7 +704,9 @@ namespace goes
                             if (data_end != std::string::npos)
                                 data_bytes -= dcs_message->data_ascii.size() - data_end;
 
-                            if (data_bytes % (num_physical_elements * 3) == 0)
+                            // No element left to read (a BC message from a DCP that only lists the battery voltage),
+                            // or no data before the first space: nothing to decode
+                            if (num_physical_elements > 0 && data_bytes > 0 && data_bytes % (num_physical_elements * 3) == 0)
                             {
                                 dcs_message->data_type = "Pseudobinary B";
                                 int sensor_offset = 3;
