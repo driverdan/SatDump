@@ -234,8 +234,7 @@ TEST_CASE("Logger int overloads log the decimal value", "[logger]")
     CHECK(t.sink->msgs[4].lvl == slog::LOG_CRIT);
 }
 
-// Bug: logger.h:117 `void notice(int v) { log(LOG_INFO, v); }` logs at INFO instead of NOTICE.
-TEST_CASE("Logger notice int overload logs at notice level", "[logger][!shouldfail]")
+TEST_CASE("Logger notice int overload logs at notice level", "[logger]")
 {
     LoggerWithSink t;
     t.logger.notice(3);

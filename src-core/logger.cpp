@@ -38,6 +38,8 @@ namespace slog
 {
     const std::string log_schar[] = {"T", "D", "I", "N", "W", "E", "C"};
     const std::string colors[] = {"\033[37m", "\033[36m", "\033[32m", "\033[35m", "\033[33m\033[1m", "\033[31m\033[1m", "\033[1m\033[41m"};
+    static_assert(sizeof(log_schar) / sizeof(log_schar[0]) == LOG_OFF, "log_schar needs one entry per log level");
+    static_assert(sizeof(colors) / sizeof(colors[0]) == LOG_OFF, "colors needs one entry per log level");
 
     template <typename... T>
     std::string vformat(const char *fmt, T &&...args)
@@ -107,9 +109,14 @@ namespace slog
     }
 
 #if defined(_WIN32)
-    const int colors_win[] = {
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,      FOREGROUND_GREEN | FOREGROUND_BLUE,    FOREGROUND_GREEN,
-        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY, FOREGROUND_RED | FOREGROUND_INTENSITY, BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY};
+    const int colors_win[] = {FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+                              FOREGROUND_GREEN | FOREGROUND_BLUE,
+                              FOREGROUND_GREEN,
+                              FOREGROUND_RED | FOREGROUND_BLUE,
+                              FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,
+                              FOREGROUND_RED | FOREGROUND_INTENSITY,
+                              BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY};
+    static_assert(sizeof(colors_win) / sizeof(colors_win[0]) == LOG_OFF, "colors_win needs one entry per log level");
 
     int win_set_foreground_color(HANDLE &out_handle_, int attribs)
     {
@@ -235,14 +242,14 @@ namespace slog
 
 #ifdef __ANDROID__
     const android_LogPriority log_lvls_a[] = {
-        ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG, ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL,
+        ANDROID_LOG_VERBOSE, ANDROID_LOG_DEBUG, ANDROID_LOG_INFO, ANDROID_LOG_INFO, ANDROID_LOG_WARN, ANDROID_LOG_ERROR, ANDROID_LOG_FATAL,
     };
+    static_assert(sizeof(log_lvls_a) / sizeof(log_lvls_a[0]) == LOG_OFF, "log_lvls_a needs one entry per log level");
 
     void AndroidSink::receive(LogMsg log)
     {
         if (log.lvl >= sink_lvl)
         {
-            std::string s = format_log(log, false);
             __android_log_print(log_lvls_a[log.lvl], ag_LogTag, "%s", log.str.c_str());
         }
     }
