@@ -35,15 +35,21 @@ namespace
         bool process(std::vector<uint8_t> &file) { return processDCS(file.data(), file.size()); }
 
         // process() on a thread of its own, so that a parser that never returns fails the test
-        // instead of stalling the run. The thread is then left running, with its own references
-        // to the decoder and the file.
+        // instead of stalling the run. Only then is the thread left running, with its own
+        // references to the decoder and the file; otherwise it is joined, so that the decoder is
+        // destroyed on the test's thread. Call it as a statement of its own, not inside a CHECK,
+        // so that a timeout is reported once.
         static bool processBounded(std::shared_ptr<DCSDecoder> decoder, std::vector<uint8_t> file)
         {
             std::packaged_task<bool()> task([decoder, file]() mutable { return decoder->process(file); });
             std::future<bool> result = task.get_future();
-            std::thread(std::move(task)).detach();
+            std::thread parser(std::move(task));
             if (result.wait_for(test_helpers::kTimeout) != std::future_status::ready)
+            {
+                parser.detach();
                 FAIL("processDCS() did not return");
+            }
+            parser.join();
             return result.get();
         }
 
@@ -96,7 +102,8 @@ namespace
 
         auto decoder = std::make_shared<DCSDecoder>(tmp.str());
         decoder->addDCP(physical_elements);
-        REQUIRE(DCSDecoder::processBounded(decoder, dcsFile(body)));
+        bool parsed = DCSDecoder::processBounded(decoder, dcsFile(body));
+        REQUIRE(parsed);
 
         nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
         REQUIRE(out["blocks"].size() == 1);
@@ -223,7 +230,8 @@ namespace
         cli_test::LogCapture log;
         TempDir tmp("goes_dcs");
         std::filesystem::create_directories(tmp.file("DCS"));
-        CHECK_FALSE(DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), file));
+        bool parsed = DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), file);
+        CHECK_FALSE(parsed);
         CHECK(log.contains(warning));
         CHECK_FALSE(std::filesystem::exists(tmp.file("DCS/" + FILE_NAME + ".json")));
     }
@@ -256,7 +264,8 @@ TEST_CASE("DCS blocks of the smallest length are parsed", "[plugins][goes_suppor
     std::vector<uint8_t> blocks;
     for (auto block : {dcsBlock(1, 50), no_data, dcsBlock(2, 29), dcsBlock(1, 50)})
         blocks.insert(blocks.end(), block.begin(), block.end());
-    REQUIRE(DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), dcsFileOf(blocks)));
+    bool parsed = DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), dcsFileOf(blocks));
+    REQUIRE(parsed);
 
     nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
     REQUIRE(out["blocks"].size() == 4);
@@ -264,6 +273,8 @@ TEST_CASE("DCS blocks of the smallest length are parsed", "[plugins][goes_suppor
     CHECK(out["blocks"][1]["type"] == "DCS Message");
     CHECK(out["blocks"][1]["header"]["type_id"] == 0);
     CHECK(out["blocks"][1]["data_ascii"] == "");
+    // Only the address digits that #100 leaves at its start, not the CRC byte 7f
+    CHECK(out["blocks"][1]["data_raw"] == "00000000");
     CHECK(out["blocks"][2]["type"] == "Missed Message");
     CHECK(out["blocks"][3]["type"] == "DCS Message");
 }
