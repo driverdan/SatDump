@@ -1,6 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include "helpers/compare.h"
+#include "helpers/random.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -23,16 +26,18 @@ namespace
         return p;
     }
 
-    // Bytes that do not come from the Rice encoder
-    std::vector<uint8_t> noise(size_t size, uint32_t seed)
+    // What aec_decode_init returns for a 8 bit stream. The decoder is freed again if it was made
+    int decodeInit(unsigned int block_size, unsigned int rsi, unsigned int flags)
     {
-        std::vector<uint8_t> out(size);
-        for (auto &b : out)
-        {
-            seed = seed * 1103515245 + 12345;
-            b = seed >> 16;
-        }
-        return out;
+        aec_stream strm = {};
+        strm.bits_per_sample = 8;
+        strm.block_size = block_size;
+        strm.rsi = rsi;
+        strm.flags = flags;
+        int status = aec_decode_init(&strm);
+        if (status == AEC_OK)
+            aec_decode_end(&strm);
+        return status;
     }
 } // namespace
 
@@ -52,7 +57,7 @@ TEST_CASE("SZ_BufftoBuffDecompress decodes the block sizes libaec supports", "[l
     size_t out_size = out.size();
     REQUIRE(SZ_BufftoBuffDecompress(out.data(), &out_size, compressed.data(), compressed_size, &p) == SZ_OK);
     CHECK(out_size == line.size());
-    CHECK(out == line);
+    CHECK(test_helpers::bytesDiff(out, line) == "");
 }
 
 TEST_CASE("SZ_BufftoBuffDecompress rejects the block sizes libaec does not support", "[libs][aec]")
@@ -61,26 +66,46 @@ TEST_CASE("SZ_BufftoBuffDecompress rejects the block sizes libaec does not suppo
     int pixels_per_block = GENERATE(1, 2, 3, 4, 5, 7, 9, 12, 24, 33, 100, 128, 255);
     SZ_com_t p = lineSettings(pixels_per_block, 16);
 
+    int rejected = 0;
     for (uint32_t seed = 1; seed <= 50; seed++)
     {
-        std::vector<uint8_t> in = noise(64, seed);
+        std::vector<uint8_t> in = test_helpers::randomBytes(64, seed); // Not from the Rice encoder
         std::vector<uint8_t> out(16);
         size_t out_size = out.size();
-        CHECK(SZ_BufftoBuffDecompress(out.data(), &out_size, in.data(), in.size(), &p) == SZ_PARAM_ERROR);
+        if (SZ_BufftoBuffDecompress(out.data(), &out_size, in.data(), in.size(), &p) == SZ_PARAM_ERROR)
+            rejected++;
     }
+    CHECK(rejected == 50);
 }
 
-TEST_CASE("aec_decode_init allows any even block size with AEC_NOT_ENFORCE", "[libs][aec]")
+TEST_CASE("SZ_BufftoBuffDecompress rejects a scanline of 0 pixels", "[libs][aec]")
 {
-    aec_stream strm = {};
-    strm.bits_per_sample = 8;
-    strm.rsi = 1;
-    strm.flags = AEC_NOT_ENFORCE;
+    // It gives the decoder a RSI of 0 blocks, and so no RSI buffer to decode to
+    SZ_com_t p = lineSettings(16, 0);
+    std::vector<uint8_t> in = test_helpers::randomBytes(64, 1);
+    std::vector<uint8_t> out(1);
+    size_t out_size = 0; // As the GOES HRIT decoder does for an image of 0 columns
+    CHECK(SZ_BufftoBuffDecompress(out.data(), &out_size, in.data(), in.size(), &p) == SZ_PARAM_ERROR);
+}
 
-    strm.block_size = 3;
-    CHECK(aec_decode_init(&strm) == AEC_CONF_ERROR);
+TEST_CASE("aec_decode_init rejects a RSI of 0 blocks", "[libs][aec]")
+{
+    CHECK(decodeInit(16, 0, 0) == AEC_CONF_ERROR);
+    CHECK(decodeInit(16, 0, AEC_NOT_ENFORCE) == AEC_CONF_ERROR);
+    CHECK(decodeInit(16, 1, 0) == AEC_OK);
+}
 
-    strm.block_size = 12;
-    REQUIRE(aec_decode_init(&strm) == AEC_OK);
-    aec_decode_end(&strm);
+TEST_CASE("aec_decode_init allows the even block sizes up to 256 with AEC_NOT_ENFORCE", "[libs][aec]")
+{
+    CHECK(decodeInit(0, 1, AEC_NOT_ENFORCE) == AEC_CONF_ERROR);
+    CHECK(decodeInit(3, 1, AEC_NOT_ENFORCE) == AEC_CONF_ERROR);
+    CHECK(decodeInit(258, 1, AEC_NOT_ENFORCE) == AEC_CONF_ERROR);
+
+    CHECK(decodeInit(2, 1, AEC_NOT_ENFORCE) == AEC_OK);
+    CHECK(decodeInit(12, 1, AEC_NOT_ENFORCE) == AEC_OK);
+    CHECK(decodeInit(256, 1, AEC_NOT_ENFORCE) == AEC_OK);
+
+    // Without the flag, only the sizes of the standard
+    CHECK(decodeInit(12, 1, 0) == AEC_CONF_ERROR);
+    CHECK(decodeInit(0, 1, 0) == AEC_CONF_ERROR);
 }

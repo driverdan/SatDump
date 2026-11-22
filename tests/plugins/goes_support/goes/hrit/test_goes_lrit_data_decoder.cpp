@@ -1061,6 +1061,20 @@ TEST_CASE("GOESLRITDataDecoderModule uses 16 pixels per block when the Rice sett
     CHECK(env.log.contains("File IMAGE.lrit has " + std::to_string(pixels_per_block) + " pixels per block in its Rice compression record, using 16", slog::LOG_WARN));
 }
 
+TEST_CASE("GOESLRITDataDecoderModule reports the lines of a Rice compressed image of 0 columns as failed", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The Rice decoder has no buffer to decode a line of 0 pixels to, and rejects it
+    DecoderEnv env;
+    Mux mux;
+    Bytes headers = lritHeaders(0, {imageStructureRecord(8, 0, LINES, 1), annotationRecord("EMPTY.lrit"), noaaRecord(1, 0, 0, 1)}, 0);
+    mux.add(VCID, riceImagePackets(headers, imageLines(), APID));
+    mux.add(VCID, packetize(textFile("NEXT.lrit", "next file"), APID, 50));
+    decode(env, mux);
+
+    CHECK(env.log.contains("Rice decompression failed. This may be an issue!", slog::LOG_WARN));
+    CHECK(env.exists("Admin Messages/NEXT.txt"));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule decodes the files after a Rice compressed image on the same APID as they are", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;

@@ -699,13 +699,18 @@ int aec_decode_init(struct aec_stream *strm)
     int i, modi;
     struct internal_state *state;
 
-    if (strm->bits_per_sample > 32 || strm->bits_per_sample == 0)
+    /* Without an RSI, or with other block sizes, the decoder writes
+       past its buffers */
+    if (strm->bits_per_sample > 32
+        || strm->bits_per_sample == 0
+        || strm->rsi == 0)
         return AEC_CONF_ERROR;
 
-    /* Other block sizes make the decoder write past its buffers */
     if (strm->flags & AEC_NOT_ENFORCE) {
-        /* All even block sizes are allowed. */
-        if (strm->block_size & 1)
+        /* Allow non-standard block sizes */
+        if (strm->block_size & 1
+            || strm->block_size == 0
+            || strm->block_size > 256)
             return AEC_CONF_ERROR;
     } else {
         /* Only allow standard conforming block sizes */
