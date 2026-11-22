@@ -17,6 +17,9 @@ TEST_CASE("FileSource logs the size of the file it opens", "[common][dsp_source_
     satdump::satdump_cfg.main_cfg["satdump_directories"]["default_input_directory"]["value"] = ".";
 
     cli_test::LogCapture log;
+    // Until #85 is merged, FileSource's worker thread reads is_started / should_run without
+    // synchronisation (#71), as in the main_live tests. The line checked here is logged by
+    // start() itself, on this thread.
     {
         FileSource src(dsp::SourceDescriptor{"file", "File", "file", false});
         src.set_settings({{"file_path", file.path.string()}, {"baseband_type", "cf32"}});
