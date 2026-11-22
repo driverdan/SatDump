@@ -359,12 +359,13 @@ TEST_CASE("Pipeline::run tolerates a trailing level without a module", "[pipelin
 // The first two modules of a baseband pipeline run on threads of their own (pipeline_run.cpp).
 // An exception from either one used to end the program (std::terminate). It must instead make
 // the pipeline fail like a later module does, without leaving the other module blocked on the FIFO.
-// The source writes more than the FIFO holds (1000000 bytes), so it blocks if nobody reads.
+// The FIFO is made small (10000 bytes) and the source writes more than it holds, so it blocks if nobody reads.
 TEST_CASE("Pipeline::run fails when one of the two streaming modules throws", "[pipeline][pipeline_run]")
 {
     cli_test::LogCapture log;
     RunEnv env;
-    const long big = 3000000;
+    test_helpers::ValueGuard<int> fifo_size(dsp::RING_BUF_SZ, 10000);
+    const long big = 100000;
     std::string error;
 
     SECTION("the second module throws while the first one still writes")

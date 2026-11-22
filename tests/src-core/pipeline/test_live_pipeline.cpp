@@ -215,17 +215,29 @@ namespace
         stream.swap(values.size());
     }
 
-    // Pushes 10 buffers of 600000 samples, more than the FIFOs between the modules hold
-    // (1000000 bytes each), on a thread of its own. False if that blocked.
+    // Size of the FIFOs between the modules in the tests below, kept small so that they fill quickly
+    const int SMALL_FIFO = 10000;
+
+    // Pushes 10 buffers of 6000 samples, more than the FIFOs between the modules hold
+    // (SMALL_FIFO bytes each), on a thread of its own. False if that blocked.
     bool pushManySamples(std::shared_ptr<dsp::stream<complex_t>> stream)
     {
         return runBounded(
             [stream]()
             {
-                std::vector<uint8_t> values(600000, 1);
+                std::vector<uint8_t> values(6000, 1);
                 for (int i = 0; i < 10; i++)
                     pushSamples(*stream, values);
             });
+    }
+
+    // A thread pool for the tests below. The holder is never freed, so that a failed test does not
+    // hang in the pool's destructor (which waits for every module thread): destroyPool() destroys the pool itself.
+    std::shared_ptr<std::unique_ptr<ctpl::thread_pool>> makePool()
+    {
+        auto tp = std::make_shared<std::unique_ptr<ctpl::thread_pool>>(std::make_unique<ctpl::thread_pool>(4));
+        new std::shared_ptr<std::unique_ptr<ctpl::thread_pool>>(tp);
+        return tp;
     }
 
     // Stops the live pipeline, bounded by a timeout. False if it hung. error is what stop() threw.
@@ -456,6 +468,7 @@ TEST_CASE("LivePipeline reports a module that throws and keeps the others runnin
 {
     cli_test::LogCapture log;
     LiveEnv env;
+    test_helpers::ValueGuard<int> fifo_size(dsp::RING_BUF_SZ, SMALL_FIFO);
     std::string failed;
 
     SECTION("the last module throws")
@@ -479,9 +492,10 @@ TEST_CASE("LivePipeline reports a module that throws and keeps the others runnin
     p.steps[3].module = failed == "unit_live_bad_sink" ? failed : "unit_live_sink";
     p.live_cfg.normal_live = {1, 2, 3};
 
-    auto tp = std::make_shared<std::unique_ptr<ctpl::thread_pool>>(std::make_unique<ctpl::thread_pool>(4));
+    auto tp = makePool();
     auto stream = std::make_shared<dsp::stream<complex_t>>();
     auto live = std::make_shared<pl::LivePipeline>(p, nlohmann::json::object(), env.dir.str());
+    new std::shared_ptr<pl::LivePipeline>(live); // Never freed: its module threads use it, and on a failure they may still run
     live->start(stream, **tp);
 
     const std::string message = "Module " + failed + " failed! " + failed + " broke";
@@ -504,6 +518,7 @@ TEST_CASE("LivePipeline::stop does not throw when no module failed", "[pipeline]
 {
     cli_test::LogCapture log;
     LiveEnv env;
+    test_helpers::ValueGuard<int> fifo_size(dsp::RING_BUF_SZ, SMALL_FIFO);
     pl::modules_registry.push_back(liveEntry<LiveDemod>("unit_live_demod"));
     pl::modules_registry.push_back(liveEntry<LiveIncrement>("unit_live_inc"));
     pl::modules_registry.push_back(liveEntry<LiveSink>("unit_live_sink"));
@@ -511,9 +526,10 @@ TEST_CASE("LivePipeline::stop does not throw when no module failed", "[pipeline]
     auto p = makeLivePipeline();
     p.live_cfg.normal_live = {1, 2, 3};
 
-    auto tp = std::make_shared<std::unique_ptr<ctpl::thread_pool>>(std::make_unique<ctpl::thread_pool>(4));
+    auto tp = makePool();
     auto stream = std::make_shared<dsp::stream<complex_t>>();
     auto live = std::make_shared<pl::LivePipeline>(p, nlohmann::json::object(), env.dir.str());
+    new std::shared_ptr<pl::LivePipeline>(live); // Never freed, as above
     live->start(stream, **tp);
 
     // The sink reads everything, so this does not block
