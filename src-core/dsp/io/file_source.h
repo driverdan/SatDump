@@ -40,7 +40,7 @@ namespace satdump
 
                 file_reader = std::ifstream(p_file, std::ios::binary);
                 if (!file_reader.good())
-                    logger->error("Invalid file " + p_file);
+                    logger->error("Invalid file %s", p_file.c_str());
 
                 d_filesize = getFilesize(p_file);
                 d_progress = 0;

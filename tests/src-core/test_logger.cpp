@@ -448,3 +448,17 @@ TEST_CASE("Logger std::string format keeps every character around 1024 character
         CHECK(t.sink->msgs[2 * i].str == t.sink->msgs[2 * i + 1].str);
     }
 }
+
+// A runtime string such as a file path must be an argument of the format, never the format
+// itself: "%s" or "%n" in it would then read arguments that were never passed. Passed as the
+// argument of a %s, it is logged as written.
+TEST_CASE("Logger logs a runtime string given to %s as written", "[logger]")
+{
+    LoggerWithSink t;
+    const std::string path = "/data/100%/a%s%n%d%%.json";
+    t.logger.info("Loading config %s", path.c_str());
+    t.logger.error("%s", path.c_str());
+    REQUIRE(t.sink->msgs.size() == 2);
+    CHECK(t.sink->msgs[0].str == "Loading config " + path);
+    CHECK(t.sink->msgs[1].str == path);
+}

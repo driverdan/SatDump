@@ -15,7 +15,7 @@ namespace satdump
     {
         void loadPipeline(std::string filepath)
         {
-            logger->info("Loading pipelines from file " + filepath);
+            logger->info("Loading pipelines from file %s", filepath.c_str());
 
             // Read file into a string
             std::ifstream fileStream(filepath);
@@ -55,7 +55,7 @@ namespace satdump
                         }
                         else
                         {
-                            logger->error("Could not include " + pathToLoad + "!");
+                            logger->error("Could not include %s!", pathToLoad.c_str());
                         }
                     }
                 }
@@ -151,7 +151,7 @@ namespace satdump
 
                             if (!moduleExists(newStep.module) && hasAllModules)
                             {
-                                logger->warn("Module " + newStep.module + " is not loaded. Skipping pipeline!");
+                                logger->warn("Module %s is not loaded. Skipping pipeline!", newStep.module.c_str());
                                 hasAllModules = false;
                             }
 
@@ -162,7 +162,7 @@ namespace satdump
                     }
 
                     if (!hasAtLeastOneModule)
-                        logger->warn("Pipeline " + newPipeline.id + " has no modules!");
+                        logger->warn("Pipeline %s has no modules!", newPipeline.id.c_str());
 
                     if (hasAllModules && hasAtLeastOneModule)
                         pipelines.push_back(newPipeline);
@@ -194,11 +194,11 @@ namespace satdump
         {
             if (!std::filesystem::exists(filepath))
             {
-                logger->error("Couldn't load pipelines! Was trying : " + filepath);
+                logger->error("Couldn't load pipelines! Was trying : %s", filepath.c_str());
                 exit(1);
             }
 
-            logger->info("Loading system pipelines from " + filepath);
+            logger->info("Loading system pipelines from %s", filepath.c_str());
 
             std::vector<std::string> systemPipelines;
             std::filesystem::recursive_directory_iterator pipelinesIterator(filepath);
@@ -211,7 +211,7 @@ namespace satdump
                     {
                         if (pipelinesIterator->path().string().find(".json.inc") == std::string::npos)
                         {
-                            logger->trace("Found system pipeline file " + pipelinesIterator->path().string());
+                            logger->trace("Found system pipeline file %s", pipelinesIterator->path().string().c_str());
                             systemPipelines.push_back(pipelinesIterator->path().string());
                         }
                     }
@@ -219,7 +219,7 @@ namespace satdump
 
                 pipelinesIterator.increment(iteratorError);
                 if (iteratorError)
-                    logger->critical(iteratorError.message());
+                    logger->critical("%s", iteratorError.message().c_str());
             }
 
             std::sort(systemPipelines.begin(), systemPipelines.end());
@@ -238,7 +238,7 @@ namespace satdump
 
             if (final_path != "")
             {
-                logger->info("Found user pipelines " + final_path);
+                logger->info("Found user pipelines %s", final_path.c_str());
                 user_cfg_path = final_path;
                 has_user_pipelines = true;
                 try
@@ -289,7 +289,7 @@ namespace satdump
                 return;
             }
 
-            logger->info("Saving user pipelines at " + user_cfg_path);
+            logger->info("Saving user pipelines at %s", user_cfg_path.c_str());
             saveJsonFile(user_cfg_path, diff_json);
         }
 

@@ -42,7 +42,7 @@ namespace satdump
             }
             else
             {
-                logger->error(_("No valid converter for : ") + itype + " => " + otype);
+                logger->error("%s%s => %s", _("No valid converter for : "), itype.c_str(), otype.c_str());
             }
         }
 

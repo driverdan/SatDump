@@ -390,7 +390,7 @@ namespace style
             if (resources::resourceExists("fonts/" + i18n_extraFont + ".ttf"))
                 io.Fonts->AddFontFromFileTTF(resources::getResourcePath("fonts/" + i18n_extraFont + ".ttf").c_str(), theme.font_size * font_scaling, &config, def);
             else
-                logger->error("fonts/" + i18n_extraFont + ".ttf" + " does not exist!");
+                logger->error("fonts/%s.ttf does not exist!", i18n_extraFont.c_str());
         }
 
         for (int i = 0; i < 9; i++)

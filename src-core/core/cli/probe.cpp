@@ -37,7 +37,7 @@ namespace satdump
             {
                 auto i = satdump::ndsp::getDeviceInstanceFromInfo(d, satdump::ndsp::DeviceBlock::MODE_SINGLE_TX);
                 d.params = i->get_cfg_list();
-                logger->debug("\n" + nlohmann::json(d).dump(4) + "\n");
+                logger->debug("\n%s\n", nlohmann::json(d).dump(4).c_str());
             }
         }
     }

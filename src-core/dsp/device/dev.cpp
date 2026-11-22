@@ -14,7 +14,7 @@ namespace satdump
 
             logger->trace("Device list :");
             for (auto &d : l)
-                logger->trace(" - " + d.name);
+                logger->trace(" - %s", d.name.c_str());
 
             return l;
         }

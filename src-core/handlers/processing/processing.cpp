@@ -49,9 +49,9 @@ namespace satdump
 
             pipeline_name = downlink_pipeline.name;
 
-            logger->info("Starting processing pipeline " + downlink_pipeline.id + "...");
-            logger->debug("Input file (" + input_level + ") : " + input_file);
-            logger->debug("Output file : " + output_file);
+            logger->info("Starting processing pipeline %s...", downlink_pipeline.id.c_str());
+            logger->debug("Input file (%s) : %s", input_level.c_str(), input_file.c_str());
+            logger->debug("Output file : %s", output_file.c_str());
 
             if (!std::filesystem::exists(output_file))
                 std::filesystem::create_directories(output_file);
@@ -68,13 +68,13 @@ namespace satdump
             }
             catch (std::exception &e)
             {
-                logger->error("Fatal error running pipeline : " + std::string(e.what()));
+                logger->error("Fatal error running pipeline : %s", e.what());
                 goto exit_handler;
             }
 
             logger->info("Done! Goodbye");
 
-            logger->critical("FINAL FILE : " + final_file); // TODOREWORK!
+            logger->critical("FINAL FILE : %s", final_file.c_str()); // TODOREWORK!
 
             // TODOREWORKUI
             if (satdump_cfg.main_cfg["user_interface"]["open_explorer_post_processing"]["value"].get<bool>())

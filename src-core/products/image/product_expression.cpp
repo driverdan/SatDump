@@ -308,7 +308,7 @@ namespace satdump
                                 if (macro[0] == "ref_channel")
                                 { // Special case to override the ref
                                     reference_channel = macro[1];
-                                    logger->info("Using reference channel : " + reference_channel);
+                                    logger->info("Using reference channel : %s", reference_channel.c_str());
                                 }
                                 else
                                     replaceAllStr(expression, macro[0], "(" + macro[1] + ")");
@@ -325,7 +325,7 @@ namespace satdump
             }
 
             if (!dummy_mode)
-                logger->debug("Final Expression " + expression);
+                logger->debug("Final Expression %s", expression.c_str());
 
             // Get required variables & number of output channels
             int nout_channels = 0;
@@ -385,7 +385,7 @@ namespace satdump
                 std::vector<std::shared_ptr<image::Image>> lut_imgs;
                 for (auto &l : lut_cfgs)
                 {
-                    logger->trace("Needs LUT " + l.path + " as " + l.token);
+                    logger->trace("Needs LUT %s as %s", l.path.c_str(), l.token.c_str());
 
                     // LUT does not exist, abort!
                     if (!std::filesystem::exists(resources::getResourcePath(l.path)))
@@ -401,7 +401,7 @@ namespace satdump
                 std::vector<std::shared_ptr<EquP>> equp_imgs;
                 for (auto &l : equp_cfgs)
                 {
-                    logger->trace("Needs EquP " + l.path + " as " + l.token);
+                    logger->trace("Needs EquP %s as %s", l.path.c_str(), l.token.c_str());
                     std::shared_ptr<EquP> e = std::make_shared<EquP>();
                     image::load_img(e->img, resources::getResourcePath(l.path));
                     e->ep.init(e->img.width(), e->img.height(), -180, 90, 180, -90);
@@ -415,13 +415,13 @@ namespace satdump
                     if (tkt.find("ch") == 0 && tkt.size() > 2)
                     { // Raw channel case
                         std::string index = tkt.substr(2);
-                        logger->trace("Needs channel " + index);
+                        logger->trace("Needs channel %s", index.c_str());
                         auto &h = product->get_channel_image(index);
 
                         // TODOREWORK?
                         if (product->contents.contains("lazyload_path"))
                         {
-                            logger->trace("Load " + h.channel_name);
+                            logger->trace("Load %s", h.channel_name.c_str());
                             image::load_img(h.image, product->contents["lazyload_path"].get<std::string>() + "/" + h.filename);
                         }
 
@@ -440,13 +440,13 @@ namespace satdump
                     { // Calibrated channel case
                         auto &c = calib_cfgs[tkt];
                         std::string index = calib_cfgs[tkt].channel;
-                        logger->trace("Needs calibrated channel " + index + " as " + c.unit);
+                        logger->trace("Needs calibrated channel %s as %s", index.c_str(), c.unit.c_str());
                         auto &h = product->get_channel_image(index);
 
                         // TODOREWORK?
                         if (product->contents.contains("lazyload_path"))
                         {
-                            logger->trace("Load " + h.channel_name);
+                            logger->trace("Load %s", h.channel_name.c_str());
                             image::load_img(h.image, product->contents["lazyload_path"].get<std::string>() + "/" + h.filename);
                         }
 
@@ -548,7 +548,7 @@ namespace satdump
             {
                 for (auto &img : product->images)
                 {
-                    logger->trace("Unload " + img.channel_name);
+                    logger->trace("Unload %s", img.channel_name.c_str());
                     img.image.clear();
                 }
             }

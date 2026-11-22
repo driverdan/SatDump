@@ -86,11 +86,11 @@ namespace satdump
     {
         if (!std::filesystem::exists(path))
         {
-            logger->error("Couldn't load config file! Was trying : " + path);
+            logger->error("Couldn't load config file! Was trying : %s", path.c_str());
             exit(1);
         }
 
-        logger->info("Loading config " + path);
+        logger->info("Loading config %s", path.c_str());
         default_cfg = loadJsonFile(path);
         main_cfg = default_cfg;
 
@@ -108,7 +108,7 @@ namespace satdump
 
         if (final_path != "")
         {
-            logger->info("Loading user settings " + final_path);
+            logger->info("Loading user settings %s", final_path.c_str());
             nlohmann::ordered_json diff_json = loadJsonFile(final_path);
             main_cfg = merge_json_diffs(default_cfg, diff_json);
             user_cfg_path = final_path;
@@ -137,7 +137,7 @@ namespace satdump
             return;
         }
 
-        logger->info("Saving user config at " + user_cfg_path);
+        logger->info("Saving user config at %s", user_cfg_path.c_str());
         saveJsonFile(user_cfg_path, diff_json);
     }
 } // namespace satdump

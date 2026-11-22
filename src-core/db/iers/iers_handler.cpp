@@ -57,7 +57,7 @@ namespace satdump
         std::string url_str = "https://datacenter.iers.org/products/eop/rapid/standard/json/finals2000A.all.json"; // TODOREWORK
 
         // IERS Bulletin A/B
-        logger->info("Downloading IERS Bulletins from " + url_str + "...");
+        logger->info("Downloading IERS Bulletins from %s...", url_str.c_str());
         std::string res;
         if (perform_http_request(url_str, res))
         {
@@ -114,7 +114,7 @@ namespace satdump
 
         // Leap seconds (bulletin C)
         url_str = "https://hpiers.obspm.fr/iers/bul/bulc/ntp/leap-seconds.list";
-        logger->info("Downloading Leap Seconds Bulletins from " + url_str + "...");
+        logger->info("Downloading Leap Seconds Bulletins from %s...", url_str.c_str());
         if (perform_http_request(url_str, res))
         {
             logger->error("Error fetching Leap Seconds Bulletins!");
@@ -180,7 +180,7 @@ namespace satdump
         sqlite3_stmt *res;
 
         if (sqlite3_prepare_v2(h->db, ("select a_pole_x,a_pole_y,ut1_utc from iers order by abs(" + std::to_string(time) + ") asc limit 1").c_str(), -1, &res, 0))
-            logger->error("Couldn't fetch IERS data from DB! " + std::string(sqlite3_errmsg(h->db)));
+            logger->error("Couldn't fetch IERS data from DB! %s", sqlite3_errmsg(h->db));
         else if (sqlite3_step(res) == SQLITE_ROW)
         {
             r.polar_dx = sqlite3_column_double(res, 0) * 1000; // todorework to marcsec
@@ -191,7 +191,7 @@ namespace satdump
         sqlite3_finalize(res);
 
         if (sqlite3_prepare_v2(h->db, ("select leap_seconds from leap_seconds where " + std::to_string(time) + " >= time order by time desc limit 1").c_str(), -1, &res, 0))
-            logger->error("Couldn't fetch Leap Seconds data from DB! " + std::string(sqlite3_errmsg(h->db)));
+            logger->error("Couldn't fetch Leap Seconds data from DB! %s", sqlite3_errmsg(h->db));
         else if (sqlite3_step(res) == SQLITE_ROW)
         {
             r.leap_seconds = sqlite3_column_int(res, 0);

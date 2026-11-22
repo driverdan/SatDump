@@ -46,7 +46,7 @@ namespace satdump
                 baseband_reader.set_file(p_file, p_type);
 
                 if (!std::filesystem::exists(p_file))
-                    logger->error("Invalid file " + p_file);
+                    logger->error("Invalid file %s", p_file.c_str());
 
                 d_filesize = baseband_reader.filesize;
                 d_progress = 0;

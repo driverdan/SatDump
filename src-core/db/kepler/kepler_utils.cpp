@@ -234,7 +234,7 @@ namespace satdump
         bool success = true;
         std::vector<KeplerData> new_registry;
 
-        logger->info(url_str);
+        logger->info("%s", url_str.c_str());
         std::string result;
         int http_res = 1, trials = 0;
         while (http_res == 1 && trials < 10)
@@ -269,7 +269,7 @@ namespace satdump
         while (url_str.find("%NORAD%") != std::string::npos)
             url_str.replace(url_str.find("%NORAD%"), 7, std::to_string(norad));
 
-        logger->info(url_str);
+        logger->info("%s", url_str.c_str());
         std::string result;
         int http_res = 1, trials = 0;
         while (http_res == 1 && trials < 10)

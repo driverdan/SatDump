@@ -51,7 +51,7 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                     data_in = std::ifstream(d_input_file, std::ios::binary);
 
-                logger->info("Using input frames " + d_input_file);
+                logger->info("Using input frames %s", d_input_file.c_str());
 
                 if (mode == "default")
                 {

@@ -106,7 +106,7 @@ namespace dsp
 #endif
 
         if (!std::filesystem::exists(finalt))
-            logger->error("We have created the output baseband file, but it does not exist! There may be a permission issue! File : " + finalt);
+            logger->error("We have created the output baseband file, but it does not exist! There may be a permission issue! File : %s", finalt.c_str());
 
         should_work = true;
         rec_mutex.unlock();

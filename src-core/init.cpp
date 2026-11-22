@@ -111,7 +111,7 @@ namespace satdump
         logger->info(" ___/ / /_/ / /_/ /_/ / /_/ / / / / / / /_/ /");
         logger->info("/____/\\__,_/\\__/_____/\\__,_/_/ /_/ /_/ .___/ ");
         logger->info("                                    /_/      ");
-        logger->info(_("Starting ") + getSatDumpVersionName());
+        logger->info("%s%s", _("Starting "), getSatDumpVersionName().c_str());
         logger->info("");
         logger->set_level(lvl);
 
@@ -189,7 +189,7 @@ namespace satdump
         // List them
         logger->debug(_("Registered pipelines :"));
         for (auto &pipeline : pipeline::pipelines)
-            logger->debug(" - " + pipeline.id);
+            logger->debug(" - %s", pipeline.id.c_str());
 
 #ifdef USE_OPENCL
         // OpenCL

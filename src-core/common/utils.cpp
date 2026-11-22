@@ -33,7 +33,7 @@ std::string prepareAutomatedPipelineFolder(time_t timevalue, double frequency, s
                             (timeReadable->tm_min > 9 ? std::to_string(timeReadable->tm_min) : "0" + std::to_string(timeReadable->tm_min));
     std::string output_dir = folder + "/" + timestamp + "_" + pipeline_name + "_" + format_notated(frequency, "Hz");
     std::filesystem::create_directories(output_dir);
-    logger->info("Generated folder name : " + output_dir);
+    logger->info("Generated folder name : %s", output_dir.c_str());
     return output_dir;
 }
 

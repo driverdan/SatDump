@@ -14,7 +14,7 @@
 
 std::shared_ptr<satdump::Plugin> loadPlugin(std::string plugin)
 {
-    logger->trace("Loading plugin " + plugin + "...");
+    logger->trace("Loading plugin %s...", plugin.c_str());
 
     void *dynlib = dlopen(plugin.c_str(), RTLD_LAZY);
     if (!dynlib)
@@ -46,7 +46,7 @@ std::shared_ptr<satdump::Plugin> loadPlugin(std::string plugin)
     // Init
     satdump::Plugin *pluginObject = reinterpret_cast<satdump::Plugin *(*)()>(create)();
     pluginObject->init();
-    logger->trace("Plugin " + pluginObject->getID() + " loaded!");
+    logger->trace("Plugin %s loaded!", pluginObject->getID().c_str());
 
     return std::shared_ptr<satdump::Plugin>(pluginObject);
 }
@@ -94,7 +94,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
     // Load all plugins
     for (std::string &plugins_path : plugins_paths)
     {
-        logger->info("Loading plugins from " + plugins_path);
+        logger->info("Loading plugins from %s", plugins_path.c_str());
 
         std::filesystem::recursive_directory_iterator pluginIterator(plugins_path);
         std::error_code iteratorError;
@@ -112,7 +112,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
 
             if (std::find_if(already_loaded_plugins.begin(), already_loaded_plugins.end(), [&](auto &v1) { return v1 == currfile; }) != already_loaded_plugins.end())
             {
-                logger->warn("Skipping duplicate plugin : " + currfile);
+                logger->warn("Skipping duplicate plugin : %s", currfile.c_str());
                 goto skip_this;
             }
 
@@ -121,7 +121,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
                 std::shared_ptr<satdump::Plugin> pl = loadPlugin(path);
                 if (pl)
                 {
-                    logger->trace("Loaded plugin : " + pl->getID() + "!");
+                    logger->trace("Loaded plugin : %s!", pl->getID().c_str());
                     loaded_plugins.insert({pl->getID(), pl});
                     already_loaded_plugins.push_back(currfile);
                 }
@@ -134,7 +134,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
         skip_this:
             pluginIterator.increment(iteratorError);
             if (iteratorError)
-                logger->critical(iteratorError.message());
+                logger->critical("%s", iteratorError.message().c_str());
         }
     }
 
@@ -167,7 +167,7 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
     {
         logger->debug("Loaded plugins (" + std::to_string(loaded_plugins.size()) + ") : ");
         for (std::pair<const std::string, std::shared_ptr<satdump::Plugin>> &it : loaded_plugins)
-            logger->debug(" - " + it.first);
+            logger->debug(" - %s", it.first.c_str());
     }
     else
         logger->warn("No Plugins loaded!");
@@ -176,6 +176,6 @@ void loadPlugins(std::map<std::string, std::shared_ptr<satdump::Plugin>> &loaded
     {
         logger->warn("The following plugins failed to load :");
         for (auto &s : failed_plugins)
-            logger->warn(" - " + std::filesystem::path(s).stem().string());
+            logger->warn(" - %s", std::filesystem::path(s).stem().string().c_str());
     }
 }

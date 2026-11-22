@@ -54,7 +54,7 @@ namespace satdump
                                                                                                                                                                                                        \
         double throughput = received / (end_time - start_time);                                                                                                                                        \
         throughput *= MULTIPICATOR;                                                                                                                                                                    \
-        logger->warn((std::string) "Performance (" + BLOCKNAME + ") %s", format_notated(throughput, "S/s").c_str());                                                                                   \
+        logger->warn("Performance (%s) %s", std::string(BLOCKNAME).c_str(), format_notated(throughput, "S/s").c_str());                                                                                \
                                                                                                                                                                                                        \
         delete block_to_test;                                                                                                                                                                          \
                                                                                                                                                                                                        \
@@ -124,7 +124,7 @@ namespace satdump
 
             double throughput = received / (end_time - start_time);
             throughput *= ratio;
-            logger->warn((std::string) "Performance (" + blkname + ") %s", format_notated(throughput, "S/s").c_str());
+            logger->warn("Performance (%s) %s", blkname.c_str(), format_notated(throughput, "S/s").c_str());
             return {blkname + " - " + format_notated(throughput, "S/s"), throughput};
         }
     } // namespace ndsp

@@ -1,3 +1,4 @@
+#include "cli_test_helpers.h"
 #include "core/resources.h"
 #include "helpers/guards.h"
 #include "helpers/temp_files.h"
@@ -57,4 +58,32 @@ TEST_CASE("resources resolve the repository's shipped resources", "[core][resour
 
     CHECK(resources::resourceExists("themes"));
     CHECK(std::filesystem::is_directory(resources::getResourcePath("themes")));
+}
+
+// The resource name used to be part of the logger's format, so a '%' in it was interpreted:
+// "%%" was logged as "%" (and "%s" or "%n" would read arguments that were never passed)
+TEST_CASE("resources log the name of a missing resource as written", "[core][resources]")
+{
+    TempDir cwd("cwd_percent");
+    std::filesystem::create_directories(cwd.path / "resources");
+    TempDir respath("respath_percent");
+
+    CwdGuard cg(cwd.path);
+    test_helpers::ValueGuard rg(satdump::RESPATH, respath.path.string() + "/");
+
+    {
+        cli_test::LogCapture log;
+        CHECK(resources::getResourcePath("maps/100%%.json") == "resources/maps/100%%.json");
+        INFO(log.dump());
+        CHECK(log.contains("Resources maps/100%%.json does not exist!", slog::LOG_ERROR));
+    }
+
+    // Without a local resources folder, the RESPATH branch
+    std::filesystem::remove_all(cwd.path / "resources");
+    {
+        cli_test::LogCapture log;
+        resources::getResourcePath("fonts/50%%.ttf");
+        INFO(log.dump());
+        CHECK(log.contains("Resources fonts/50%%.ttf does not exist!", slog::LOG_ERROR));
+    }
 }

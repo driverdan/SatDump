@@ -109,7 +109,7 @@ namespace satdump
         }
         catch (std::exception &e)
         {
-            logger->warn("Error parsing JSON from DB : " + id);
+            logger->warn("Error parsing JSON from DB : %s", id.c_str());
             return def;
         }
     }

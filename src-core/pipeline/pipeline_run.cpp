@@ -17,11 +17,11 @@ namespace satdump
         {
             if (!std::filesystem::exists(input_file))
             {
-                logger->error("Input file " + input_file + " does not exist!");
+                logger->error("Input file %s does not exist!", input_file.c_str());
                 return;
             }
 
-            logger->debug("Starting " + id);
+            logger->debug("Starting %s", id.c_str());
 
             std::string lastFile = "";
 
@@ -155,11 +155,11 @@ namespace satdump
                 if (!foundLevel)
                 {
                     foundLevel = step.level == input_level;
-                    logger->info("Data is already at level " + step.level + ", skipping");
+                    logger->info("Data is already at level %s, skipping", step.level.c_str());
                     continue;
                 }
 
-                logger->info("Processing data to level " + step.level);
+                logger->info("Processing data to level %s", step.level.c_str());
 
                 std::vector<std::string> files;
 
@@ -255,7 +255,7 @@ namespace satdump
 
             logger->debug("Parameters :");
             for (const nlohmann::detail::iteration_proxy_value<nlohmann::detail::iter_impl<nlohmann::json>> &param : final_parameters.items())
-                logger->debug("   - " + param.key() + " : " + param.value().dump());
+                logger->debug("   - %s : %s", param.key().c_str(), param.value().dump().c_str());
 
             return final_parameters;
         }

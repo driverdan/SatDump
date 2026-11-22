@@ -37,7 +37,7 @@ namespace dsp
         }
         catch (std::exception &e)
         {
-            logger->error("Error trying to list " + type + " sources! %s", e.what());
+            logger->error("Error trying to list %s sources! %s", type.c_str(), e.what());
             return {};
         }
     }

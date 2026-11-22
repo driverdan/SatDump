@@ -70,7 +70,7 @@ image::Image downloadTileMap(std::string url_source, double lat0, double lon0, d
 
             try
             {
-                logger->debug("Downloading tile from: " + url);
+                logger->debug("Downloading tile from: %s", url.c_str());
 
                 satdump::perform_http_request(url, res);
 
@@ -86,7 +86,7 @@ image::Image downloadTileMap(std::string url_source, double lat0, double lon0, d
             }
             catch (std::exception &e)
             {
-                logger->error("Error downloading tile from: " + url + " %s", e.what());
+                logger->error("Error downloading tile from: %s %s", url.c_str(), e.what());
             }
         }
     }
