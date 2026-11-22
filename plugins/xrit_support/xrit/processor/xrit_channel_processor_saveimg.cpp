@@ -311,6 +311,7 @@ namespace satdump
         }
 
         void XRITChannelProcessor::saveImg(xrit::XRITFileInfo &meta, image::Image &img)
+        try
         {
             // If we lack some essential metadata, we have to exit
             if (meta.channel == "" || meta.satellite_name == "" || meta.satellite_short_name == "" || meta.timestamp == -1)
@@ -486,6 +487,10 @@ namespace satdump
             // Save the actual img
             if (!in_memory_mode)
                 image::save_img(img, directory_path + filename);
+        }
+        catch (const std::exception &e)
+        {
+            logger->error("Could not save image %s! %s", meta.filename.c_str(), e.what());
         }
 
         void XRITChannelProcessor::process_composites(std::shared_ptr<products::ImageProduct> pro, std::string pro_path)

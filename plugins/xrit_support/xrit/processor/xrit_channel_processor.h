@@ -64,19 +64,13 @@ namespace satdump
             bool saveMeta(xrit::XRITFileInfo &meta, XRITFile &file);
 
             /**
-             * @brief Save an image xRIT file (process into products!)
+             * @brief Save an image xRIT file (process into products!). A failure is
+             * logged instead of thrown, so that an image that cannot be saved is
+             * dropped and the segmented decoders still move on
              * @param meta xRIT file info
              * @param file actual xRIT file
              */
             void saveImg(xrit::XRITFileInfo &meta, image::Image &img);
-
-            /**
-             * @brief saveImg(), logging a failure instead of throwing it, so that an image
-             * that cannot be saved is dropped and the segmented decoders still move on
-             * @param meta xRIT file info
-             * @param img the image
-             */
-            void trySaveImg(xrit::XRITFileInfo &meta, image::Image &img);
 
         private:
             // TODOREWORK DOCUMENT
