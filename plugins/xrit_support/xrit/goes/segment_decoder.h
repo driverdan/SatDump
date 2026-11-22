@@ -67,7 +67,7 @@ namespace satdump
                 goes::NOAALRITHeader noaa_header = file.getHeader<goes::NOAALRITHeader>();
                 ImageStructureRecord image_structure_record = file.getHeader<ImageStructureRecord>();
 
-                if (file.lrit_data.size() - primary_header.total_header_length < image_structure_record.columns_count * image_structure_record.lines_count)
+                if (file.lrit_data.size() - primary_header.total_header_length < (size_t)image_structure_record.columns_count * image_structure_record.lines_count)
                 {
                     logger->info("Image is too small compared to its header!");
                     return;
