@@ -702,6 +702,20 @@ int aec_decode_init(struct aec_stream *strm)
     if (strm->bits_per_sample > 32 || strm->bits_per_sample == 0)
         return AEC_CONF_ERROR;
 
+    /* Other block sizes make the decoder write past its buffers */
+    if (strm->flags & AEC_NOT_ENFORCE) {
+        /* All even block sizes are allowed. */
+        if (strm->block_size & 1)
+            return AEC_CONF_ERROR;
+    } else {
+        /* Only allow standard conforming block sizes */
+        if (strm->block_size != 8
+            && strm->block_size != 16
+            && strm->block_size != 32
+            && strm->block_size != 64)
+            return AEC_CONF_ERROR;
+    }
+
     state = malloc(sizeof(struct internal_state));
     if (state == NULL)
         return AEC_MEM_ERROR;

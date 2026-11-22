@@ -119,9 +119,11 @@ namespace goes
                             rice_parameters.options_mask = rice_compression_header.flags | SZ_RAW_OPTION_MASK;
                         }
 
-                        if (rice_parameters.pixels_per_block <= 0) // The Rice decoder divides by it
+                        // The Rice decoder divides by it, and only supports these
+                        int ppb = rice_parameters.pixels_per_block;
+                        if (ppb != 8 && ppb != 16 && ppb != 32 && ppb != 64)
                         {
-                            logger->warn("File %s has 0 pixels per block in its Rice compression record, using 16", file.filename.c_str());
+                            logger->warn("File %s has %d pixels per block in its Rice compression record, using 16", file.filename.c_str(), ppb);
                             rice_parameters.pixels_per_block = 16;
                         }
                     }
