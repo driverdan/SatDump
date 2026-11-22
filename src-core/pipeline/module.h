@@ -233,5 +233,18 @@ namespace satdump
          * @return true if it exists
          */
         bool moduleExists(std::string id);
+
+        /**
+         * @brief Run a module's process() on a thread of its own, as
+         * a pipeline does for modules that stream to each other.
+         *
+         * If process() throws, the error is logged with the module ID.
+         * Then the module's streaming input is read and discarded
+         * until its reader is stopped, so the module feeding it does
+         * not block on a full buffer. Then the exception is rethrown.
+         *
+         * @param module the module to run
+         */
+        void runModuleThread(std::shared_ptr<ProcessingModule> module);
     } // namespace pipeline
 } // namespace satdump

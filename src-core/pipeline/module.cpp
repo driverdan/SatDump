@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <exception>
 #include <string>
 #define SATDUMP_DLL_EXPORT 1
 
@@ -132,6 +134,43 @@ namespace satdump
                 if (m.id == id)
                     return m.inst(input_file, output_file_hint, parameters);
             throw satdump_exception("Could not find module " + id);
+        }
+
+        void runModuleThread(std::shared_ptr<ProcessingModule> module)
+        {
+            std::exception_ptr error;
+            try
+            {
+                module->process();
+                return;
+            }
+            catch (std::exception &e)
+            {
+                error = std::current_exception();
+                logger->error("Module %s failed! %s", module->getIDM().c_str(), e.what());
+            }
+            catch (...)
+            {
+                error = std::current_exception();
+                logger->error("Module %s failed!", module->getIDM().c_str());
+            }
+
+            // Keep reading the input until it is stopped, so the module before this one does not block
+            if (module->getInputType() == DATA_DSP_STREAM && module->input_stream)
+            {
+                while (module->input_stream->read() >= 0)
+                    module->input_stream->flush();
+            }
+            else if (module->getInputType() == DATA_STREAM && module->input_fifo)
+            {
+                std::vector<uint8_t> buffer(8192);
+                int readable;
+                while ((readable = module->input_fifo->waitUntilReadable()) > 0)
+                    if (module->input_fifo->read(buffer.data(), std::min<int>(readable, buffer.size())) < 0)
+                        break;
+            }
+
+            std::rethrow_exception(error);
         }
 
         bool moduleExists(std::string id)

@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "pipeline/live_pipeline.h"
 #include "webserver.h"
+#include <exception>
 #include <filesystem>
 #include <signal.h>
 
@@ -293,12 +294,25 @@ int main_live(int argc, char *argv[])
             // Stop cleanly
             source_ptr->stop();
             splitter_vfo->stop();
+            // A pipeline whose module failed throws from stop(). The other pipelines are still
+            // stopped first, or the thread pool would wait for their modules forever.
+            std::exception_ptr error;
             for (auto &e : all_pipelines)
             {
-                e.second->stop();
+                try
+                {
+                    e.second->stop();
+                }
+                catch (...)
+                {
+                    if (!error)
+                        error = std::current_exception();
+                }
                 splitter_vfo->del_vfo(e.first);
                 logger->info("Stopped VFO " + e.first);
             }
+            if (error)
+                std::rethrow_exception(error);
         }
         else
         {

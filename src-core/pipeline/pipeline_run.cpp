@@ -5,6 +5,7 @@
 #include "core/exception.h"
 #include "logger.h"
 #include "pipeline/module.h"
+#include <exception>
 #include <thread>
 
 namespace satdump
@@ -89,9 +90,34 @@ namespace satdump
                         uiCallListMutex->unlock();
                     }
 
-                    std::thread module1_thread([&m1]() { m1->process(); });
-                    std::thread module2_thread([&m2]() { m2->process(); });
+                    // An exception must not leave a thread (std::terminate). It is kept, and thrown once both modules are done
+                    std::exception_ptr module1_error, module2_error;
+                    std::thread module1_thread(
+                        [&m1, &module1_error]()
+                        {
+                            try
+                            {
+                                runModuleThread(m1);
+                            }
+                            catch (...)
+                            {
+                                module1_error = std::current_exception();
+                            }
+                        });
+                    std::thread module2_thread(
+                        [&m2, &module2_error]()
+                        {
+                            try
+                            {
+                                runModuleThread(m2);
+                            }
+                            catch (...)
+                            {
+                                module2_error = std::current_exception();
+                            }
+                        });
 
+                    // If the second module failed, runModuleThread() discards its input, so this does not block
                     if (module1_thread.joinable())
                         module1_thread.join();
                     while (m2->input_fifo->getReadable() > 0)
@@ -109,6 +135,12 @@ namespace satdump
                         uiCallList->clear();
                         uiCallListMutex->unlock();
                     }
+
+                    // Both were logged by runModuleThread(). The first module's error is the one reported
+                    if (module1_error)
+                        std::rethrow_exception(module1_error);
+                    if (module2_error)
+                        std::rethrow_exception(module2_error);
 
                     lastFile = m2->getOutput();
                     currentStep += 2;
