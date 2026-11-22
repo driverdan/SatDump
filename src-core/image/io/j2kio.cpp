@@ -23,7 +23,9 @@ namespace satdump
         {
             // The file save_j2k() writes to. OpenJPEG's own file stream closes the file
             // without checking, so a write that fails then is not seen: this one is closed by
-            // save_j2k(), and remembers a failed write.
+            // save_j2k(), and remembers a failed write. A failed write is also reported to
+            // OpenJPEG, which stops encoding: given a short count it only calls again for the
+            // rest, forever if nothing more can be written.
             struct J2KOutputFile
             {
                 FILE *fp;
@@ -35,10 +37,14 @@ namespace satdump
             {
                 J2KOutputFile *f = (J2KOutputFile *)user_data;
                 OPJ_SIZE_T written = fwrite(buffer, 1, size, f->fp);
-                if (written != size && !f->write_failed)
+                if (written != size)
                 {
-                    f->write_failed = true;
-                    f->write_errno = errno;
+                    if (!f->write_failed)
+                    {
+                        f->write_failed = true;
+                        f->write_errno = errno;
+                    }
+                    return (OPJ_SIZE_T)-1;
                 }
                 return written;
             }

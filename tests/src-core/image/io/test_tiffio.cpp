@@ -14,6 +14,37 @@ using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
+#ifdef __linux__
+namespace
+{
+    // Limits the size of the files this process can write, until it goes out of scope.
+    // SIGXFSZ, which ends the process by default, is ignored meanwhile, so that a write past
+    // the limit fails with EFBIG instead. Nothing else may be written to a file while this
+    // is in place, so keep its scope to the call under test.
+    struct FileSizeLimit
+    {
+        struct rlimit saved;
+        void (*saved_handler)(int);
+        bool ok;
+
+        explicit FileSizeLimit(rlim_t bytes) : saved_handler(signal(SIGXFSZ, SIG_IGN))
+        {
+            ok = getrlimit(RLIMIT_FSIZE, &saved) == 0;
+            struct rlimit limited = saved;
+            limited.rlim_cur = bytes;
+            ok = ok && setrlimit(RLIMIT_FSIZE, &limited) == 0;
+        }
+
+        ~FileSizeLimit()
+        {
+            if (ok)
+                setrlimit(RLIMIT_FSIZE, &saved);
+            signal(SIGXFSZ, saved_handler);
+        }
+    };
+} // namespace
+#endif
+
 TEST_CASE("image::save_tiff / load_tiff round-trip exactly", "[image][io][tiff]")
 {
     auto depth = GENERATE(8, 16);
@@ -145,27 +176,26 @@ TEST_CASE("image::save_tiff throws when the file cannot be written", "[image][io
 
     SECTION("the disk fills up after the header")
     {
-        // Writes past 64 KiB fail with EFBIG instead of raising SIGXFSZ
+        // Writes past 64 KiB fail. The limit is lifted before anything is checked, as Catch2
+        // may be writing its report to a file
         std::string path = dir.file("big.tif");
-        struct rlimit saved;
-        REQUIRE(getrlimit(RLIMIT_FSIZE, &saved) == 0);
-        struct rlimit limited = saved;
-        limited.rlim_cur = 64 * 1024;
-        void (*saved_handler)(int) = signal(SIGXFSZ, SIG_IGN);
-        REQUIRE(setrlimit(RLIMIT_FSIZE, &limited) == 0);
+        bool limited = false;
         bool threw = false;
         std::string what;
-        try
         {
-            img::save_tiff(in, path);
+            FileSizeLimit limit(64 * 1024);
+            limited = limit.ok;
+            try
+            {
+                img::save_tiff(in, path);
+            }
+            catch (std::exception &e)
+            {
+                threw = true;
+                what = e.what();
+            }
         }
-        catch (std::exception &e)
-        {
-            threw = true;
-            what = e.what();
-        }
-        setrlimit(RLIMIT_FSIZE, &saved);
-        signal(SIGXFSZ, saved_handler);
+        REQUIRE(limited);
         CHECK(threw);
         CHECK_THAT(what, ContainsSubstring("cannot write " + path));
     }

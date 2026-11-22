@@ -2,9 +2,6 @@
 #include "xrit_support/xrit_decoder_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
 
 using namespace xrit_decoder_test;
 
@@ -32,15 +29,29 @@ TEST_CASE("GK2ALRITDataDecoderModule saves the files it does not decode", "[plug
     DecoderEnv env;
     Mux mux;
     mux.add(VCID, packetize(unknownFile("TEST_0001.lrit", "unknown"), APID, 0));
-    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_ANT_0001.lrit")}, Bytes{'a', 'n', 't', 's'}), APID, 10));
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_BIN_0001.lrit")}, Bytes{'d', 'a', 't', 'a'}), APID, 10));
     mux.add(VCID, packetize(unknownFile("TEST_0002.lrit", "encrypted", {keyRecord(1)}), APID, 20));
     env.decode<gk2a::lrit::GK2ALRITDataDecoderModule>(mux, gk2aParams());
 
     INFO(env.log.dump());
-    // ANT files are meant to be .txt, but the decoder compares "ANT/" with "ANT", so they are .bin (#54)
-    CHECK(env.files() == std::vector<std::string>{"ADD/ANT/COMS_ANT_0001.bin", "LRIT/TEST_0001.lrit", "LRIT_ENCRYPTED/TEST_0002.lrit"});
-    CHECK(env.read("ADD/ANT/COMS_ANT_0001.bin") == "ants");
+    CHECK(env.files() == std::vector<std::string>{"ADD/BIN/COMS_BIN_0001.bin", "LRIT/TEST_0001.lrit", "LRIT_ENCRYPTED/TEST_0002.lrit"});
+    CHECK(env.read("ADD/BIN/COMS_BIN_0001.bin") == "data");
     CHECK_FALSE(env.log.contains("", slog::LOG_ERROR));
+}
+
+// Bug: module_gk2a_lrit_data_decoder_proc.cpp:115,123: the type of an additional file is
+// kept with a "/" after it ("ANT/") and is then compared with "ANT", so the text files of
+// type ANT are saved as .bin instead of .txt (#54).
+TEST_CASE("GK2ALRITDataDecoderModule saves additional files of type ANT as text", "[plugins][gk2a_support][gk2a_lrit_data_decoder][!shouldfail]")
+{
+    NoKeys keys;
+    DecoderEnv env;
+    Mux mux;
+    mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_ANT_0001.lrit")}, Bytes{'a', 'n', 't', 's'}), APID, 0));
+    env.decode<gk2a::lrit::GK2ALRITDataDecoderModule>(mux, gk2aParams());
+
+    INFO(env.log.dump());
+    CHECK(env.files() == std::vector<std::string>{"ADD/ANT/COMS_ANT_0001.txt"});
 }
 
 // A file that cannot be written is lost, with one error naming it, and the file after it is
@@ -65,10 +76,10 @@ TEST_CASE("GK2ALRITDataDecoderModule carries on when it cannot write a file", "[
 
     SECTION("an additional file cannot be opened")
     {
-        lost = "ADD/ANT/COMS_ANT_0001.bin";
+        lost = "ADD/BIN/COMS_BIN_0001.bin";
         std::filesystem::create_directories(env.path(lost));
-        mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_ANT_0001.lrit")}, Bytes{'l', 'o', 's', 't'}), APID, 0));
-        error = "Could not process file COMS_ANT_0001.lrit! cannot open " + env.path(lost) + ": ";
+        mux.add(VCID, packetize(lritFile(255, {annotationRecord("COMS_BIN_0001.lrit")}, Bytes{'l', 'o', 's', 't'}), APID, 0));
+        error = "Could not process file COMS_BIN_0001.lrit! cannot open " + env.path(lost) + ": ";
     }
 
     SECTION("an encrypted file cannot be opened")

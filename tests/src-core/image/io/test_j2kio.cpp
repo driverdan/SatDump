@@ -26,7 +26,7 @@ TEST_CASE("image::save_j2k / load_j2k round-trip losslessly", "[image][io][j2k]"
     CHECK(image_test::samePixels(out, in));
 }
 
-// Bug: j2kio.cpp:31,85: the encoder always uses 5 resolution levels, which OpenJPEG
+// Bug: j2kio.cpp:80,145: the encoder always uses 5 resolution levels, which OpenJPEG
 // rejects for images smaller than 16 pixels in either dimension. The return
 // value of opj_setup_encoder is ignored, so an empty file is written silently.
 TEST_CASE("image::save_j2k / load_j2k round-trip small images", "[image][io][j2k][!shouldfail]")
