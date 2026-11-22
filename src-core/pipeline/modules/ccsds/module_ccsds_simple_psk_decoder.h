@@ -75,7 +75,7 @@ namespace satdump
                 std::shared_ptr<deframing::BPSK_CCSDS_Deframer> deframer_qpsk;
                 std::shared_ptr<reedsolomon::ReedSolomon> reed_solomon;
 
-                int errors[10];
+                int errors[10] = {};
 
                 // UI Stuff
                 dsp::Random rng;
