@@ -73,7 +73,7 @@ namespace satdump
 
         protected:
             /**
-             * @brief Allocates the work-in-progress image, filled with zeros. An image larger
+             * @brief Allocates the work-in-progress image, filled with zeros. An empty image, one larger
              * than MAX_IMAGE_PIXELS, or one that cannot be allocated, is logged and left
              * empty, so that the file's segments are ignored instead of stopping the decoder.
              * @param filename name of the file the size comes from, for the log
@@ -82,8 +82,11 @@ namespace satdump
             bool initImage(const std::string &filename, int bit_depth, size_t width, size_t height)
             {
                 image.clear();
-                if (width == 0 || height == 0) // Nothing to allocate
+                if (width == 0 || height == 0)
+                {
+                    logger->warn("File %s gives an image of %zux%zu pixels, its segments are ignored", filename.c_str(), width, height);
                     return false;
+                }
 
                 if (!imageSizeAllowed(width, height))
                 {

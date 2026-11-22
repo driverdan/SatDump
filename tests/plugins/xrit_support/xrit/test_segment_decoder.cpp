@@ -118,7 +118,20 @@ TEST_CASE("FY4xSegmentedImageDecoder ignores the segments of an image too large 
     checkIgnored(*decoder, file, log, "65535x16711425");
 }
 
-// The three below would ask for 4 to 86 GB, which the allocator may give
+TEST_CASE("MSGSegmentedImageDecoder ignores the segments of an image of 0 pixels", "[plugins][xrit_support][segment_decoder]")
+{
+    cli_test::LogCapture log;
+    auto file = parsedFile(lritFile(0, {imageStructureRecord(8, 0, 4, 0), annotationRecord(ABSURD), msgSegmentIdentificationRecord(1, 1, 1, 2)}, Bytes(64, 1)));
+    xr::MSGSegmentedImageDecoder decoder(file);
+    INFO(log.dump());
+    CHECK(decoder.image.size() == 0);
+    CHECK(log.contains("File " + ABSURD + " gives an image of 0x8 pixels, its segments are ignored", slog::LOG_WARN));
+    decoder.pushSegment(file);
+    CHECK_FALSE(decoder.hasData());
+}
+
+// The three below would ask for 4.3 GB to 281 TB, of which the allocator may give the
+// smaller sizes
 
 TEST_CASE("HimawariSegmentedImageDecoder ignores the segments of an image too large to allocate", "[plugins][xrit_support][segment_decoder]")
 {

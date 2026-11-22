@@ -64,7 +64,7 @@ namespace satdump
                 //  }
                 try
                 {
-                    image::imemcpy(image, /*(seg_height * seg_width)*/ seg_width * p, data, 0, data.size());
+                    image::imemcpy(image, /*(seg_height * seg_width)*/ (size_t)seg_width * p, data, 0, data.size());
                     segments_done[segc] = true;
                 }
                 catch (std::exception &e)
