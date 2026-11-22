@@ -263,6 +263,21 @@ TEST_CASE("image::kuwahara_filter picks the most uniform quadrant", "[image][pro
     }
 }
 
+// The rows of a channel are filtered by several OpenMP threads. Each wrote the progress for its own
+// row, so the value left at the end was the one of whichever thread wrote last
+TEST_CASE("image::kuwahara_filter ends with the progress of its last row", "[image][processing]")
+{
+    const int height = GENERATE(64, 257);
+    const int channels = GENERATE(1, 3);
+    Image im(8, 300, height, channels);
+    float progress = -1;
+    img::kuwahara_filter(im, &progress);
+
+    // What a serial run leaves: the last row of the last channel
+    float expected = (channels - 1) * (1.0 / (float)channels) + ((float(height - 1) / float(height)) / (float)channels);
+    CHECK(progress == expected);
+}
+
 TEST_CASE("image::simple_despeckle replaces bright isolated pixels", "[image][processing]")
 {
     Image im(8, 5, 3, 1);
