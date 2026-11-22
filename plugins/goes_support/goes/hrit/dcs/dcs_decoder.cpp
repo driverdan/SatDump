@@ -363,6 +363,13 @@ namespace goes
         {
             DCSFile dcs_file;
 
+            // The 64 byte header and the 4 byte file CRC
+            if (size < 68)
+            {
+                logger->warn("Invalid DCS File size! Not parsing");
+                return false;
+            }
+
             // DCS Header
             dcs_file.name = std::string(&data[0], &data[32]);
             size_t file_size = std::stoull(std::string(&data[32], &data[40]));
@@ -410,6 +417,14 @@ namespace goes
                     // Empty file, ignore
                     block_ptr += 5;
                     continue;
+                }
+
+                // Block header and CRC, and the fixed fields of a DCP message or a missed message
+                size_t min_block_length = block_id == 1 ? 42 : block_id == 2 ? 27 : 5;
+                if (block_length < min_block_length)
+                {
+                    logger->warn("Invalid DCS block length! Skipping remainder of file");
+                    return false;
                 }
 
                 // Calculate Block CRC
@@ -730,8 +745,8 @@ namespace goes
                                         }
 
                                         uint32_t val_int = (uint32_t)(pseudo_string[sensor_offset + (3 * i) + 2] - 0x40) |
-                                            (uint32_t)((pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
-                                            (uint32_t)((pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
+                                            ((uint32_t)(pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
+                                            ((uint32_t)(pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
 
                                         new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                     }
@@ -782,19 +797,23 @@ namespace goes
                             std::string instrument_string;
                             while (std::getline(message_stream, instrument_string, '+'))
                             {
+                                // Sensor, day of year, minute of day and interval
+                                if (instrument_string.size() < 7)
+                                    continue;
+
                                 DCSValue new_value;
                                 new_value.name = "Sensor " + std::to_string((int)(instrument_string[0] - 0x40));
 
                                 // Skipping Day of year
 
                                 // Minute of day to compute reading age
-                                uint16_t recorded_minute = (((uint16_t)instrument_string[3] - 0x40) << 6) | (instrument_string[4] - 0x40);
+                                uint16_t recorded_minute = ((uint32_t)(instrument_string[3] - 0x40) << 6) | (instrument_string[4] - 0x40);
                                 uint16_t transmission_minute = ((block_ptr[16] & 0x0f) * 10 + ((block_ptr[15] & 0xf0) >> 4)) * 60 +
                                     (block_ptr[15] & 0x0f) * 10 + ((block_ptr[14] & 0xf0) >> 4);
                                 new_value.reading_age = transmission_minute - recorded_minute;
 
                                 // Interval
-                                new_value.interval = (((uint16_t)instrument_string[5] - 0x40) << 6) | (instrument_string[6] - 0x40);
+                                new_value.interval = ((uint32_t)(instrument_string[5] - 0x40) << 6) | (instrument_string[6] - 0x40);
 
                                 // Reading values
                                 for (size_t i = 7; i + 2 < instrument_string.size(); i += 3)
@@ -807,8 +826,8 @@ namespace goes
                                     }
 
                                     uint32_t val_int = (uint32_t)(instrument_string[i + 2] - 0x40) |
-                                        (uint32_t)((instrument_string[i + 1] - 0x40) << 6) |
-                                        (uint32_t)((instrument_string[i] - 0x40) << 12);
+                                        ((uint32_t)(instrument_string[i + 1] - 0x40) << 6) |
+                                        ((uint32_t)(instrument_string[i] - 0x40) << 12);
 
                                     new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                 }
@@ -868,8 +887,8 @@ namespace goes
                                     }
 
                                     uint32_t val_int = (uint32_t)(pseudo_string[sensor_offset + (3 * i) + 2] - 0x40) |
-                                        (uint32_t)((pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
-                                        (uint32_t)((pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
+                                        ((uint32_t)(pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
+                                        ((uint32_t)(pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
 
                                     new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                 }
@@ -882,7 +901,7 @@ namespace goes
                             {
                                 DCSValue transmission_count;
                                 transmission_count.name = "Transmissions since reboot";
-                                transmission_count.values.emplace_back(std::to_string((uint16_t)((dcs_message->data_ascii[sensor_offset] - 0x40) << 6 |
+                                transmission_count.values.emplace_back(std::to_string((uint16_t)((uint32_t)(dcs_message->data_ascii[sensor_offset] - 0x40) << 6 |
                                     (dcs_message->data_ascii[sensor_offset + 1] - 0x40))));
                                 dcs_message->data_values.emplace_back(transmission_count);
                             }

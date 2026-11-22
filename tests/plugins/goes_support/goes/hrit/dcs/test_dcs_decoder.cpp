@@ -174,3 +174,103 @@ TEST_CASE("DCS Pseudobinary B messages that cannot be decoded are left undecoded
         CHECK(msg["data_values"].empty());
     }
 }
+
+namespace
+{
+    // A block of this ID with this length field, and as many bytes (at least its 3 byte header)
+    std::vector<uint8_t> dcsBlock(uint8_t id, size_t length)
+    {
+        std::vector<uint8_t> block(length < 3 ? 3 : length, 0);
+        block[0] = id;
+        block[1] = length & 0xff;
+        block[2] = length >> 8;
+        return block;
+    }
+
+    // A DCS file holding these blocks, whose size field is its size. The CRCs are left at 0.
+    std::vector<uint8_t> dcsFileOf(const std::vector<uint8_t> &blocks)
+    {
+        size_t size = 64 + blocks.size() + 4;
+        char size_str[9];
+        snprintf(size_str, sizeof(size_str), "%08zu", size);
+        std::string name = FILE_NAME + std::string(32 - FILE_NAME.size(), ' ');
+        std::string header = name + size_str + "SRC " + "DCSH" + std::string(12, ' ') + std::string(4, '\0');
+
+        std::vector<uint8_t> file(header.begin(), header.end());
+        file.insert(file.end(), blocks.begin(), blocks.end());
+        file.insert(file.end(), 4, 0);
+        return file;
+    }
+
+    // processDCS() of this file, which must not be parsed
+    void checkRejected(std::vector<uint8_t> file, const std::string &warning)
+    {
+        cli_test::LogCapture log;
+        TempDir tmp("goes_dcs");
+        std::filesystem::create_directories(tmp.file("DCS"));
+        DCSDecoder decoder(tmp.str());
+        CHECK_FALSE(decoder.process(file));
+        CHECK(log.contains(warning));
+        CHECK_FALSE(std::filesystem::exists(tmp.file("DCS/" + FILE_NAME + ".json")));
+    }
+} // namespace
+
+// #67: the block CRC loop ran 64 KiB past a block of length 0 or 1 (and never ended for 0),
+// and the fields of a short message block were read past it
+TEST_CASE("DCS blocks shorter than their fields are not parsed", "[plugins][goes_support][goes_dcs]")
+{
+    SECTION("a DCP message block of length 0") { checkRejected(dcsFileOf(dcsBlock(1, 0)), "Invalid DCS block length"); }
+    SECTION("a DCP message block of length 1") { checkRejected(dcsFileOf(dcsBlock(1, 1)), "Invalid DCS block length"); }
+    SECTION("a DCP message block of length 2") { checkRejected(dcsFileOf(dcsBlock(1, 2)), "Invalid DCS block length"); }
+    SECTION("a DCP message block that ends inside its header") { checkRejected(dcsFileOf(dcsBlock(1, 41)), "Invalid DCS block length"); }
+    SECTION("a missed message block that ends inside its header") { checkRejected(dcsFileOf(dcsBlock(2, 26)), "Invalid DCS block length"); }
+    SECTION("a block of an unknown type shorter than a block header and CRC") { checkRejected(dcsFileOf(dcsBlock(3, 4)), "Invalid DCS block length"); }
+}
+
+TEST_CASE("DCS blocks of the smallest length are parsed", "[plugins][goes_support][goes_dcs]")
+{
+    cli_test::LogCapture log;
+    TempDir tmp("goes_dcs");
+    std::filesystem::create_directories(tmp.file("DCS"));
+    DCSDecoder decoder(tmp.str());
+
+    std::vector<uint8_t> blocks = dcsBlock(1, 42);
+    std::vector<uint8_t> missed = dcsBlock(2, 27);
+    blocks.insert(blocks.end(), missed.begin(), missed.end());
+    auto file = dcsFileOf(blocks);
+    REQUIRE(decoder.process(file));
+
+    nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
+    CHECK(out["blocks"].size() == 2);
+}
+
+// #67: the header was read before the size was known to hold it
+TEST_CASE("DCS files shorter than their header and CRC are not parsed", "[plugins][goes_support][goes_dcs]")
+{
+    // Its size field is right: "00000040"
+    std::string header = FILE_NAME + std::string(32 - FILE_NAME.size(), ' ') + "00000040";
+    checkRejected(std::vector<uint8_t>(header.begin(), header.end()), "Invalid DCS File size");
+}
+
+TEST_CASE("DCS Pseudobinary C messages are decoded by sensor", "[plugins][goes_support][goes_dcs]")
+{
+    // Sensor A, day @A, minute @A, every 15 minutes (@O), one reading of 0.64 (@A@)
+    SECTION("one sensor")
+    {
+        nlohmann::json msg = decode({}, "C1+A@A@A@O@A@.");
+        CHECK(msg["data_type"] == "Pseudobinary C");
+        REQUIRE(msg["data_values"].size() == 1);
+        CHECK(msg["data_values"][0]["name"] == "Sensor 1");
+        CHECK(msg["data_values"][0]["interval"] == 15);
+        CHECK(msg["data_values"][0]["values"] == nlohmann::json::array({"0.640000"}));
+    }
+
+    // #67: its minute of day and interval were read past the end of the block
+    SECTION("a sensor block too short for its header is skipped")
+    {
+        nlohmann::json msg = decode({}, "C1+A@A@A@O@A@+B@.");
+        CHECK(msg["data_type"] == "Pseudobinary C");
+        REQUIRE(msg["data_values"].size() == 1);
+        CHECK(msg["data_values"][0]["name"] == "Sensor 1");
+    }
+}
