@@ -171,13 +171,21 @@ namespace satdump
             template <typename T>
             T getHeader()
             {
+                // A record the file does not have is read as zeros. It is not looked up with
+                // operator[], which would add it at offset 0, the primary header
                 size_t offset = 0;
+                bool present = true;
                 if constexpr (!std::is_same_v<T, PrimaryHeader>)
-                    offset = all_headers[T::TYPE];
+                {
+                    auto it = all_headers.find(T::TYPE);
+                    present = it != all_headers.end();
+                    if (present)
+                        offset = it->second;
+                }
 
                 // A record cut by the end of the data, or too short for its type, is read as if
                 // padded with zeros, rather than reading past the data
-                size_t available = offset < lrit_data.size() ? lrit_data.size() - offset : 0;
+                size_t available = present && offset < lrit_data.size() ? lrit_data.size() - offset : 0;
                 size_t record_length = (available >= 2 ? lrit_data[offset + 1] << 8 : 0) | (available >= 3 ? lrit_data[offset + 2] : 0); // As the padded copy gives it
                 size_t needed = std::max<size_t>(T::MIN_LENGTH, record_length);
 
