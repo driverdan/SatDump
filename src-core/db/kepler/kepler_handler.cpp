@@ -224,7 +224,7 @@ namespace satdump
                                 std::to_string(norad) + " order by abs(epoch - " + std::to_string(time) + ") asc limit 1")
                                    .c_str(),
                                -1, &res, 0))
-            logger->error("Couldn't fetch Kepler data from DB! " + std::string(sqlite3_errmsg(h->db)));
+            logger->error("Couldn't fetch Kepler data from DB! %s", sqlite3_errmsg(h->db));
         else if (sqlite3_step(res) == SQLITE_ROW)
         {
             kep.satellite_number = sqlite3_column_int(res, 0);
@@ -263,7 +263,7 @@ namespace satdump
                 "c1.mean_motion, c1.derivative_mean_motion, c1.second_derivative_mean_motion, c1.bstar_drag_term, c1.revolutions_at_epoch FROM kepler c1 JOIN (SELECT satellite_number, MAX(epoch) "
                 "AS Maxepoch FROM kepler GROUP BY satellite_number) c2 ON c1.satellite_number = c2.satellite_number AND c1.epoch = c2.Maxepoch;",
                 -1, &res, 0))
-            logger->error("Couldn't fetch Kepler data from DB! " + std::string(sqlite3_errmsg(h->db)));
+            logger->error("Couldn't fetch Kepler data from DB! %s", sqlite3_errmsg(h->db));
         else
         {
             while (sqlite3_step(res) == SQLITE_ROW)

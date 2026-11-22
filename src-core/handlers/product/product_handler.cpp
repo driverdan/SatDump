@@ -46,13 +46,13 @@ namespace satdump
                             }
                             catch (std::exception &e)
                             {
-                                logger->error("Common instrument configuration (" + path + ") invalid! %s", e.what());
+                                logger->error("Common instrument configuration (%s) invalid! %s", path.c_str(), e.what());
                             }
                         }
 
                         commonIterator.increment(iteratorError);
                         if (iteratorError)
-                            logger->critical(iteratorError.message());
+                            logger->critical("%s", iteratorError.message().c_str());
                     }
 
                     // Sort in alphabetical order (to make lego11 happy)
@@ -67,7 +67,7 @@ namespace satdump
             }
             else
             {
-                logger->warn("Couldn't open instrument configuration at " + config_path + ". Expect degraded experience.");
+                logger->warn("Couldn't open instrument configuration at %s. Expect degraded experience.", config_path.c_str());
                 handler_name = product->instrument_name;
             }
 
@@ -92,15 +92,15 @@ namespace satdump
                         }
                         else
                         {
-                            logger->debug("Disabling unavailable preset : " + cfg["name"].get<std::string>());
+                            logger->debug("Disabling unavailable preset : %s", cfg["name"].get<std::string>().c_str());
                         }
                     }
                     catch (std::exception &e)
                     {
                         if (cfg.contains("name"))
-                            logger->warn("Error loading preset (" + cfg["name"].get<std::string>() + ")! JSON : " + cfg.dump());
+                            logger->warn("Error loading preset (%s)! JSON : %s", cfg["name"].get<std::string>().c_str(), cfg.dump().c_str());
                         else
-                            logger->warn("Error loading preset! JSON : " + cfg.dump());
+                            logger->warn("Error loading preset! JSON : %s", cfg.dump().c_str());
                     }
                 }
             }

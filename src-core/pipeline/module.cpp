@@ -125,7 +125,7 @@ namespace satdump
             // Log them out
             logger->debug("Registered modules (" + std::to_string(modules_registry.size()) + ") : ");
             for (auto &it : modules_registry)
-                logger->debug(" - " + it.id);
+                logger->debug(" - %s", it.id.c_str());
         }
 
         std::shared_ptr<ProcessingModule> getModuleInstance(std::string id, std::string input_file, std::string output_file_hint, nlohmann::json parameters)

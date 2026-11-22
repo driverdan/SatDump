@@ -88,7 +88,7 @@ namespace satdump
                         {
                             IM_ASSERT(payload->DataSize == sizeof(DragDropWip));
                             const DragDropWip *payload_n = (const DragDropWip *)payload->Data;
-                            logger->info("Handler " + handler->getName() + " got drag of " + payload_n->drag->getName());
+                            logger->info("Handler %s got drag of %s", handler->getName().c_str(), payload_n->drag->getName().c_str());
                             if (!isParent(payload_n->drag, handler))
                             {
                                 handler->addSubHandler(payload_n->drag);

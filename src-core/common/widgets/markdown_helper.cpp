@@ -23,7 +23,7 @@ namespace satdump
             std::string url(data_.link, data_.linkLength);
             if (!data_.isImage)
             {
-                logger->info("Opening URL " + url);
+                logger->info("Opening URL %s", url.c_str());
 
 #if defined(_WIN32) // TODOREWORK per-platform again!
                 ShellExecuteA(0, 0, url.c_str(), 0, 0, SW_SHOW);
@@ -80,7 +80,7 @@ namespace satdump
 
                 if (std::filesystem::exists(resources::getResourcePath(image_path)))
                 {
-                    logger->trace("Loading image for markdown : " + image_path);
+                    logger->trace("Loading image for markdown : %s", image_path.c_str());
 
                     image::Image img;
                     image::load_img(img, resources::getResourcePath(image_path));

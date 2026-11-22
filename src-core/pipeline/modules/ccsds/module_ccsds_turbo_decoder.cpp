@@ -147,8 +147,8 @@ namespace satdump
                 data_out = std::ofstream(d_output_file_hint + ".cadu", std::ios::binary);
                 d_output_file = d_output_file_hint + ".cadu";
 
-                logger->info("Using input symbols " + d_input_file);
-                logger->info("Decoding to " + d_output_file_hint + ".cadu");
+                logger->info("Using input symbols %s", d_input_file.c_str());
+                logger->info("Decoding to %s.cadu", d_output_file_hint.c_str());
 
                 codings::turbo::turbo_rate_t frate = codings::turbo::RATE_1_2;
 
@@ -247,7 +247,7 @@ namespace satdump
                     {
                         lastTime = time(NULL);
                         std::string lock_state = locked ? "SYNCED" : "NOSYNC";
-                        logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0f) / 10.0f) + "%%, Lock : " + lock_state);
+                        logger->info("Progress %f%%, Lock : %s", round(((double)progress / (double)filesize) * 1000.0f) / 10.0f, lock_state.c_str());
                     }
                 }
 

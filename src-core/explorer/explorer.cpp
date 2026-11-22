@@ -530,7 +530,7 @@ namespace satdump
                     if (std::filesystem::path(path).extension().string() == ".cbor")
                         loaders.push_back({"Product Loader", [](std::string path, ExplorerApplication *e)
                                            {
-                                               logger->trace("Explorer loading product " + path);
+                                               logger->trace("Explorer loading product %s", path.c_str());
 
                                                try
                                                {
@@ -547,7 +547,7 @@ namespace satdump
                         loaders.push_back(
                             {"Dataset Loader", [](std::string path, ExplorerApplication *e)
                              {
-                                 logger->trace("Viewer loading dataset " + path);
+                                 logger->trace("Viewer loading dataset %s", path.c_str());
 
                                  try
                                  {
@@ -564,19 +564,19 @@ namespace satdump
                     else if (std::filesystem::path(path).extension().string() == ".shp")
                         loaders.push_back({"Shapefile Loader", [](std::string path, ExplorerApplication *e)
                                            {
-                                               logger->trace("Viewer loading shapefile " + path);
+                                               logger->trace("Viewer loading shapefile %s", path.c_str());
                                                e->addHandler(std::make_shared<handlers::ShapefileHandler>(path));
                                            }});
                     else if (std::filesystem::path(path).extension().string() == ".satdump_dsp_flowgraph")
                         loaders.push_back({"DSP Flowgraph Loader", [](std::string path, ExplorerApplication *e)
                                            {
-                                               logger->trace("Viewer loading DSP flowgraph " + path);
+                                               logger->trace("Viewer loading DSP flowgraph %s", path.c_str());
                                                e->addHandler(std::make_shared<handlers::DSPFlowGraphHandler>(path), true);
                                            }});
                     else if (std::filesystem::path(path).extension().string() == ".satdump_processing_flowgraph")
                         loaders.push_back({"Processing Flowgraph Loader", [](std::string path, ExplorerApplication *e)
                                            {
-                                               logger->trace("Viewer loading Processing flowgraph " + path);
+                                               logger->trace("Viewer loading Processing flowgraph %s", path.c_str());
                                                e->addHandler(std::make_shared<handlers::ProcessingFlowGraphHandler>(path), true);
                                            }});
 
@@ -587,7 +587,7 @@ namespace satdump
                     if (loaders.size() == 0)
                         loaders.push_back({"Image Loader", [](std::string path, ExplorerApplication *e)
                                            {
-                                               logger->trace("Viewer loading image " + path);
+                                               logger->trace("Viewer loading image %s", path.c_str());
 
                                                image::Image img;
                                                image::load_img(img, path);

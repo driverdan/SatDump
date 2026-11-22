@@ -592,12 +592,12 @@ namespace satdump
 
                             if (image_filters.count(f.first))
                             {
-                                logger->info("Applying filter : " + f.first);
+                                logger->info("Applying filter : %s", f.first.c_str());
                                 image_filters[f.first].perform(curr_image, f.second.cfg, &f.second.progress);
                             }
                             else
                             {
-                                logger->error("Could not find image filter " + f.first + "!");
+                                logger->error("Could not find image filter %s!", f.first.c_str());
                             }
 
                             f.second.progress = 1;

@@ -38,7 +38,7 @@ namespace satdump
                 for (auto d : dataset.products_list)
                 {
                     std::string pro_path = std::filesystem::path(d_input_file).parent_path().string() + "/" + d;
-                    logger->warn("Processing product at " + pro_path);
+                    logger->warn("Processing product at %s", pro_path.c_str());
                     auto prod = satdump::products::loadProduct(pro_path);
                     satdump::products::process_product_with_handler(prod, pro_path);
                 }

@@ -353,7 +353,7 @@ namespace satdump
                                                     if (n2->internal->inputs[b2].type == i->outputs[o].type)
                                                     {
                                                         n2->internal->inputs[b2].ptr = i->outputs[o].ptr;
-                                                        logger->trace("Assigned to : " + n2->internal->title);
+                                                        logger->trace("Assigned to : %s", n2->internal->title.c_str());
                                                     }
                                                     else
                                                     {
@@ -379,7 +379,7 @@ namespace satdump
                                                 if (n2->node_io[b].id == l.start)
                                                 {
                                                     n2->internal->inputs[b2] = i->outputs[o];
-                                                    logger->trace("Assigned to : " + n2->internal->title);
+                                                    logger->trace("Assigned to : %s", n2->internal->title.c_str());
                                                 }
 
                                                 b2++;

@@ -231,9 +231,9 @@ namespace satdump
                         {
                             auto v = [&]
                             {
-                                logger->trace("Stopping source " + n->internal->blk->d_id);
+                                logger->trace("Stopping source %s", n->internal->blk->d_id.c_str());
                                 n->internal->blk->stop(true);
-                                logger->trace("Stopped source " + n->internal->blk->d_id);
+                                logger->trace("Stopped source %s", n->internal->blk->d_id.c_str());
                             };
                             all_th.push_back(std::thread(v));
                         }

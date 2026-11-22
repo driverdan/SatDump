@@ -11,7 +11,7 @@ namespace satdump
         void load_img(Image &img, std::string file)
         {
             if (!std::filesystem::exists(file))
-                logger->error("File " + file + " does not exist!");
+                logger->error("File %s does not exist!", file.c_str());
 
             std::ifstream file_sigature_src(file, std::ios::binary);
             uint8_t signature[10];
@@ -42,7 +42,7 @@ namespace satdump
         {
             if (!append_ext(&file))
                 return;
-            logger->info("Saving " + file + "...");
+            logger->info("Saving %s...", file.c_str());
             if (file.find(".png") != std::string::npos)
                 save_png(img, file, fast);
             else if (file.find(".jpeg") != std::string::npos || file.find(".jpg") != std::string::npos)

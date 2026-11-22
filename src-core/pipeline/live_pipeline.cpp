@@ -23,10 +23,10 @@ namespace satdump
                 nlohmann::json final_parameters = Pipeline::prepareParameters(d_pipeline.steps[currentModule].parameters, d_parameters);
 
                 // Log it all out
-                logger->info("Module " + d_pipeline.steps[currentModule].module);
+                logger->info("Module %s", d_pipeline.steps[currentModule].module.c_str());
                 logger->debug("Parameters :");
                 for (const nlohmann::detail::iteration_proxy_value<nlohmann::detail::iter_impl<nlohmann::json>> &param : final_parameters.items())
-                    logger->debug("   - " + param.key() + " : " + param.value().dump());
+                    logger->debug("   - %s : %s", param.key().c_str(), param.value().dump().c_str());
 
                 modules.push_back(getModuleInstance(d_pipeline.steps[currentModule].module, "", d_output_dir + "/" + d_pipeline.id, final_parameters));
             }
@@ -35,10 +35,10 @@ namespace satdump
         void LivePipeline::prepare_module(std::string id)
         {
             // Log it all out
-            logger->info("Module " + id);
+            logger->info("Module %s", id.c_str());
             logger->debug("Parameters :");
             for (const nlohmann::detail::iteration_proxy_value<nlohmann::detail::iter_impl<nlohmann::json>> &param : d_parameters.items())
-                logger->debug("   - " + param.key() + " : " + param.value().dump());
+                logger->debug("   - %s : %s", param.key().c_str(), param.value().dump().c_str());
 
             modules.push_back(getModuleInstance(id, "", d_output_dir + "/" + d_pipeline.id, d_parameters));
         }

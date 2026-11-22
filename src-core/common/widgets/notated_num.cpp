@@ -68,7 +68,7 @@ namespace satdump
             }
             catch (std::exception &e)
             {
-                logger->trace("Ignoring bad int input - " + std::string(e.what()));
+                logger->trace("Ignoring bad int input - %s", e.what());
                 display_val = last_display;
                 return;
             }
