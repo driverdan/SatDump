@@ -5,8 +5,12 @@
 #include <algorithm>
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
+#include <ctime>
 #include <filesystem>
+#include <mutex>
+#include <string>
 #include <thread>
+#include <vector>
 
 // In live mode, the GVAR image decoder queues each full disk for its saving thread. These
 // tests run the decoder on an empty stream and queue the disks themselves, as building GVAR
@@ -85,12 +89,14 @@ TEST_CASE("GVARImageDecoderModule saves every queued disk when a live stream sto
     auto decoder = std::make_shared<TestDecoder>("", out + "/gvar", nlohmann::json::object());
     setUpLive(*decoder);
     std::thread t([&decoder]() { decoder->process(); });
-    bool started = test_helpers::waitUntil([&]() { return log.contains("Started saving thread..."); });
+    // Logged once the output directories are set, which the saving thread uses
+    bool started = test_helpers::waitUntil([&]() { return log.contains("Decoding to "); });
 
     // Three disks, one minute apart so that each has its own directory, queued just before the stream stops
     const time_t first = 1700000000;
-    for (int i = 0; i < 3; i++)
-        decoder->queueDisk(first + i * 60);
+    if (started)
+        for (int i = 0; i < 3; i++)
+            decoder->queueDisk(first + i * 60);
     stopLive(*decoder);
     t.join();
     REQUIRE(started);

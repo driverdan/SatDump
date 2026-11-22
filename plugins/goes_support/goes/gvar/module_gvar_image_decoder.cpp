@@ -646,7 +646,7 @@ namespace goes
                 }
                 imageVectorMutex.unlock();
 
-                // Only wait when the queue was empty, so that the next queued image is not delayed
+                // Only wait when the queue was empty, so that images already queued are saved without delay
                 if (imagesCount == 0)
                 {
                     if (!keep_running)
