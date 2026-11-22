@@ -1,6 +1,7 @@
 #include "../io.h"
 #include "core/exception.h"
 #include "logger.h"
+#include <cerrno>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -25,6 +26,8 @@ namespace satdump
             }
 
             std::ofstream fileo(file, std::ios::binary);
+            if (!fileo)
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
 
             int channels = 1;
             if (d_channels == 3)
@@ -82,6 +85,8 @@ namespace satdump
             }
 
             fileo.close();
+            if (!fileo)
+                throw satdump_exception("cannot write " + file + ": " + strerror(errno));
         }
 
         void load_pbm(Image &img, std::string file)

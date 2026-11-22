@@ -3,8 +3,14 @@
 #include "image/meta.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <tiffio.h>
+#ifdef __linux__
+#include <csignal>
+#include <sys/resource.h>
+#endif
 
+using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
@@ -112,3 +118,63 @@ TEST_CASE("image::save_tiff refuses empty images", "[image][io][tiff]")
     img::save_tiff(empty, dir.file("empty.tif"));
     CHECK_FALSE(std::filesystem::exists(dir.file("empty.tif")));
 }
+
+TEST_CASE("image::save_tiff throws when the file cannot be opened", "[image][io][tiff]")
+{
+    image_test::TempDir dir;
+    std::string path = dir.file("dir.tif");
+    std::filesystem::create_directories(path); // A directory where the file goes
+    Image in = image_test::makeGradient(8, 4, 4, 1);
+    CHECK_THROWS_WITH(img::save_tiff(in, path), ContainsSubstring("cannot open " + path));
+}
+
+#ifdef __linux__
+TEST_CASE("image::save_tiff throws when the file cannot be written", "[image][io][tiff]")
+{
+    Image in = image_test::makePattern(8, 512, 512, 3);
+
+    SECTION("/dev/full")
+    {
+        if (!std::filesystem::exists("/dev/full"))
+            SKIP("No /dev/full");
+        // libtiff writes the header when it opens the file, so this fails there
+        CHECK_THROWS_WITH(img::save_tiff(in, "/dev/full"), ContainsSubstring("cannot open /dev/full: "));
+    }
+
+    image_test::TempDir dir;
+
+    SECTION("the disk fills up after the header")
+    {
+        // Writes past 64 KiB fail with EFBIG instead of raising SIGXFSZ
+        std::string path = dir.file("big.tif");
+        struct rlimit saved;
+        REQUIRE(getrlimit(RLIMIT_FSIZE, &saved) == 0);
+        struct rlimit limited = saved;
+        limited.rlim_cur = 64 * 1024;
+        void (*saved_handler)(int) = signal(SIGXFSZ, SIG_IGN);
+        REQUIRE(setrlimit(RLIMIT_FSIZE, &limited) == 0);
+        bool threw = false;
+        std::string what;
+        try
+        {
+            img::save_tiff(in, path);
+        }
+        catch (std::exception &e)
+        {
+            threw = true;
+            what = e.what();
+        }
+        setrlimit(RLIMIT_FSIZE, &saved);
+        signal(SIGXFSZ, saved_handler);
+        CHECK(threw);
+        CHECK_THAT(what, ContainsSubstring("cannot write " + path));
+    }
+
+    // Nothing is left in a bad state for the next save
+    std::string path = dir.file("after.tif");
+    img::save_tiff(in, path);
+    Image out;
+    img::load_tiff(out, path);
+    CHECK(image_test::sameShape(out, in));
+}
+#endif

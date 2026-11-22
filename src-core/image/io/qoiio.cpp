@@ -1,4 +1,5 @@
 #include "../io.h"
+#include <cerrno>
 #include <cstring>
 #define QOI_IMPLEMENTATION 1
 #include "core/exception.h"
@@ -47,16 +48,32 @@ namespace satdump
             desc.height = d_height;
             desc.channels = final_channels;
             desc.colorspace = QOI_LINEAR;
-            qoi_write(file.c_str(), qoi_buffer, &desc);
+            int qoi_size = 0;
+            void *encoded = qoi_encode(qoi_buffer, &desc, &qoi_size);
+            delete[] qoi_buffer;
+            if (!encoded)
+                throw satdump_exception("cannot encode " + file);
+
+            // Written here rather than with qoi_write(), so that a failed write is seen
+            std::ofstream fileo(file, std::ios::binary);
+            if (!fileo)
+            {
+                QOI_FREE(encoded);
+                throw satdump_exception("cannot open " + file + ": " + strerror(errno));
+            }
+            fileo.write((char *)encoded, qoi_size);
+            QOI_FREE(encoded);
 
             // Custom marker for single-channel files
             if (d_channels == 1)
             {
                 uint8_t v = 0xAA;
-                std::ofstream(file, std::ios::app | std::ios::binary).write((char *)&v, 1);
+                fileo.write((char *)&v, 1);
             }
 
-            delete[] qoi_buffer;
+            fileo.close();
+            if (!fileo)
+                throw satdump_exception("cannot write " + file + ": " + strerror(errno));
         }
 
         void load_qoi(Image &img, std::string file)

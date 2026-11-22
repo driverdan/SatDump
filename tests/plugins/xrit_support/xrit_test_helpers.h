@@ -290,6 +290,7 @@ namespace xrit_test
             uint32_t counter = 0;
         };
 
+        int zone_bytes;
         std::map<int, Channel> channels;
         std::vector<Bytes> done;
         uint32_t fill_counter = 0;
@@ -320,13 +321,16 @@ namespace xrit_test
                 if (i == 0 && ch.first_header == 2047)
                     ch.first_header = ch.zone.size();
                 ch.zone.push_back(pkt[i]);
-                if (ch.zone.size() == (size_t)MPDU_ZONE_BYTES)
+                if (ch.zone.size() == (size_t)zone_bytes)
                     finishZone(vcid, ch);
             }
         }
 
     public:
         static constexpr int SPACECRAFT_ID = 16;
+
+        // The packet zone is 884 bytes in LRIT and HRIT, FengYun-4 LRIT uses 1012
+        explicit Mux(int zone_bytes = MPDU_ZONE_BYTES) : zone_bytes(zone_bytes) {}
 
         // Adds a source packet to a virtual channel
         void add(int vcid, const Bytes &pkt) { append(vcid, pkt); }
@@ -343,9 +347,9 @@ namespace xrit_test
             Channel &ch = channels[vcid];
             if (ch.zone.empty())
                 return;
-            size_t left = MPDU_ZONE_BYTES - ch.zone.size();
+            size_t left = zone_bytes - ch.zone.size();
             if (left < 7) // An idle packet needs its header and one byte: it then also takes the next M_PDU
-                left += MPDU_ZONE_BYTES;
+                left += zone_bytes;
 
             ccsds::CCSDSHeader header;
             header.version = 0;
@@ -368,7 +372,7 @@ namespace xrit_test
             Channel ch;
             ch.counter = fill_counter++;
             ch.first_header = 2046;
-            ch.zone.assign(MPDU_ZONE_BYTES, 0);
+            ch.zone.assign(zone_bytes, 0);
             finishZone(VCID_FILL, ch);
         }
 

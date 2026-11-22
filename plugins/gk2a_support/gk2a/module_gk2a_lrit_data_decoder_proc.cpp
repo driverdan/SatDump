@@ -8,8 +8,11 @@
 #include "utils/string.h"
 #include "xrit/gk2a/decomp.h"
 #include "xrit/gk2a/gk2a_headers.h"
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 extern "C"
 {
@@ -76,9 +79,14 @@ namespace gk2a
                 logger->info("Writing file %s/LRIT_ENCRYPTED/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
-                std::ofstream fileo(directory + "/LRIT_ENCRYPTED/" + file.filename, std::ios::binary);
+                std::string path = directory + "/LRIT_ENCRYPTED/" + file.filename;
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                 return;
             }
 
@@ -121,9 +129,14 @@ namespace gk2a
                 logger->info("Writing file %s/ADD/%s%s.%s...", directory.c_str(), name.c_str(), clean_filename.c_str(), extension.c_str());
 
                 // Write file out
-                std::ofstream fileo(directory + "/ADD/" + name + clean_filename + "." + extension, std::ios::binary);
+                std::string path = directory + "/ADD/" + name + clean_filename + "." + extension;
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)&file.lrit_data[offset], file.lrit_data.size() - offset);
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
             else
             {
@@ -133,9 +146,14 @@ namespace gk2a
                 logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
-                std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);
+                std::string path = directory + "/LRIT/" + file.filename;
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
         }
     } // namespace lrit

@@ -2,8 +2,10 @@
 #include "image/io.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <string>
 
+using Catch::Matchers::ContainsSubstring;
 using satdump::image::Image;
 namespace img = satdump::image;
 
@@ -113,3 +115,34 @@ TEST_CASE("image::save_pbm refuses empty images", "[image][io][pbm]")
     img::save_pbm(empty, dir.file("empty.pgm"));
     CHECK_FALSE(std::filesystem::exists(dir.file("empty.pgm")));
 }
+
+TEST_CASE("image::save_pbm throws when the file cannot be opened", "[image][io][pbm]")
+{
+    image_test::TempDir dir;
+    std::string path = dir.file("dir.pgm");
+    std::filesystem::create_directories(path); // A directory where the file goes
+    Image in = image_test::makeGradient(8, 4, 4, 1);
+    CHECK_THROWS_WITH(img::save_pbm(in, path), ContainsSubstring("cannot open " + path));
+}
+
+#ifdef __linux__
+TEST_CASE("image::save_pbm throws when the file cannot be written", "[image][io][pbm]")
+{
+    if (!std::filesystem::exists("/dev/full"))
+        SKIP("No /dev/full");
+
+    // A small image fails when the file is closed, a large one while it is written
+    auto size = GENERATE(4, 512);
+    INFO("size " << size);
+    Image in = image_test::makePattern(8, size, size, 3);
+    CHECK_THROWS_WITH(img::save_pbm(in, "/dev/full"), ContainsSubstring("cannot write /dev/full"));
+
+    // Nothing is left in a bad state for the next save
+    image_test::TempDir dir;
+    std::string path = dir.file("after.pgm");
+    img::save_pbm(in, path);
+    Image out;
+    img::load_pbm(out, path);
+    CHECK(image_test::sameShape(out, in));
+}
+#endif

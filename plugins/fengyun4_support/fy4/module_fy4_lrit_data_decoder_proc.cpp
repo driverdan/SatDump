@@ -6,8 +6,11 @@
 #include "module_fy4_lrit_data_decoder.h"
 #include "utils/string.h"
 #include "xrit/fy4/fy4_headers.h"
+#include <cerrno>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 namespace fy4
 {
@@ -39,9 +42,14 @@ namespace fy4
                 logger->info("Writing file %s/LRIT_ENCRYPTED/%s...", directory.c_str(), file.filename.c_str());
 
                 // Write file out
-                std::ofstream fileo(directory + "/LRIT_ENCRYPTED/" + file.filename, std::ios::binary);
+                std::string path = directory + "/LRIT_ENCRYPTED/" + file.filename;
+                std::ofstream fileo(path, std::ios::binary);
+                if (!fileo)
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                 fileo.close();
+                if (!fileo)
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
             else
             {
@@ -73,9 +81,14 @@ namespace fy4
                         logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                         // Write file out
-                        std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);
+                        std::string path = directory + "/LRIT/" + file.filename;
+                        std::ofstream fileo(path, std::ios::binary);
+                        if (!fileo)
+                            throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                         fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                         fileo.close();
+                        if (!fileo)
+                            throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                     }
                 }
                 else
@@ -86,9 +99,14 @@ namespace fy4
                     logger->info("Writing file %s/LRIT/%s...", directory.c_str(), file.filename.c_str());
 
                     // Write file out
-                    std::ofstream fileo(directory + "/LRIT/" + file.filename, std::ios::binary);
+                    std::string path = directory + "/LRIT/" + file.filename;
+                    std::ofstream fileo(path, std::ios::binary);
+                    if (!fileo)
+                        throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                     fileo.write((char *)file.lrit_data.data(), file.lrit_data.size());
                     fileo.close();
+                    if (!fileo)
+                        throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
                 }
             }
         }
