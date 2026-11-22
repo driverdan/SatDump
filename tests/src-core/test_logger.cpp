@@ -7,6 +7,7 @@
 #include <mutex>
 #include <regex>
 #include <string>
+#include <thread>
 #include <vector>
 
 // These tests use their own slog::Logger instances and never touch the global logger or its
@@ -165,6 +166,54 @@ TEST_CASE("Logger does not replay LOG_OFF messages to sinks added later", "[logg
     REQUIRE(late->msgs.size() == 1);
     CHECK(late->msgs[0].str == "replayed");
     CHECK(late->msgs[0].lvl == slog::LOG_INFO);
+}
+
+// The init buffer is shared by every Logger, while each Logger has its own sink_mtx. Without a
+// lock of its own, two loggers on two threads raced on it and lost messages, and so did
+// completeLoggerInit() against a thread that logs (seen with ThreadSanitizer)
+TEST_CASE("Logger init buffer can be used from several threads", "[logger]")
+{
+    test_helpers::ValueGuard<std::vector<slog::LogMsg>> buffer_guard(init_log_buffer, std::vector<slog::LogMsg>());
+    test_helpers::ValueGuard<bool> active_guard(init_buffer_active, true);
+
+    SECTION("two loggers keep every message")
+    {
+        slog::Logger a, b;
+        std::thread ta(
+            [&a]
+            {
+                for (int i = 0; i < 400; i++)
+                    a.info("a");
+            });
+        std::thread tb(
+            [&b]
+            {
+                for (int i = 0; i < 400; i++)
+                    b.info("b");
+            });
+        ta.join();
+        tb.join();
+
+        auto late = std::make_shared<RecordingSink>();
+        a.add_sink(late);
+        CHECK(late->msgs.size() == 800);
+    }
+
+    SECTION("completeLoggerInit while another thread logs")
+    {
+        slog::Logger l;
+        std::thread t(
+            [&l]
+            {
+                for (int i = 0; i < 500; i++)
+                    l.info("m");
+            });
+        completeLoggerInit();
+        t.join();
+
+        CHECK(init_log_buffer.empty());
+        CHECK_FALSE(init_buffer_active);
+    }
 }
 #endif
 
