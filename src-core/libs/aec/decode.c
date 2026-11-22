@@ -308,6 +308,11 @@ static inline uint32_t direct_get_fs(struct aec_stream *strm)
         state->acc = 0;
 
     while (state->acc == 0) {
+        /* Corrupt data can hold a longer run of zeros than the input
+           checked for the block. As upstream libaec 62f82d0. */
+        if (strm->avail_in < 7)
+            return 0;
+
         state->acc = (state->acc << 56)
             | ((uint64_t)strm->next_in[0] << 48)
             | ((uint64_t)strm->next_in[1] << 40)
@@ -475,6 +480,12 @@ static int m_split(struct aec_stream *strm)
             state->rsip[i] = direct_get_fs(strm) << k;
 
         if (k) {
+            /* Long fundamental sequences in corrupt data may have used
+               up the input of the binary part. As upstream libaec
+               62f82d0 and 8cb693a. */
+            if (strm->avail_in < (k * (strm->block_size - state->ref)) / 8 + 9)
+                return M_ERROR;
+
             for (i = state->ref; i < strm->block_size; i++)
                 *state->rsip++ += direct_get(strm, k);
         } else {
@@ -559,13 +570,16 @@ static int m_zero_block(struct aec_stream *strm)
 
 static int m_se_decode(struct aec_stream *strm)
 {
-    int32_t m, d1;
+    uint32_t m;
+    int32_t d1;
     struct internal_state *state = strm->state;
 
     while(state->i < strm->block_size) {
         if (fs_ask(strm) == 0)
             return M_EXIT;
         m = state->fs;
+        if (m > SE_TABLE_SIZE)
+            return M_ERROR;
         d1 = m - state->se_table[2 * m + 1];
 
         if ((state->i & 1) == 0) {
@@ -588,8 +602,8 @@ static int m_se_decode(struct aec_stream *strm)
 
 static int m_se(struct aec_stream *strm)
 {
-    uint32_t i;
-    int32_t m, d1;
+    uint32_t i, m;
+    int32_t d1;
     struct internal_state *state = strm->state;
 
     if (BUFFERSPACE(strm)) {
@@ -597,9 +611,8 @@ static int m_se(struct aec_stream *strm)
 
         while (i < strm->block_size) {
             m = direct_get_fs(strm);
-            if (2 * m + 1 > sizeof(state->se_table)) {
+            if (m > SE_TABLE_SIZE)
                 return M_ERROR;
-            }
             d1 = m - state->se_table[2 * m + 1];
 
             if ((i & 1) == 0) {
@@ -677,6 +690,14 @@ static int m_uncomp(struct aec_stream *strm)
     state->i = strm->block_size;
     state->mode = m_uncomp_copy;
     return M_CONTINUE;
+}
+
+static int m_error(struct aec_stream *strm)
+{
+    /* Stay in error state. Resuming after a data error could leave
+       a partial block in rsi_buffer and overrun it. As upstream
+       libaec 4dda29b. */
+    return M_ERROR;
 }
 
 static void create_se_table(int *table)
@@ -784,8 +805,10 @@ int aec_decode_init(struct aec_stream *strm)
         state->xmax = UINT32_MAX >> (32 - strm->bits_per_sample);
     }
 
+    /* Room for the binary part check in m_split. As upstream libaec
+       62f82d0. */
     state->in_blklen = (strm->block_size * strm->bits_per_sample
-                        + state->id_len) / 8 + 9;
+                        + state->id_len) / 8 + 16;
 
     modi = 1UL << state->id_len;
     state->id_table = malloc(modi * sizeof(int (*)(struct aec_stream *)));
@@ -837,8 +860,10 @@ int aec_decode(struct aec_stream *strm, int flush)
         status = state->mode(strm);
     } while (status == M_CONTINUE);
 
-    if (status == M_ERROR)
+    if (status == M_ERROR) {
+        state->mode = m_error;
         return AEC_DATA_ERROR;
+    }
 
     if (status == M_EXIT && strm->avail_out > 0 &&
         strm->avail_out < state->bytes_per_sample)
