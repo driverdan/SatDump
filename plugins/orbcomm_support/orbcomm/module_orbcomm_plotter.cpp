@@ -109,7 +109,7 @@ namespace orbcomm
     {
 
         std::ofstream data_out(d_output_file_hint + "_plotter.frm", std::ios::binary);
-        logger->info("Using input frames " + d_input_file);
+        logger->info("Using input frames %s", d_input_file.c_str());
         uint8_t frm[600];
 
         double qth_lon = satdump::satdump_cfg.getValueFromSatDumpGeneral<double>("qth_lon");

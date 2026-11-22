@@ -143,7 +143,7 @@ namespace inmarsat
                     egc_parser.push_message(msg);
                 }
                 else
-                    logger->info("Packet : " + get_id_name(id));
+                    logger->info("Packet : %s", get_id_name(id).c_str());
 
                 if (is_gui)
                 {

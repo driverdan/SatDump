@@ -111,8 +111,8 @@ namespace satdump
                     d_output_file = d_output_file_hint + ".ts";
                 }
 
-                logger->info("Using input baseband " + d_input_file);
-                logger->info("Demodulating to " + d_output_file_hint + ".ts");
+                logger->info("Using input baseband %s", d_input_file.c_str());
+                logger->info("Demodulating to %s.ts", d_output_file_hint.c_str());
                 logger->info("Buffer size : %d", d_buffer_size);
 
                 time_t lastTime = 0;
@@ -159,8 +159,8 @@ namespace satdump
                                 lastTime = time(NULL);
 
                                 std::string viterbi_l = std::string(viterbi.getState() == 0 ? "NOSYNC" : "SYNC") + " " + rate;
-                                logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%, SNR : " + std::to_string(snr) +
-                                             "dB, Viterbi : " + viterbi_l + ", Deframer Sync : " + std::to_string(def->isSynced()) + ", Peak SNR: " + std::to_string(peak_snr) + "dB");
+                                logger->info("Progress %f%%, SNR : %fdB, Viterbi : %s, Deframer Sync : %d, Peak SNR: %fdB", round(((double)progress / (double)filesize) * 1000.0) / 10.0, snr,
+                                             viterbi_l.c_str(), def->isSynced(), peak_snr);
                             }
 
                             // Read data

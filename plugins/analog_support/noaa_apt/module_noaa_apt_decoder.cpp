@@ -162,7 +162,7 @@ namespace noaa_apt
             }
         }
 
-        logger->info("Using input wav " + d_input_file);
+        logger->info("Using input wav %s", d_input_file.c_str());
 
         // Init stream source
         std::shared_ptr<dsp::stream<float>> input_stream = std::make_shared<dsp::stream<float>>();
@@ -774,7 +774,7 @@ namespace noaa_apt
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
         }
         else
@@ -910,7 +910,7 @@ namespace noaa_apt
                     }
                 }
                 else
-                    logger->warn("(AVHRR) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(AVHRR) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
             }
 
             if (d_parameters.contains("start_timestamp") && norad != 0)

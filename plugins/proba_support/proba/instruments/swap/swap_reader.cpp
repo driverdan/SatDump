@@ -52,7 +52,7 @@ namespace proba
                                             (timeReadable.tm_hour > 9 ? std::to_string(timeReadable.tm_hour) : "0" + std::to_string(timeReadable.tm_hour)) + ":" +
                                             (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min)) + ":" +
                                             (timeReadable.tm_sec > 9 ? std::to_string(timeReadable.tm_sec) : "0" + std::to_string(timeReadable.tm_sec));
-                logger->info("Found new SWAP image! Saving as SWAP-" + std::to_string(count) + ".jpeg. Timestamp " + timestamp_str);
+                logger->info("Found new SWAP image! Saving as SWAP-%d.jpeg. Timestamp %s", count, timestamp_str.c_str());
 
                 std::string utc_filename = "SWAP_" +                                                                                                                 // Instrument name
                                            std::to_string(timeReadable.tm_year + 1900) +                                                                             // Year yyyy
@@ -100,7 +100,7 @@ namespace proba
                 std::string extension = "";
                 std::string filename = cswap.second.filename;
 
-                logger->info("Decompressing " + filename + "...");
+                logger->info("Decompressing %s...", filename.c_str());
 
                 image::Image img = image::decompress_jpeg(cswap.second.payload_jpg.data(), cswap.second.payload_jpg.size());
 

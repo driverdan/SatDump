@@ -27,7 +27,7 @@ namespace metop
             }
 
             std::string outputFileName = directory + "/" + std::to_string(packet.header.packet_sequence_count) + ".xml";
-            logger->info("Writing message to " + outputFileName);
+            logger->info("Writing message to %s", outputFileName.c_str());
             std::ofstream outputMessageFile(outputFileName);
             outputMessageFile.write((char *)message_out, outsize);
             outputMessageFile.close();

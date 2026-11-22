@@ -21,7 +21,7 @@ void provideExplorerFileLoader(const satdump::explorer::ExplorerRequestFileLoad 
 
     if (info.type != satdump::firstparty::PRODUCT_NONE)
     {
-        logger->info("Identified first-party product : " + info.name + " (" + evt.path + ")");
+        logger->info("Identified first-party product : %s (%s)", info.name.c_str(), evt.path.c_str());
 
         evt.loaders.push_back({"First-Party Products", [info](std::string p, satdump::explorer::ExplorerApplication *e)
                                {

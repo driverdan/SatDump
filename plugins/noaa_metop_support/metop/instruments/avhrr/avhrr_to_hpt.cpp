@@ -55,7 +55,7 @@ namespace metop
             std::string path = std::filesystem::path(temp_path).parent_path().string() + "/" + hpt_filename;
 
             std::filesystem::rename(temp_path, path);
-            logger->info("Saved .hpt file at " + path);
+            logger->info("Saved .hpt file at %s", path.c_str());
         }
 
         void AVHRRToHpt::work(ccsds::CCSDSPacket &pkt)

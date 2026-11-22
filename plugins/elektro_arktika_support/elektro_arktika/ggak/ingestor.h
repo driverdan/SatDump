@@ -66,7 +66,7 @@ namespace elektro_arktika
                     for (auto &day : ongoing_day_timers)
                         if (cur_time - day.second > 30)
                         {
-                            logger->info("Processing directory " + day.first);
+                            logger->info("Processing directory %s", day.first.c_str());
                             // An exception would end the program from this thread with the mutex held
                             try
                             {

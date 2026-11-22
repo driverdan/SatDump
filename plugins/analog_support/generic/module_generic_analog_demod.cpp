@@ -97,8 +97,8 @@ namespace generic_analog
             d_output_file = output_file_hint + ".wav";
         }
 
-        logger->info("Using input baseband " + d_input_file);
-        logger->info("Demodulating to " + output_file_hint + ".wav");
+        logger->info("Using input baseband %s", d_input_file.c_str());
+        logger->info("Demodulating to %s.wav", output_file_hint.c_str());
         logger->info("Buffer size : " + std::to_string(d_buffer_size));
 
         time_t lastTime = 0;

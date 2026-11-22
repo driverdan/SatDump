@@ -132,27 +132,27 @@ namespace spacex
         {
         case AV_LOG_PANIC:
         case AV_LOG_FATAL:
-            logger->critical(str);
+            logger->critical("%s", str.c_str());
             break;
 
         case AV_LOG_ERROR:
-            logger->error(str);
+            logger->error("%s", str.c_str());
             break;
 
         case AV_LOG_INFO:
-            logger->info(str);
+            logger->info("%s", str.c_str());
             break;
 
         case AV_LOG_WARNING:
-            logger->warn(str);
+            logger->warn("%s", str.c_str());
             break;
 
         case AV_LOG_DEBUG:
-            logger->debug(str);
+            logger->debug("%s", str.c_str());
             break;
 
         default:
-            logger->trace(std::string("FalconVideoEncoder: ") + str);
+            logger->trace("FalconVideoEncoder: %s", str.c_str());
         };
     }
 
@@ -327,7 +327,7 @@ namespace spacex
 
             if (!out_ctx)
             {
-                logger->error("Failed to create output context file " + out_file);
+                logger->error("Failed to create output context file %s", out_file.c_str());
                 continue;
             }
 
@@ -343,7 +343,7 @@ namespace spacex
 
             if (!out_stream)
             {
-                logger->error("Failed allocating output stream " + out_file);
+                logger->error("Failed allocating output stream %s", out_file.c_str());
                 continue;
             }
 
@@ -351,7 +351,7 @@ namespace spacex
 
             if (!enc_ctx)
             {
-                logger->error("Failed to allocate the encoder context for " + out_file);
+                logger->error("Failed to allocate the encoder context for %s", out_file.c_str());
                 continue;
             }
 
@@ -387,17 +387,17 @@ namespace spacex
 
             if (avio_open(&out_ctx->pb, out_file.c_str(), AVIO_FLAG_WRITE) < 0)
             {
-                logger->error("Couldn't create output file " + out_file);
+                logger->error("Couldn't create output file %s", out_file.c_str());
                 continue;
             }
 
             if (avformat_write_header(out_ctx, NULL) < 0)
             {
-                logger->error("Unable to write AV header to " + out_file);
+                logger->error("Unable to write AV header to %s", out_file.c_str());
                 continue;
             }
 
-            logger->info("Writing Video #" + std::to_string(dec_ctx.first) + " to " + out_file);
+            logger->info("Writing Video #%d to %s", dec_ctx.first, out_file.c_str());
 
             video_encoders[dec_ctx.first] = enc_ctx;
             video_out_ctx[dec_ctx.first] = out_ctx;

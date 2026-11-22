@@ -63,7 +63,7 @@ namespace gcom1
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
 
             // AMSR-2

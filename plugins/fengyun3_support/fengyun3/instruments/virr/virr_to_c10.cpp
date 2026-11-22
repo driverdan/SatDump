@@ -53,7 +53,7 @@ namespace fengyun3
             std::string path = std::filesystem::path(temp_path).parent_path().string() + "/" + hpt_filename;
 
             std::filesystem::rename(temp_path, path);
-            logger->info("Saved .C10 file at " + path);
+            logger->info("Saved .C10 file at %s", path.c_str());
         }
 
         void VIRRToC10::work(std::vector<uint8_t> &pkt)

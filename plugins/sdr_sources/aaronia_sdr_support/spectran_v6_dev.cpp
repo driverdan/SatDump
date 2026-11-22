@@ -165,7 +165,7 @@ namespace satdump
                 else if (d_rx_channel == "Rx2")
                     rtsa_api->AARTSAAPI_ConfigSetString(&aaronia_device, &config, L"Rx2");
                 else
-                    logger->error("Invalid channel " + d_rx_channel);
+                    logger->error("Invalid channel %s", d_rx_channel.c_str());
             }
 
             if (rtsa_api->AARTSAAPI_ConfigFind(&aaronia_device, &root, &config, L"device/outputformat") == AARTSAAPI_OK)

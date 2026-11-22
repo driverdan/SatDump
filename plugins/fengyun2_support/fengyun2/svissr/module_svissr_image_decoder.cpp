@@ -166,7 +166,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
         std::string manam_path = manam_directory + "/MANAM_" + timestamp + ".txt";
-        logger->info("Saving MANAM to " + manam_path + "...");
+        logger->info("Saving MANAM to %s...", manam_path.c_str());
 
         std::ofstream outfile(manam_path, std::ios::out | std::ios::binary);
         outfile.write(reinterpret_cast<const char *>(&manam_data[0]), 10250);
@@ -195,7 +195,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
         std::string telemetry_path = telemetry_directory + "/Telemetry_" + timestamp + ".jsonc";
-        logger->info("Saving telemetry to " + telemetry_path + "...");
+        logger->info("Saving telemetry to %s...", telemetry_path.c_str());
 
         std::ofstream outfile(telemetry_path, std::ios::out | std::ios::binary);
         outfile.write(telemetry_jsonc.c_str(), telemetry_jsonc.size());
@@ -527,7 +527,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_hour > 9 ? std::to_string(timeReadable.tm_hour) : "0" + std::to_string(timeReadable.tm_hour)) + "-" +
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
-        logger->info("Full disk finished, saving at " + timestamp + "...");
+        logger->info("Full disk finished, saving at %s...", timestamp.c_str());
 
         std::filesystem::create_directory(buffer.directory + "/" + timestamp);
 
@@ -594,8 +594,8 @@ namespace fengyun_svissr
         if (!std::filesystem::exists(directory))
             std::filesystem::create_directory(directory);
 
-        logger->info("Using input frames " + d_input_file);
-        logger->info("Decoding to " + directory);
+        logger->info("Using input frames %s", d_input_file.c_str());
+        logger->info("Decoding to %s", directory.c_str());
 
         uint8_t last_status[20];
         memset(last_status, 0, 20);

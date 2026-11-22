@@ -37,7 +37,7 @@ void USRPSource::open_sdr()
     channel_option_str = "";
     for (int i = 0; i < (int)sub_boards.size(); i++)
     {
-        logger->trace("USRP has " + usrp_device->get_rx_subdev_name(i) + " in slot " + sub_boards[i].db_name);
+        logger->trace("USRP has %s in slot %s", usrp_device->get_rx_subdev_name(i).c_str(), sub_boards[i].db_name.c_str());
         channel_option_str += usrp_device->get_rx_subdev_name(i) + " (" + sub_boards[i].db_name + ")" + '\0';
     }
 }

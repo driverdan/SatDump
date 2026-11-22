@@ -30,7 +30,7 @@ namespace meteor
             filesize = getFilesize(d_input_file);
             std::ifstream data_in(d_input_file, std::ios::binary);
 
-            logger->info("Using input frames " + d_input_file);
+            logger->info("Using input frames %s", d_input_file.c_str());
 
             std::string sat_name = "Unknown Meteor";
             if (d_parameters["satellite_number"].get<std::string>() == "M2-2")

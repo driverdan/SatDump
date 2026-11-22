@@ -54,7 +54,7 @@ namespace satdump
             }
             else
             {
-                logger->error("Not a file or ZIP! => " + fpath);
+                logger->error("Not a file or ZIP! => %s", fpath.c_str());
             }
 
             return toproc_info;
@@ -67,7 +67,7 @@ namespace satdump
             if (toproc_info.type == PRODUCT_NONE)
                 throw satdump_exception("No product present in file " + fpath + "!");
 
-            logger->debug("Processing product : " + toproc_info.name);
+            logger->debug("Processing product : %s", toproc_info.name.c_str());
 
             auto processor = getProcessorForProduct(toproc_info);
 
@@ -76,7 +76,7 @@ namespace satdump
 
             if (toproc_info.group_id.size() || is_zip) // If we have a group, we need to iterate through all of them (also do so if we got a single one in a file)
             {
-                logger->trace("Group : " + toproc_info.group_id);
+                logger->trace("Group : %s", toproc_info.group_id.c_str());
 
                 std::shared_ptr<satdump::utils::FilesIterator> fit;
                 if (is_zip)
@@ -92,7 +92,7 @@ namespace satdump
 
                     if (toproc_info.group_id == parseFirstPartyInfo(f).group_id)
                     {
-                        logger->trace(" - " + f->name);
+                        logger->trace(" - %s", f->name.c_str());
 
                         try
                         {
@@ -112,7 +112,7 @@ namespace satdump
             else
             {
                 std::unique_ptr<satdump::utils::FilesIteratorItem> f = std::make_unique<satdump::utils::FolderFileIteratorItem>(fpath);
-                logger->trace(" - " + f->name);
+                logger->trace(" - %s", f->name.c_str());
                 processor->ingestFile(f->getPayload());
             }
 

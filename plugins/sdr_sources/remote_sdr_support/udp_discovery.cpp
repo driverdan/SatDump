@@ -296,7 +296,7 @@ namespace service_discovery
         }
         catch(std::exception &e)
         {
-            logger->trace("Error on Remote SDR Discovery - " + std::string(e.what()));
+            logger->trace("Error on Remote SDR Discovery - %s", e.what());
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(wait_millis));
@@ -307,7 +307,7 @@ namespace service_discovery
         }
         catch(std::exception &e)
         {
-            logger->trace("Error on Remote SDR Discovery - " + std::string(e.what()));
+            logger->trace("Error on Remote SDR Discovery - %s", e.what());
         }
 
         if (funrx_th.joinable())
