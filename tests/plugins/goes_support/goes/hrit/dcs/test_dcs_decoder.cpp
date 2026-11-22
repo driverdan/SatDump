@@ -89,7 +89,7 @@ namespace
     }
 } // namespace
 
-TEST_CASE("DCS Pseudobinary B messages are decoded with the physical elements of their DCP", "[goes_dcs]")
+TEST_CASE("DCS Pseudobinary B messages are decoded with the physical elements of their DCP", "[plugins][goes_support][goes_dcs]")
 {
     SECTION("B1: one reading of one element, then the battery voltage")
     {
@@ -110,6 +110,19 @@ TEST_CASE("DCS Pseudobinary B messages are decoded with the physical elements of
         CHECK(msg["data_values"][0]["values"] == nlohmann::json::array({"0.640000"}));
     }
 
+    SECTION("B1: two readings of each of two elements, one of them missing")
+    {
+        nlohmann::json msg = decode({"Stage", "Precipitation"}, "B1A@A@///@B@@C@L");
+        CHECK(msg["data_type"] == "Pseudobinary B");
+        REQUIRE(msg["data_values"].size() == 3);
+        CHECK(msg["data_values"][0]["name"] == "Stage");
+        CHECK(msg["data_values"][0]["values"] == nlohmann::json::array({"0.640000", "0"}));
+        CHECK(msg["data_values"][1]["name"] == "Precipitation");
+        CHECK(msg["data_values"][1]["values"] == nlohmann::json::array({"1.280000", "1.920000"}));
+        CHECK(msg["data_values"][2]["name"] == "Voltage - battery (volt)");
+        CHECK(msg["data_values"][2]["values"] == nlohmann::json::array({"13.408000"}));
+    }
+
     SECTION("BC: the last element of the DCP is the battery voltage, which is not read as a 3 byte value")
     {
         nlohmann::json msg = decode({"Stage", "Voltage - battery (volt)"}, "BCA@A@L");
@@ -123,7 +136,7 @@ TEST_CASE("DCS Pseudobinary B messages are decoded with the physical elements of
 }
 
 // #37: these took a modulo by 0 (SIGFPE), or read far past the end of the message
-TEST_CASE("DCS Pseudobinary B messages that cannot be decoded are left undecoded", "[goes_dcs]")
+TEST_CASE("DCS Pseudobinary B messages that cannot be decoded are left undecoded", "[plugins][goes_support][goes_dcs]")
 {
     SECTION("BC from a DCP whose only element is the battery voltage: no other element to read")
     {
@@ -143,6 +156,20 @@ TEST_CASE("DCS Pseudobinary B messages that cannot be decoded are left undecoded
     SECTION("no data bytes at all")
     {
         nlohmann::json msg = decode({"Stage"}, "B1AL junk");
+        CHECK(msg["data_type"] == "Unknown");
+        CHECK(msg["data_values"].empty());
+    }
+
+    SECTION("a DCP with no physical element")
+    {
+        nlohmann::json msg = decode({}, "B1A@A@L");
+        CHECK(msg["data_type"] == "Unknown");
+        CHECK(msg["data_values"].empty());
+    }
+
+    SECTION("data that is not a whole number of readings of each element")
+    {
+        nlohmann::json msg = decode({"Stage", "Precipitation"}, "B1A@A@L");
         CHECK(msg["data_type"] == "Unknown");
         CHECK(msg["data_values"].empty());
     }
