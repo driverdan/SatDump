@@ -32,7 +32,7 @@ namespace satdump
 
         for (dsp::SourceDescriptor src : sources)
         {
-            logger->debug("Device " + src.name);
+            logger->debug("Device %s", src.name.c_str());
             sdr_select_string += src.name + '\0';
         }
 
@@ -118,7 +118,7 @@ namespace satdump
 
                 paletteIterator.increment(iteratorError);
                 if (iteratorError)
-                    logger->critical(iteratorError.message());
+                    logger->critical("%s", iteratorError.message().c_str());
             }
         }
 
@@ -297,7 +297,7 @@ namespace satdump
                 sdr_select_string.clear();
                 for (dsp::SourceDescriptor src : sources)
                 {
-                    logger->debug("Device " + src.name);
+                    logger->debug("Device %s", src.name.c_str());
                     sdr_select_string += src.name + '\0';
                 }
 

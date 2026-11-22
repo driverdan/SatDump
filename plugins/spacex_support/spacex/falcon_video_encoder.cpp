@@ -132,27 +132,27 @@ namespace spacex
         {
         case AV_LOG_PANIC:
         case AV_LOG_FATAL:
-            logger->critical("%s", str.c_str());
+            logger->critical("%s", str);
             break;
 
         case AV_LOG_ERROR:
-            logger->error("%s", str.c_str());
+            logger->error("%s", str);
             break;
 
         case AV_LOG_INFO:
-            logger->info("%s", str.c_str());
+            logger->info("%s", str);
             break;
 
         case AV_LOG_WARNING:
-            logger->warn("%s", str.c_str());
+            logger->warn("%s", str);
             break;
 
         case AV_LOG_DEBUG:
-            logger->debug("%s", str.c_str());
+            logger->debug("%s", str);
             break;
 
         default:
-            logger->trace("FalconVideoEncoder: %s", str.c_str());
+            logger->trace("FalconVideoEncoder: %s", str);
         };
     }
 
@@ -397,7 +397,7 @@ namespace spacex
                 continue;
             }
 
-            logger->info("Writing Video #%d to %s", dec_ctx.first, out_file.c_str());
+            logger->info("Writing Video #%u to %s", dec_ctx.first, out_file.c_str());
 
             video_encoders[dec_ctx.first] = enc_ctx;
             video_out_ctx[dec_ctx.first] = out_ctx;

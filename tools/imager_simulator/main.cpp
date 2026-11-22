@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     auto tles = satdump::db_tle->get_from_norad(norad).value();
     satdump::SatelliteTracker sat_tracker(tles);
 
-    logger->trace(tles.name);
+    logger->trace("%s", tles.name.c_str());
 
     bool invert_scan = false;
 
