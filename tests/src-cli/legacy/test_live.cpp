@@ -172,7 +172,8 @@ TEST_CASE("main_live fails when the source cannot start", "[cli][legacy][live]")
 // Bug: src-cli/legacy/live.cpp:56 and :306 - getPipelineFromID() never returns an empty
 // optional, it throws for an unknown pipeline. The has_value() checks meant to log
 // "Pipeline ... does not exist!" and return 1 are dead code, and the exception leaves
-// main_live(). CommandHandler::run() then catches it, and satdump exits with status 0.
+// main_live(). CommandHandler::run() then catches it, and satdump exits with status 1
+// without the intended message.
 TEST_CASE("main_live returns an error for an unknown pipeline", "[cli][legacy][live][!shouldfail]")
 {
     LiveEnv env;
