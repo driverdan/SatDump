@@ -1,0 +1,1442 @@
+{
+  "description": "Third-party code vendored in (or fetched by) the SatDump tree. One entry per library. A PR that changes a listed path must update that library's entry. Fields are described in CONTRIBUTING.md; tools/check_third_party.py validates the file.",
+  "format_version": 1,
+  "libraries": [
+    {
+      "id": "imgui",
+      "name": "Dear ImGui",
+      "paths": [
+        "src-core/imgui/imconfig.h",
+        "src-core/imgui/imgui.cpp",
+        "src-core/imgui/imgui.h",
+        "src-core/imgui/imgui_demo.cpp",
+        "src-core/imgui/imgui_draw.cpp",
+        "src-core/imgui/imgui_internal.h",
+        "src-core/imgui/imgui_stdlib.cpp",
+        "src-core/imgui/imgui_stdlib.h",
+        "src-core/imgui/imgui_tables.cpp",
+        "src-core/imgui/imgui_widgets.cpp",
+        "src-core/imgui/imstb_rectpack.h",
+        "src-core/imgui/imstb_textedit.h",
+        "src-core/imgui/imstb_truetype.h",
+        "src-ui/imgui/imgui_impl_glfw.cpp",
+        "src-ui/imgui/imgui_impl_glfw.h",
+        "src-ui/imgui/imgui_impl_opengl2.cpp",
+        "src-ui/imgui/imgui_impl_opengl2.h",
+        "src-ui/imgui/imgui_impl_opengl3.cpp",
+        "src-ui/imgui/imgui_impl_opengl3.h"
+      ],
+      "satdump_files": [
+        "src-core/imgui/dialogs",
+        "src-core/imgui/imgui_filedrop.h",
+        "src-core/imgui/imgui_flags.h",
+        "src-core/imgui/imgui_image.cpp",
+        "src-core/imgui/imgui_image.h",
+        "src-ui/imgui/imgui_image_adv.cpp",
+        "src-ui/imgui/imgui_image_base.cpp"
+      ],
+      "upstream_url": "https://github.com/ocornut/imgui",
+      "version": "1.92.5",
+      "commit": "6d910d5487d11ca567b61c7824b0c78c569d62f0",
+      "commit_verified": true,
+      "version_source": "IMGUI_VERSION in imgui.h. imgui.cpp, imgui.h, imgui_draw.cpp, imgui_tables.cpp, imgui_widgets.cpp, imgui_internal.h, imgui_demo.cpp and imstb_truetype.h are identical to the v1.92.5 tag.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "imconfig.h is an older upstream imconfig.h with SatDump settings (IMGUI_DEFINE_MATH_OPERATORS etc.). imgui_stdlib.cpp/.h are from an older release than the core (comment and IMGUI_DISABLE-guard differences only). The src-ui backends include \"imgui/imgui.h\" instead of \"imgui.h\", and imgui_impl_opengl3.cpp includes gl3w."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 273,
+      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. #273 also lists android/imgui_backends and src-core/image/font_lib, but those are older copies with their own entries (imgui-android-backends, stb-font)."
+    },
+    {
+      "id": "imgui-android-backends",
+      "name": "Dear ImGui Android backends",
+      "paths": [
+        "android/imgui_backends"
+      ],
+      "upstream_url": "https://github.com/ocornut/imgui",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. imgui_impl_android.cpp and imgui_impl_opengl3.cpp differ from the v1.92.5 backends beyond local edits (older changelog and texture API), so these come from an older Dear ImGui release than the core.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against the matching upstream release."
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "newer-available",
+      "update_issue": 273,
+      "notes": "Android only. Must be updated to the same version as the core (see #273)."
+    },
+    {
+      "id": "implot",
+      "name": "ImPlot",
+      "paths": [
+        "src-core/imgui/implot"
+      ],
+      "upstream_url": "https://github.com/epezent/implot",
+      "version": "0.18 WIP",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "IMPLOT_VERSION in implot.h. A WIP version is a master snapshot between tags, so the commit is not known.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 274,
+      "notes": ""
+    },
+    {
+      "id": "implot3d",
+      "name": "ImPlot3D",
+      "paths": [
+        "src-core/imgui/implot3d"
+      ],
+      "upstream_url": "https://github.com/brenocq/implot3d",
+      "version": "0.1",
+      "commit": "8e77ea20905408da9b9862cfe842961c4ef8da30",
+      "commit_verified": true,
+      "version_source": "IMPLOT3D_VERSION in implot3d.h; implot3d.cpp and implot3d.h differ from the v0.1 tag only by the local changes below.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "implot3d.h includes \"imgui/imgui.h\" and <cmath>; implot3d.cpp adds <cmath> for Windows and uses ImFont::LegacySize for Dear ImGui 1.92."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 275,
+      "notes": "The other implot3d files were not compared."
+    },
+    {
+      "id": "imnodes",
+      "name": "imnodes",
+      "paths": [
+        "src-core/imgui/imnodes"
+      ],
+      "upstream_url": "https://github.com/Nelarius/imnodes",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded in the files.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 276,
+      "notes": ""
+    },
+    {
+      "id": "imgui_markdown",
+      "name": "imgui_markdown",
+      "paths": [
+        "src-core/imgui/imgui_markdown.h"
+      ],
+      "upstream_url": "https://github.com/enkisoftware/imgui_markdown",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (no upstream releases).",
+      "license": "Zlib",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 277,
+      "notes": "Upstream moved from juliettef/imgui_markdown to enkisoftware/imgui_markdown."
+    },
+    {
+      "id": "nlohmann-json",
+      "name": "nlohmann/json",
+      "paths": [
+        "src-core/nlohmann/json.hpp"
+      ],
+      "satdump_files": [
+        "src-core/nlohmann/json_utils.cpp",
+        "src-core/nlohmann/json_utils.h"
+      ],
+      "upstream_url": "https://github.com/nlohmann/json",
+      "version": "3.11.3",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "NLOHMANN_JSON_VERSION_* in json.hpp. The file is not the v3.11.3 release: its SPDX copyright reads 2013 - 2024 (the release has 2013-2023) and about 1500 lines differ, so it is a develop-branch snapshot taken after v3.11.3.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against the develop snapshot it came from."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 278,
+      "notes": ""
+    },
+    {
+      "id": "cli11",
+      "name": "CLI11",
+      "paths": [
+        "src-core/libs/CLI11.hpp"
+      ],
+      "upstream_url": "https://github.com/CLIUtils/CLI11",
+      "version": "2.5.0",
+      "commit": "4160d259d961cd393fd8d67590a8c7d210207348",
+      "commit_verified": false,
+      "version_source": "CLI11_VERSION in CLI11.hpp; the commit is the v2.5.0 tag. The file is the single-header release asset, which is not in the repository, so it was not compared.",
+      "license": "BSD-3-Clause",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet compared with the v2.5.0 single-header asset."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 279,
+      "notes": ""
+    },
+    {
+      "id": "qoi",
+      "name": "QOI (Quite OK Image format)",
+      "paths": [
+        "src-core/libs/qoi.h"
+      ],
+      "upstream_url": "https://github.com/phoboslab/qoi",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (no upstream releases). Differs from current master in two lines (QOI_COLOR_HASH(px) % 64 where master has & (64 - 1)), so it predates that master change.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "The two-line difference is probably an older upstream state, not a local change."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 280,
+      "notes": ""
+    },
+    {
+      "id": "fkyaml",
+      "name": "fkYAML",
+      "paths": [
+        "src-core/libs/fkyaml"
+      ],
+      "upstream_url": "https://github.com/fktn-k/fkYAML",
+      "version": "0.4.3",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "FK_YAML_*_VERSION in node.hpp. The files are not the v0.4.3 tag: their SPDX copyright reads 2023-2026 (the tag has 2023-2025) and node.hpp differs by about 160 lines, so this is probably a develop snapshot after v0.4.3.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against the snapshot it came from."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 281,
+      "notes": ""
+    },
+    {
+      "id": "angelscript",
+      "name": "AngelScript",
+      "paths": [
+        "src-core/angelscript"
+      ],
+      "satdump_files": [
+        "src-core/angelscript/scriptsatdump"
+      ],
+      "upstream_url": "https://www.angelcode.com/angelscript/",
+      "version": "2.38.0 WIP",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "ANGELSCRIPT_VERSION_STRING in angelscript.h. Upstream is Subversion (GitHub mirror: https://github.com/anjo76/angelscript); a WIP version is a snapshot between releases.",
+      "license": "Zlib",
+      "local_changes": {
+        "status": "yes",
+        "details": "25 local commits (see #282). Not yet split out from the upstream code."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 282,
+      "notes": "Add-ons scriptarray, scriptbuilder, scriptdictionary and scriptstdstring are from the AngelScript SDK; scriptsatdump is SatDump's own."
+    },
+    {
+      "id": "miniz",
+      "name": "miniz",
+      "paths": [
+        "src-core/libs/miniz"
+      ],
+      "upstream_url": "https://github.com/richgel999/miniz",
+      "version": "2.2.0",
+      "commit": "cb97387d20909c0a4728972fd0f19bfacd083c42",
+      "commit_verified": true,
+      "version_source": "MZ_VERSION \"10.2.0\" in miniz.h is the internal version of the 2.2.0 release; miniz.h is identical to the 2.2.0 tag and miniz_zip.c differs only by the local change below.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "miniz_zip.c: the \"Using fopen, ftello, fseeko, stat() ...\" #pragma message is commented out."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 283,
+      "notes": "#283 calls the vendored version 10.2.0; that is MZ_VERSION, the release is 2.2.0."
+    },
+    {
+      "id": "muparser",
+      "name": "muparser",
+      "paths": [
+        "src-core/libs/muparser"
+      ],
+      "upstream_url": "https://github.com/beltoforion/muparser",
+      "version": "2.3.3 (Development Build)",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "ParserVersion in muParserDef.h. Upstream v2.3.2 reports \"2.3.2\" and v2.3.3-1 reports \"2.3.3 (Release)\", so this is a master snapshot between them.",
+      "license": "BSD-2-Clause",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 284,
+      "notes": ""
+    },
+    {
+      "id": "libaec",
+      "name": "libaec",
+      "paths": [
+        "src-core/libs/aec"
+      ],
+      "upstream_url": "https://github.com/MathisRosenhauer/libaec",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded in the files.",
+      "license": "BSD-2-Clause",
+      "local_changes": {
+        "status": "yes",
+        "details": "Patched locally for #49 (see also #83). Not yet split out from the upstream code."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 285,
+      "notes": ""
+    },
+    {
+      "id": "openjpeg",
+      "name": "OpenJPEG",
+      "paths": [
+        "src-core/libs/openjp2"
+      ],
+      "upstream_url": "https://github.com/uclouvain/openjpeg",
+      "version": "2.5.0",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "OPJ_PACKAGE_VERSION in opj_config_private.h. t1.c is identical to the v2.5.0 tag, but j2k.c differs from it (it lacks typo fixes that are in v2.5.0, yet has TLM changes newer than v2.4.0), so the copy may be a pre-release snapshot or mixed.",
+      "license": "BSD-2-Clause",
+      "local_changes": {
+        "status": "yes",
+        "details": "10 local commits (see #286). Not yet split out from the upstream code."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 286,
+      "notes": "Security-relevant: decodes received data."
+    },
+    {
+      "id": "libjpeg",
+      "name": "IJG libjpeg (8-bit and 12-bit, with lossless patches)",
+      "paths": [
+        "src-core/libs/jpeg",
+        "src-core/libs/jpeg12"
+      ],
+      "upstream_url": "https://www.ijg.org/",
+      "version": "6b (27-Mar-1998) with lossless patches",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "JVERSION in jpeg/jversion.h and jpeg12/jversion12.h. IJG releases are tarballs with no commit. The source of the lossless (SOF3) patches is not recorded.",
+      "license": "IJG",
+      "local_changes": {
+        "status": "yes",
+        "details": "jpeg12 holds a 12-bit variant with renamed headers (jconfig12.h, jpeglib12.h, jversion12.h, ...). Other local changes not yet identified."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 287,
+      "notes": "#287 proposes replacing both copies with libjpeg-turbo (https://github.com/libjpeg-turbo/libjpeg-turbo), which builds 8-bit, 12-bit and lossless from one library."
+    },
+    {
+      "id": "calceph",
+      "name": "CALCEPH",
+      "paths": [
+        "src-core/libs/calceph"
+      ],
+      "upstream_url": "https://calceph.imcce.fr/",
+      "version": "4.0.5",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "CALCEPH_VERSION_* in calceph.h. Upstream publishes release tarballs.",
+      "license": "CECILL-C OR CECILL-B OR CECILL-2.1",
+      "local_changes": {
+        "status": "yes",
+        "details": "calcephconfig.h is generated for SatDump and includes libs/mmap_windows.h and libs/strings_h_win.h on Windows. Other changes not yet identified."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 288,
+      "notes": "Not on GitHub; #306 needs a custom check for it."
+    },
+    {
+      "id": "supernovas",
+      "name": "SuperNOVAS",
+      "paths": [
+        "src-core/libs/supernovas"
+      ],
+      "upstream_url": "https://github.com/Smithsonian/SuperNOVAS",
+      "version": "1.5.0 (pre-release)",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "SUPERNOVAS_*_VERSION in novas.h say 1.5.0, but novas.h and frames.c are not the v1.5.0 release: they are closest to v1.5.0-rc4/rc5 (frames.c differs from rc5 by about 20 lines, novas.h from rc4 by about 40), so this is a development snapshot before the 1.5.0 release.",
+      "license": "Unlicense",
+      "local_changes": {
+        "status": "yes",
+        "details": "Includes are rewritten to quoted local paths (\"nutation.h\") and parse.c, target.c and timescale.c include libs/strings_h_win.h. Other changes not yet identified."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 289,
+      "notes": "#289 records the vendored version as 1.5.0; it is a pre-release snapshot."
+    },
+    {
+      "id": "mqtt-c",
+      "name": "MQTT-C",
+      "paths": [
+        "src-core/libs/mqttc"
+      ],
+      "upstream_url": "https://github.com/LiamBindle/MQTT-C",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (only MQTT_PROTOCOL_LEVEL).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "2 local commits (see #290), possibly in mqtt_pal.*."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 290,
+      "notes": ""
+    },
+    {
+      "id": "ghc-filesystem",
+      "name": "ghc::filesystem",
+      "paths": [
+        "std_filesystem/filesystem"
+      ],
+      "upstream_url": "https://github.com/gulrak/filesystem",
+      "version": "1.5.10",
+      "commit": "614bbe87b80435d87ab8791564370e0c1d13627d",
+      "commit_verified": false,
+      "version_source": "GHC_FILESYSTEM_VERSION 10510L; the commit is the v1.5.10 tag. The file is reformatted, so it was not compared line by line.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "Marked \"MODIFIED TO USE THE std:: NAMESPACE!\" and reformatted."
+      },
+      "consumption": "system-first-vendored-fallback",
+      "upstream_state": "newer-available",
+      "update_issue": 291,
+      "notes": "Only used when the compiler has no <filesystem> (STD_HAS_FILESYSTEM check in the top-level CMakeLists.txt)."
+    },
+    {
+      "id": "portable-file-dialogs",
+      "name": "portable-file-dialogs",
+      "paths": [
+        "src-ui/imgui/portable-file-dialogs.h"
+      ],
+      "upstream_url": "https://github.com/samhocevar/portable-file-dialogs",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2018-2022).",
+      "license": "WTFPL",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 292,
+      "notes": ""
+    },
+    {
+      "id": "gl3w",
+      "name": "gl3w (generated OpenGL loader)",
+      "paths": [
+        "src-ui/imgui/gl3w"
+      ],
+      "upstream_url": "https://github.com/skaslev/gl3w",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. The files are generated by upstream gl3w_gen.py from the Khronos registry.",
+      "license": "Unlicense",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Generated files; regenerate instead of patching."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 293,
+      "notes": "glcorearb.h and khrplatform.h are Khronos headers (MIT-style Khronos license)."
+    },
+    {
+      "id": "libcorrect",
+      "name": "libcorrect (Reed-Solomon only)",
+      "paths": [
+        "src-core/libs/correct"
+      ],
+      "upstream_url": "https://github.com/quiet/libcorrect",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (no upstream releases). correct.h and reed-solomon/{decode,polynomial}.c match current master apart from include paths.",
+      "license": "BSD-3-Clause",
+      "local_changes": {
+        "status": "yes",
+        "details": "Include paths flattened (\"encode.h\" instead of \"correct/reed-solomon/encode.h\"). Only the Reed-Solomon part is vendored."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 294,
+      "notes": ""
+    },
+    {
+      "id": "dlfcn-win32",
+      "name": "dlfcn-win32",
+      "paths": [
+        "src-core/libs/dlfcn"
+      ],
+      "upstream_url": "https://github.com/dlfcn-win32/dlfcn-win32",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded in the files.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "3 local commits (see #295)."
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "newer-available",
+      "update_issue": 295,
+      "notes": "Windows only (dlfcn.c is wrapped in #ifdef _WIN32)."
+    },
+    {
+      "id": "opencl-headers",
+      "name": "Khronos OpenCL headers",
+      "paths": [
+        "src-core/libs/libopencl_loader/CL"
+      ],
+      "satdump_files": [
+        "src-core/libs/libopencl_loader/opencl_loader.cpp",
+        "src-core/libs/libopencl_loader/opencl_loader.h",
+        "src-core/libs/libopencl_loader/opencl_header_private.h"
+      ],
+      "upstream_url": "https://github.com/KhronosGroup/OpenCL-Headers",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. The headers carry the older Khronos \"Materials\" MIT-style license, which upstream replaced with Apache-2.0, so they predate that change.",
+      "license": "MIT (Khronos Materials license)",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 296,
+      "notes": "cl.hpp is the deprecated C++ bindings from https://github.com/KhronosGroup/OpenCL-CLHPP. The rest of libopencl_loader (opencl_loader.*, opencl_header_private.h) is SatDump's own loader."
+    },
+    {
+      "id": "xdsopl-ldpc",
+      "name": "xdsopl LDPC (DVB-S2)",
+      "paths": [
+        "plugins/dvb_support/codings/dvb-s2/ldpc"
+      ],
+      "upstream_url": "https://github.com/xdsopl/LDPC",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (no upstream releases). dvb_s2_tables.hh, encoder.hh and ldpc.hh match current master (32357d8, 2023-05-05); algorithms.hh, layered_decoder.hh, simd.hh and avx2.hh differ.",
+      "license": "0BSD",
+      "local_changes": {
+        "status": "unknown",
+        "details": "avx2.hh, neon.hh, simd.hh and sse4_1.hh carry \"Ahmet Inan, Ron Economos\" and GPL-3.0-or-later headers, so they likely come from the gr-dvbs2rx variant rather than xdsopl/LDPC. Not yet diffed."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": 297,
+      "notes": "README.md in the directory says all the code is from xdsopl/LDPC, which the SIMD headers contradict."
+    },
+    {
+      "id": "publicdecompwt",
+      "name": "EUMETSAT PublicDecompWT",
+      "paths": [
+        "plugins/xrit_support/DecompWT"
+      ],
+      "upstream_url": "https://gitlab.eumetsat.int/open-source/PublicDecompWT",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded.",
+      "license": "Apache-2.0",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Trimmed and modified for SatDump (see its README.md). Merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": 298,
+      "notes": ""
+    },
+    {
+      "id": "extio-sddc",
+      "name": "ExtIO_sddc",
+      "paths": [
+        "plugins/sdr_sources/sddc_sdr_support/lib",
+        "resources/sddc/SDDC_FX3.img"
+      ],
+      "upstream_url": "https://github.com/ik1xpv/ExtIO_sddc",
+      "version": "1.3.0 RC1",
+      "commit": "f2b682a952ad3e08ce8b38cb09be6345bf0d5d62",
+      "commit_verified": false,
+      "version_source": "SWVERSION in lib/Core/config.h; the commit is the v1.3.0RC1 tag. Core/RadioHandler.cpp differs from the tag by about 60 lines (local changes or a later master).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "Core/RadioHandler.cpp differs from the tag. Not yet split out."
+      },
+      "consumption": "vendored",
+      "upstream_state": "current",
+      "update_issue": 299,
+      "notes": "v1.3.0RC1 is still the latest tag, but upstream master has later commits (see #299). Includes Core/pffft (pf_mixer by Julien Pommier, Hayati Ayguen, Dario Mambro; BSD-style) and Core/arch/win32/CyAPI (Cypress) as bundled by upstream, and the FX3 firmware image."
+    },
+    {
+      "id": "libpredict",
+      "name": "libpredict",
+      "paths": [
+        "src-core/libs/predict"
+      ],
+      "upstream_url": "https://github.com/la1k/libpredict",
+      "version": "3.0.0",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "PREDICT_VERSION_* in predict.h. 3.0.0 is newer than any upstream release (latest v2.0.0), so it tracks master; orbit.c differs from current master by several hundred lines.",
+      "license": "GPL-2.0-or-later",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not yet diffed against upstream history."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": 300,
+      "notes": "Coordinate with #193."
+    },
+    {
+      "id": "rapidxml",
+      "name": "RapidXml",
+      "paths": [
+        "src-core/libs/rapidxml.hpp"
+      ],
+      "upstream_url": "https://sourceforge.net/projects/rapidxml/",
+      "version": "1.13",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "\"Version 1.13\" in the header. Released as a zip, no commit.",
+      "license": "BSL-1.0 OR MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not compared."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive: 1.13 (2009) is the last release."
+    },
+    {
+      "id": "muparserx",
+      "name": "muparserx",
+      "paths": [
+        "src-core/libs/muparserx"
+      ],
+      "upstream_url": "https://github.com/beltoforion/muparserx",
+      "version": "4.0.12",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "MUP_PARSER_VERSION \"4.0.12 (2023-03-04)\" in mpDefines.h. mpDefines.h matches v4.0.12 and master; mpParser.cpp matches master but not v4.0.12 (copyright year), so this is master after v4.0.12 (e1bdc29).",
+      "license": "BSD-2-Clause",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Only two files compared."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream nearly inactive: v4.0.12 (2023) is the last release and later commits are cleanup and build changes."
+    },
+    {
+      "id": "ctpl",
+      "name": "CTPL (C++ thread pool)",
+      "paths": [
+        "src-core/libs/ctpl"
+      ],
+      "upstream_url": "https://github.com/vit-vit/CTPL",
+      "version": "unknown",
+      "commit": "437e135dbd94eb65b45533d9ce8ee28b5bd37b6d",
+      "commit_verified": true,
+      "version_source": "No releases. ctpl_stl.h is identical to master at this commit (2015-06-12).",
+      "license": "Apache-2.0",
+      "local_changes": {
+        "status": "no",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Already current; upstream inactive since 2015."
+    },
+    {
+      "id": "mbelib",
+      "name": "mbelib (with JAERO AMBE 4800x3600 decoder)",
+      "paths": [
+        "plugins/inmarsat_support/aero/mbelib"
+      ],
+      "upstream_url": "https://github.com/jontio/libaeroambe",
+      "version": "1.3.0",
+      "commit": "df7eebf17ca6396cc545bff4869dbeccc1e7dfcd",
+      "commit_verified": true,
+      "version_source": "MBELIB_VERSION in mbelib.h. mbelib.h, mbelib.c and ambe4800x3600.c match the mbelib-master copy in jontio/libaeroambe at this commit; ambe3600x2400.c and ecc.c match https://github.com/szechyjs/mbelib master.",
+      "license": "ISC",
+      "local_changes": {
+        "status": "yes",
+        "details": "#define _USE_MATH_DEFINES added at the top of the .c files (MSVC)."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive: szechyjs/mbelib last changed 2019, jontio/libaeroambe 2018."
+    },
+    {
+      "id": "ccsds-bpe",
+      "name": "CCSDS 122.0 Bit Plane Encoder (University of Nebraska-Lincoln)",
+      "paths": [
+        "src-core/libs/bpe"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded. Files are by Hongqiang Wang, University of Nebraska-Lincoln, dated Nov. 3, 2006.",
+      "license": "unknown",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Not compared: no upstream copy is available."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive: a 2006 reference implementation with no maintained source. The headers ask users to agree to a license agreement that is not in the tree."
+    },
+    {
+      "id": "netbsd-strptime",
+      "name": "strptime() from NetBSD libc",
+      "paths": [
+        "src-core/libs/others"
+      ],
+      "upstream_url": "http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c",
+      "version": "strptime.c,v 1.62 2017/08/24",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "$NetBSD$ RCS id in strptime.cpp.",
+      "license": "BSD-2-Clause",
+      "local_changes": {
+        "status": "yes",
+        "details": "Ported to C++ and Windows (_WIN32 / _MSC_VER blocks); strptime.h is SatDump's declaration."
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Windows only. Upstream is stable libc code; no update needed."
+    },
+    {
+      "id": "cpp-base64",
+      "name": "tomykaira base64 (Macaron)",
+      "paths": [
+        "src-core/libs/base64"
+      ],
+      "upstream_url": "https://gist.github.com/tomykaira/f0fd86b6c73063283afe550bc5d77594",
+      "version": "unknown",
+      "commit": "dceb7af2f73afb7aae20322cca04f27331d2e16a",
+      "commit_verified": true,
+      "version_source": "Gist revision; base64.h is identical to Base64.h at this revision (2024-01-12), apart from the final newline.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "no",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Already current."
+    },
+    {
+      "id": "libintl-lite",
+      "name": "libintl-lite (libintl-tiny)",
+      "paths": [
+        "src-core/libs/libintl-tiny"
+      ],
+      "upstream_url": "https://github.com/j-jorge/libintl-lite",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. libintl.h, MessageCatalog.hpp (and the internal/ layout) match j-jorge/libintl-lite master (a69bde3); libintl.cpp differs only by the local change below. That repository may itself be a fork of the original libintl-lite.",
+      "license": "BSL-1.0",
+      "local_changes": {
+        "status": "yes",
+        "details": "libintl.cpp: wrapped in #if defined(__APPLE__) || defined(_WIN32) || defined(__ANDROID__), and includes \"libintl.h\" instead of \"../libintl.h\" (files flattened)."
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Used on Windows and Android when ENABLE_I18N is set (src-core/i18n.h); other platforms use the system libintl."
+    },
+    {
+      "id": "win32ports-strings_h",
+      "name": "win32ports strings.h",
+      "paths": [
+        "src-core/libs/strings_h_win.h"
+      ],
+      "upstream_url": "https://github.com/win32ports/strings_h",
+      "version": "unknown",
+      "commit": "822de6e8c368abb986b403792082189f3c602c45",
+      "commit_verified": true,
+      "version_source": "No releases. Identical to strings.h on master at this commit (2023-03-17).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "no",
+        "details": ""
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Windows shim used by CALCEPH and SuperNOVAS. Already current."
+    },
+    {
+      "id": "mmap-windows",
+      "name": "mmap() replacement for Windows (Mike Frysinger)",
+      "paths": [
+        "src-core/libs/mmap_windows.h"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded; the header names the author only.",
+      "license": "public-domain",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored-platform",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Windows shim used by CALCEPH (calcephconfig.h). Upstream unknown and inactive; small and stable."
+    },
+    {
+      "id": "deepspace-turbo",
+      "name": "deepspace-turbo",
+      "paths": [
+        "src-core/libs/deepspace-turbo"
+      ],
+      "upstream_url": "https://github.com/geeanlooca/deepspace-turbo",
+      "version": "unknown",
+      "commit": "5d53fe0411075780127fa0435be3a88bb7b4ac7c",
+      "commit_verified": true,
+      "version_source": "No releases. The files match this commit (2017-07-20) apart from the local changes below. Upstream's last commit (2019-03-18) changed the API to pass code structs by pointer.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "Helper functions are no longer static (so SatDump can call them), and the utilities.h include is commented out."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive since 2019. The one later commit changes the API and fixes minor memory leaks; not pulled in."
+    },
+    {
+      "id": "imgui-notify",
+      "name": "imgui-notify",
+      "paths": [
+        "src-interface/imgui_notify/imgui_notify.h"
+      ],
+      "upstream_url": "https://github.com/patrickcjk/imgui-notify",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. Differs substantially from upstream master (about 130 lines added, 185 removed).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "Adapted for SatDump and newer Dear ImGui; not yet itemized."
+      },
+      "consumption": "vendored",
+      "upstream_state": "archived",
+      "update_issue": null,
+      "notes": "Upstream is archived (read-only), so there is nothing to update from."
+    },
+    {
+      "id": "iconfontcppheaders",
+      "name": "IconFontCppHeaders (Font Awesome 5 icon header)",
+      "paths": [
+        "src-interface/imgui_notify/font_awesome_5.h"
+      ],
+      "upstream_url": "https://github.com/juliettef/IconFontCppHeaders",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded; a generated header.",
+      "license": "Zlib",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Shipped with imgui-notify. Only needs an update if the bundled Font Awesome font changes."
+    },
+    {
+      "id": "bzip2",
+      "name": "bzip2",
+      "paths": [
+        "src-core/libs/bzlib"
+      ],
+      "satdump_files": [
+        "src-core/libs/bzlib_utils.h"
+      ],
+      "upstream_url": "https://gitlab.com/bzip2/bzip2",
+      "version": "1.1.0 (development)",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "BZ_VERSION in bz_version.h. 1.1.0 is the development line of the GitLab repository, not a release (the latest release is 1.0.8).",
+      "license": "bzip2-1.0.6",
+      "local_changes": {
+        "status": "unknown",
+        "details": "bzlib_utils.h (listed as a SatDump file) holds a modified copy of BZ2_bzBuffToBuffDecompress that also returns the bytes consumed."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream nearly inactive; no release since 1.0.8 (2019)."
+    },
+    {
+      "id": "volk_alloc",
+      "name": "VOLK volk_alloc.hh",
+      "paths": [
+        "volk_includes/volk/volk_alloc.hh"
+      ],
+      "upstream_url": "https://github.com/gnuradio/volk",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2019). Differs from current master by about 15 lines.",
+      "license": "LGPL-3.0-or-later",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "system-first-vendored-fallback",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Only used when the system VOLK lacks volk_alloc.hh (VOLK 1.x, VOLK_HAS_ALLOC check in src-core/CMakeLists.txt), and always on Android. Kept only for old VOLK, so it does not need to follow upstream."
+    },
+    {
+      "id": "sdrplay-api",
+      "name": "SDRplay API headers",
+      "paths": [
+        "plugins/sdr_sources/sdrplay_sdr_support/sdrplay"
+      ],
+      "upstream_url": "https://www.sdrplay.com/",
+      "version": "3.15",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "SDRPLAY_API_VERSION in sdrplay_api.h. Distributed with SDRplay's closed-source API installer, no repository.",
+      "license": "proprietary (SDRplay API headers)",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Headers only; the API library is loaded at run time (dynload.h). Update when a new API version adds devices or calls SatDump needs."
+    },
+    {
+      "id": "stb-font",
+      "name": "stb_truetype / stb_textedit / stb_rect_pack (Dear ImGui imstb_ copies for text rendering)",
+      "paths": [
+        "src-core/image/font/imstb_rectpack.h",
+        "src-core/image/font/imstb_textedit.h",
+        "src-core/image/font/imstb_truetype.h",
+        "src-core/image/font_lib"
+      ],
+      "upstream_url": "https://github.com/ocornut/imgui",
+      "version": "Dear ImGui 1.89 copies (stb_truetype 1.26, stb_textedit 1.14, stb_rect_pack 1.01)",
+      "commit": "81160fee56027226bc80b48e196d0332f5541a8c",
+      "commit_verified": true,
+      "version_source": "The three files are identical (ignoring line endings) to the imstb_*.h files of the Dear ImGui v1.89 tag. They are ImGui's modified copies of https://github.com/nothings/stb.",
+      "license": "MIT OR Unlicense",
+      "local_changes": {
+        "status": "no",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Used by src-core/image/text.*, independently of the Dear ImGui core (which has its own, newer copies). src-core/image/font_lib is an identical, unused duplicate of these three files. #273 lists font_lib as part of Dear ImGui; it is not, and it is not the copy that is used."
+    },
+    {
+      "id": "utfcpp",
+      "name": "UTF8-CPP",
+      "paths": [
+        "src-core/image/font/utf8.h",
+        "src-core/image/font/utf8"
+      ],
+      "upstream_url": "https://github.com/nemtrif/utfcpp",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2006). core.h is much smaller than current master, so this is an old 2.x-era copy.",
+      "license": "BSL-1.0",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Found in the 2026-11-23 sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "nativefiledialog-extended",
+      "name": "Native File Dialog Extended",
+      "paths": [
+        "src-ui/nfd"
+      ],
+      "upstream_url": "https://github.com/btzy/nativefiledialog-extended",
+      "version": "1.2.1",
+      "commit": "86d5f2005fe1c00747348a12070fec493ea2407e",
+      "commit_verified": true,
+      "version_source": "project(... VERSION 1.2.1) in src-ui/nfd/CMakeLists.txt; include/nfd.h is identical to the v1.2.1 tag.",
+      "license": "Zlib",
+      "local_changes": {
+        "status": "yes",
+        "details": "nfd_gtk.cpp, nfd_portal.cpp and nfd_win.cpp differ from v1.2.1 (e.g. an added NFD_CASE_SENSITIVE_FILTER option); not yet itemized."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Desktop GUI only (add_subdirectory in src-ui/CMakeLists.txt). Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "libacars",
+      "name": "libacars",
+      "paths": [
+        "plugins/inmarsat_support/aero/libacars"
+      ],
+      "upstream_url": "https://github.com/szpajder/libacars",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded: LA_VERSION is declared in version.h but its generated definition is not in the tree. Copyright 2018-2021 suggests a 2.1.x-era copy.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "config.h is a hand-written build configuration (WITH_ZLIB, no libxml2)."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Includes an asn1c runtime under asn1/. Upstream is active. Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "charls",
+      "name": "CharLS",
+      "paths": [
+        "plugins/firstparty_support/fcidecomp/charls"
+      ],
+      "upstream_url": "https://github.com/team-charls/charls",
+      "version": "2.4.2",
+      "commit": "36dd3307e070d8fbc765c3ba890b7e681046fa39",
+      "commit_verified": true,
+      "version_source": "CHARLS_VERSION_* in version.h; charls.h and jpeg_stream_reader.cpp are identical to the 2.4.2 tag.",
+      "license": "BSD-3-Clause",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Only two files compared; the directory is flattened (include/ and src/ merged)."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Used by FCIDECOMP for JPEG-LS. Security-relevant: decodes downloaded data. Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "fcidecomp",
+      "name": "EUMETSAT FCIDECOMP",
+      "paths": [
+        "plugins/firstparty_support/fcidecomp/fcicomp_errors.h",
+        "plugins/firstparty_support/fcidecomp/fcicomp_jpegls.c",
+        "plugins/firstparty_support/fcidecomp/fcicomp_jpegls.h",
+        "plugins/firstparty_support/fcidecomp/fcicomp_jpegls_messages.h",
+        "plugins/firstparty_support/fcidecomp/fcicomp_log.c",
+        "plugins/firstparty_support/fcidecomp/fcicomp_log.h",
+        "plugins/firstparty_support/fcidecomp/fcicomp_options.h",
+        "plugins/firstparty_support/fcidecomp/H5Zjpegls.c",
+        "plugins/firstparty_support/fcidecomp/H5Zjpegls_definitions.h",
+        "plugins/firstparty_support/fcidecomp/H5Zjpegls.h",
+        "plugins/firstparty_support/fcidecomp/H5Zjpegls_messages.h"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright EUMETSAT 2015-2023).",
+      "license": "Apache-2.0",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "EUMETSAT's FCI JPEG-LS HDF5 filter. The upstream repository URL is not recorded in the files and still has to be confirmed. Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "libmirisdr",
+      "name": "libmirisdr",
+      "paths": [
+        "plugins/sdr_sources/mirisdr_sdr_support/mirisdr"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. Has mirisdr_set_hw_flavour (libmirisdr-4 lineage) and mirisdr_set_bias; which fork it came from (https://github.com/f4exb/libmirisdr-4, https://github.com/ericek111/libmirisdr-5 or another) is not recorded.",
+      "license": "GPL-2.0-or-later",
+      "local_changes": {
+        "status": "unknown",
+        "details": "mirisdr_open_fd (Android USB file descriptor) is probably a local addition."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Only libmirisdr.c is compiled; it #includes the other .c files. Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "wjwwood-serial",
+      "name": "serial (William Woodall)",
+      "paths": [
+        "plugins/experimental_devices_support/libserial"
+      ],
+      "upstream_url": "https://github.com/wjwwood/serial",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (the \\version 0.1 in serial.h is also in every upstream release).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Directory layout flattened (no include/serial/)."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Found in the sweep; not covered by #273 to #300."
+    },
+    {
+      "id": "sdrpp-spyserver",
+      "name": "SDR++ SpyServer client",
+      "paths": [
+        "plugins/sdr_sources/spyserver_support/spyserver"
+      ],
+      "upstream_url": "https://github.com/AlexandreRouma/SDRPlusPlus",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded; adapted from spyserver_source/src (see README.txt).",
+      "license": "GPL-3.0-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Adapted for SatDump. Merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "spyserver_protocol.h is by Youssef Touil (Airspy). Found in the sweep."
+    },
+    {
+      "id": "sdrpp-server",
+      "name": "SDR++ server client",
+      "paths": [
+        "plugins/sdr_sources/sdrpp_server_support/sdrpp_server"
+      ],
+      "upstream_url": "https://github.com/AlexandreRouma/SDRPlusPlus",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded; adapted from sdrpp_server_source/src (see README.txt).",
+      "license": "GPL-3.0-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Adapted for SatDump. Merge upstream fixes by hand; the protocol must stay compatible with SDR++ servers."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Found in the sweep."
+    },
+    {
+      "id": "gr-dvbs2rx",
+      "name": "gr-dvbs2rx BCH and BBFRAME code",
+      "paths": [
+        "plugins/dvb_support/codings/dvb-s2/bch",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_bch.cpp",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_bch.h",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_descramble.cpp",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_descramble.h",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_ldpc.cpp",
+        "plugins/dvb_support/codings/dvb-s2/bbframe_ldpc.h",
+        "src-core/common/codings/dvb-s2/bbframe_ts_parser.cpp",
+        "src-core/common/codings/dvb-s2/bbframe_ts_parser.h"
+      ],
+      "upstream_url": "https://github.com/drmpeg/gr-dvbs2rx",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded; the headers say \"adapted from https://github.com/drmpeg/gr-dvbs2rx\".",
+      "license": "GPL-3.0-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "GNU Radio blocks rewritten as SatDump classes. Merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Found in the sweep."
+    },
+    {
+      "id": "readerwriterqueue",
+      "name": "moodycamel readerwriterqueue (circular buffer and atomicops)",
+      "paths": [
+        "src-core/dsp/base/atomicops.h",
+        "src-core/dsp/base/readerwritercircularbuffer.h"
+      ],
+      "upstream_url": "https://github.com/cameron314/readerwriterqueue",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. Each file differs from current master by under 10 lines.",
+      "license": "BSD-2-Clause AND Zlib",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "atomicops.h embeds Jeff Preshing's semaphore (Zlib). Found in the sweep."
+    },
+    {
+      "id": "imgui-software-renderer",
+      "name": "imgui_software_renderer (imgui_sw)",
+      "paths": [
+        "src-core/dsp/benchmark/render"
+      ],
+      "upstream_url": "https://github.com/emilk/imgui_software_renderer",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. imgui_sw.cpp differs from current master by about 20 lines.",
+      "license": "public-domain",
+      "local_changes": {
+        "status": "unknown",
+        "details": "Probably adjusted for the current Dear ImGui API; not itemized."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Dual-licensed to the public domain and a permissive grant (see the header). Upstream inactive since 2022. Found in the sweep."
+    },
+    {
+      "id": "maidenhead",
+      "name": "maidenhead",
+      "paths": [
+        "src-core/common/map/maidenhead.c",
+        "src-core/common/map/maidenhead.h"
+      ],
+      "upstream_url": "https://github.com/sp6q/maidenhead",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. maidenhead.c differs substantially from upstream master.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "maidenhead.c is extended (about 100 lines added); not itemized."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive since 2021. Found in the sweep."
+    },
+    {
+      "id": "gdal-thinplatespline",
+      "name": "GDAL thin plate spline",
+      "paths": [
+        "src-core/projection/thinplatespline.cpp",
+        "src-core/projection/thinplatespline.h"
+      ],
+      "upstream_url": "https://github.com/OSGeo/gdal",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2004 VIZRT, 2008-2014 Even Rouault).",
+      "license": "MIT",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Extracted from GDAL alg/thinplatespline.* with the GDAL helpers it needs copied in. Merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Also contains a log() approximation derived from Sun Microsystems fdlibm code. Found in the sweep."
+    },
+    {
+      "id": "libdc1394-bayer",
+      "name": "libdc1394 Bayer demosaicing",
+      "paths": [
+        "src-core/image/bayer"
+      ],
+      "upstream_url": "https://sourceforge.net/projects/libdc1394/",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded.",
+      "license": "LGPL-2.1-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Ported to C++ for SatDump images. Merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "VNG and AHD code originates from dcraw. Found in the sweep."
+    },
+    {
+      "id": "solarsoft-hinode",
+      "name": "SolarSoft Hinode image restoration",
+      "paths": [
+        "plugins/hinode_support/hinode/instruments/common.h"
+      ],
+      "upstream_url": "https://hesperia.gsfc.nasa.gov/ssw/",
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2020 SolarSoft Consortium).",
+      "license": "BSD-style (SolarSoft Consortium, see header)",
+      "local_changes": {
+        "status": "adapted",
+        "details": "C++ implementation of the SolarSoft Hinode JPEG restoration algorithm."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Found in the sweep."
+    },
+    {
+      "id": "gnuradio-viterbi-k7",
+      "name": "GNU Radio volk_k7_r2 generic Viterbi kernel",
+      "paths": [
+        "src-core/common/codings/viterbi/volk_k7_r2_generic_fixed.h"
+      ],
+      "upstream_url": "https://github.com/gnuradio/gnuradio",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded (copyright 2014 Free Software Foundation).",
+      "license": "GPL-3.0-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Single kernel extracted from GNU Radio."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Smaller GNU Radio, SDR++ and LeanDVB fragments embedded in SatDump's own files (e.g. common/dsp/filter/firdes.h, common/codings/lfsr.h, dvb-s2/s2_scrambling.*) are not tracked here. Found in the sweep."
+    },
+    {
+      "id": "cmake-find-modules",
+      "name": "Third-party CMake find modules",
+      "paths": [
+        "cmake/FindJemalloc.cmake",
+        "cmake/FindOpenGLES2.cmake",
+        "cmake/FindZSTD.cmake"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Sources named in the files: FindZSTD.cmake from https://github.com/facebook/folly (CMake/FindZstd.cmake), FindOpenGLES2.cmake modified from https://github.com/freeminer/freeminer, FindJemalloc.cmake from https://gist.github.com/Lewiscowles1986/225a10154637d18d6187147015c8d0f7.",
+      "license": "Apache-2.0 (FindZSTD), public-domain (FindOpenGLES2), unknown (FindJemalloc)",
+      "local_changes": {
+        "status": "unknown",
+        "details": ""
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Build scripts only; no need to follow upstream. FindAVX, FindNEON and FindSSE41 carry no origin or license and are not listed. Found in the sweep."
+    },
+    {
+      "id": "catch2",
+      "name": "Catch2",
+      "paths": [
+        "tests/CMakeLists.txt"
+      ],
+      "upstream_url": "https://github.com/catchorg/Catch2",
+      "version": "3.16.1",
+      "commit": "08092139210881f01a34e60c5f2fd6afa0ea4024",
+      "commit_verified": true,
+      "version_source": "SATDUMP_CATCH2_FETCH_VERSION in tests/CMakeLists.txt (FetchContent of tag v3.16.1).",
+      "license": "BSL-1.0",
+      "local_changes": {
+        "status": "no",
+        "details": ""
+      },
+      "consumption": "system-first-fetchcontent-fallback",
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Not vendored: a system Catch2 >= 3.4.0 is used if present, otherwise 3.16.1 is fetched at configure time. The path is where the version is set."
+    }
+  ]
+}
