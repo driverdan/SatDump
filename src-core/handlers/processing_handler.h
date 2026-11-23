@@ -31,11 +31,7 @@ namespace satdump
         {
         public:
             ProcessingHandler() {}
-            ~ProcessingHandler()
-            {
-                if (async_thread.joinable())
-                    async_thread.join();
-            }
+            ~ProcessingHandler() { waitForProcessing(); }
 
         protected:
             bool is_processing = false;
@@ -47,6 +43,20 @@ namespace satdump
             virtual void do_process() = 0;
 
             std::thread async_thread;
+
+            /**
+             * @brief Wait for the processing thread started by asyncProcess() to finish.
+             *
+             * The thread runs do_process(), which uses members of the child class.
+             * Those are destroyed before ~ProcessingHandler() runs, so a child class
+             * must call this from its own destructor, before anything do_process()
+             * uses is torn down. Calling it again (or from the base destructor) is a no-op.
+             */
+            void waitForProcessing()
+            {
+                if (async_thread.joinable())
+                    async_thread.join();
+            }
 
         public:
             /**

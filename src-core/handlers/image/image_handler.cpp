@@ -96,7 +96,7 @@ namespace satdump
 
         ImageHandler::~ImageHandler()
         {
-            ProcessingHandler::~ProcessingHandler();
+            waitForProcessing();
             if (file_save_thread.joinable())
                 file_save_thread.join();
         }
