@@ -1,7 +1,3 @@
-// interpolator.h uses std::sort without including <algorithm>, so it has to come first.
-// It is in its own block to keep clang-format from moving it.
-#include <algorithm>
-
 #include "common/tracking/interpolator.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>

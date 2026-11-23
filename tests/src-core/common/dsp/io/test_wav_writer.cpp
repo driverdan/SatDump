@@ -1,7 +1,3 @@
-// wav_writer.h is not self-contained (uses uint32_t without <cstdint>), so it has to come first.
-// It is in its own block to keep clang-format from moving it.
-#include <cstdint>
-
 #include "common/dsp/io/io_test_helpers.h"
 #include "common/dsp/io/wav_writer.h"
 #include <catch2/catch_test_macros.hpp>
