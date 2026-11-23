@@ -4,7 +4,6 @@
 #include "../attenuation/generic.h"
 #include "../const.h"
 #include "link_margin.h"
-#include "nlohmann/json.hpp"
 #include <memory>
 
 class ChannelModelLEO
@@ -51,15 +50,6 @@ private:
     std::shared_ptr<LinkMargin> d_link_margin;
 
     /*!
-     * Calculate the free-space path-loss attenuation for a
-     * given slant range.
-     * \param slant_range The distance in kilometers between the observer and the
-     *      satellite.
-     * @return a double representing the attenuation in dB.
-     */
-    double calculate_free_space_path_loss(double slant_range);
-
-    /*!
      * Calculate the Doppler frequency shift for a given satellite range rate.
      * \param velocity The range rate of the satellite expressed in
      * kilometers/sec.
@@ -100,7 +90,6 @@ public:
     }
 
     void update();
-    nlohmann::json get_channel_model_settings();
 
 public:
     double get_frequency();
