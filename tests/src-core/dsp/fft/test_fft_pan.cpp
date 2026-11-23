@@ -24,7 +24,7 @@ namespace
         auto pan = std::make_shared<FFTPanBlock>();
         pan->set_fft_settings(size, samplerate, rate);
         REQUIRE(pan->set_cfg("avg_num", 1.0) == Block::RES_OK);
-        // The averaging buffer is never initialized by the block (see UNTESTED_ISSUES.md), clear it
+        // The averaging buffer is never initialized by the block (see #168), clear it
         std::fill(pan->output_fft_buff, pan->output_fft_buff + dsp::STREAM_BUFFER_SIZE, 0.0f);
         pan->on_fft = [cap](float *v, size_t n)
         {

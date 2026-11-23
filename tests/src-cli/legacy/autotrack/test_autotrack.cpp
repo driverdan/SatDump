@@ -15,7 +15,7 @@
 //
 // The tracked satellite is in a polar orbit and the station is next to the north pole, so that
 // there is a pass on every orbit whenever the tests run. This matters: with no upcoming pass
-// at all the scheduler reads out of bounds (see tests/UNTESTED_ISSUES.md). The satellite has no
+// at all the scheduler reads out of bounds (see #126). The satellite has no
 // live or recorded downlink, so its passes start nothing.
 //
 // Everything in AutoTrackApp is private. What it does is observed through the log and through
@@ -206,7 +206,7 @@ TEST_CASE("AutoTrackApp serves its status over HTTP", "[cli][legacy][autotrack]"
         {
             // The page needs the range of the tracked satellite, which the tracker only has
             // once its thread has loaded the elements. Asking earlier would take the test
-            // executable down (see tests/UNTESTED_ISSUES.md).
+            // executable down (see #195).
             REQUIRE(test_helpers::waitUntil(
                 [&]()
                 {
@@ -278,7 +278,7 @@ TEST_CASE("AutoTrackApp sets its FFT up when enabled", "[cli][legacy][autotrack]
         CHECK(env.log.contains("FFT Rate 2400, Samplerate 48000, Final Size 1024, Skip 1376", slog::LOG_TRACE));
 
         // /fft.jpeg is not requested: drawing the plot writes out of bounds (see
-        // tests/UNTESTED_ISSUES.md). The FFT branch is only enabled by such a request, so the
+        // #154). The FFT branch is only enabled by such a request, so the
         // heartbeat has nothing to shut down.
         app.web_heartbeat();
         CHECK_FALSE(env.log.contains("Enabling FFT"));

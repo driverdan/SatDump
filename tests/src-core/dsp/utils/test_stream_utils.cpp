@@ -92,7 +92,7 @@ namespace
 {
     // The reshape block has a second thread writing to the output, which is
     // only safe while the work thread itself is idle. So wait for all expected
-    // output before sending the terminator (see UNTESTED_ISSUES.md).
+    // output before sending the terminator (see #159).
     template <typename T>
     std::vector<uint32_t> runReshape(int bufsize, const std::vector<T> &in, size_t chunk, size_t expected_out, std::vector<T> &out)
     {
@@ -101,7 +101,7 @@ namespace
         auto is = std::make_shared<DSPStream>(4);
         b->set_input({"in", getTypeSampleType<T>(), is}, 0);
         ndsp_test::Collector<T> col(b->get_output(0, 4).fifo);
-        // Workaround for the start() race (see UNTESTED_ISSUES.md) : initialize the ring
+        // Workaround for the start() race (see #159) : initialize the ring
         // buffer before start() launches the second thread. start() runs
         // init() again, leaking the first ring allocation.
         b->init();

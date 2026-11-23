@@ -177,7 +177,7 @@ TEST_CASE("ndsp OptionsDisplayer option parsing", "[dsp][device][options_display
     CHECK(d.get_values().is_null());
 
     // Options without a type are rejected. This throws with the internal mutex
-    // still locked (see UNTESTED_ISSUES.md), so this instance is never used nor destroyed
+    // still locked (see #163), so this instance is never used nor destroyed
     // afterwards (destroying a locked std::mutex is undefined).
     OptionsDisplayer *d2 = new OptionsDisplayer();
     nlohmann::ordered_json bad;

@@ -6,7 +6,7 @@
 // The stats webserver of the live, record and autotrack commands. It is only ever started on a
 // free 127.0.0.1 port and queried with the POSIX client of the helpers, so these tests are
 // POSIX only. Every start() is paired with exactly one stop(): stopping twice is not safe (see
-// tests/UNTESTED_ISSUES.md).
+// #197).
 
 #ifndef _WIN32
 using namespace cli_test;

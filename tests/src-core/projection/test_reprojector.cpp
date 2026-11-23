@@ -205,7 +205,7 @@ TEST_CASE("reproject warps a raytraced (GCP) source through the smart warper", "
     satdump::image::set_metadata_proj_cfg(img, cfg);
 
     // reprojectImage() fills in the source width/height the raytracer config needs. Calling
-    // reproject() directly on this metadata throws instead (see UNTESTED_ISSUES.md).
+    // reproject() directly on this metadata throws instead (see #224).
     auto out = satdump::projection::reprojectImage(img, globeCfg(0.5));
     REQUIRE(out.width() == 720);
     REQUIRE(out.channels() == 4);

@@ -5,8 +5,8 @@ Construction over pre-filled memory, shared by the whole suite. Everything is
 inline and lives in the test_helpers namespace, as every test file is linked
 into the same executable.
 
-Some src-core classes read members they never initialise (see
-UNTESTED_ISSUES.md). On the stack or the heap those members hold whatever the
+Some src-core classes read members they never initialise (for example #139 and
+#143). On the stack or the heap those members hold whatever the
 previous tests left there, so the result changes with the test order and from
 run to run. Building the object over memory filled with a known byte gives
 them a fixed value instead, chosen by the test to be harmless.

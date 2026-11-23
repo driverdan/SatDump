@@ -28,7 +28,7 @@ TEST_CASE("GardnerClockRecoveryBlock<float> outputs one sample per symbol on the
         auto sig = dsp_test_clock::shapeSymbols(sym, c.true_sps, c.offset);
 
         auto input = std::make_shared<dsp::stream<float>>();
-        // Built over zeroed memory, as the float version never initialises last_sample (see UNTESTED_ISSUES.md)
+        // Built over zeroed memory, as the float version never initialises last_sample (see #139)
         auto gd = test_helpers::makePrefilled<dsp::GardnerClockRecoveryBlock<float>>(0, input, c.sps, kGardnerOmegaGain, 0.5f, kGardnerMuGain, kGardnerOmegaLimit);
         auto r = dsp_test::runBlock(*gd, input, sig, 4096);
         REQUIRE(r.completed);
