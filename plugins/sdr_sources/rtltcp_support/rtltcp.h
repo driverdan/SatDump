@@ -6,6 +6,9 @@
 #include "imgui/imgui.h"
 #include "core/style.h"
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include "common/widgets/double_list.h"
 
 class RTLTCPSource : public dsp::DSPSampleSource
@@ -27,23 +30,40 @@ protected:
     void set_gains();
     void set_bias();
     void set_ppm();
+    void configure();
+
+    // When the connection is lost, connecting again is tried RECONNECT_ATTEMPTS times, waiting
+    // RECONNECT_FIRST_DELAY_MS before the first attempt and twice as long before each of the
+    // next ones, up to RECONNECT_MAX_DELAY_MS (about 20 seconds in all)
+    static constexpr int RECONNECT_ATTEMPTS = 8;
+    static constexpr int RECONNECT_FIRST_DELAY_MS = 250;
+    static constexpr int RECONNECT_MAX_DELAY_MS = 4000;
+    int reconnect_attempts = RECONNECT_ATTEMPTS;
+    int reconnect_first_delay_ms = RECONNECT_FIRST_DELAY_MS;
+    int reconnect_max_delay_ms = RECONNECT_MAX_DELAY_MS;
 
     std::thread work_thread;
 
-    bool thread_should_run = false;
+    std::atomic<bool> thread_should_run{false};
+    std::mutex reconnect_mtx;
+    std::condition_variable reconnect_cv; // Wakes the reconnection wait up when stopping
+
+    bool reconnect();
 
     void mainThread()
     {
         uint8_t in_buf[8192];
         while (thread_should_run)
         {
-            // Once the connection is lost, nothing more is output: the stream stays idle until
-            // the source is stopped (and started again, which connects again)
+            // The buffer is only output once it was filled: never the stale one
             if (!client.receiveData(in_buf, 8192))
             {
-                if (thread_should_run)
-                    logger->error("RTL-TCP connection lost (%s), no more samples will be received. Stop and start the source to connect again.", client.receiveError().c_str());
-                break;
+                if (!thread_should_run)
+                    break;
+                logger->error("RTL-TCP connection lost (%s), trying to reconnect", client.receiveError().c_str());
+                if (!reconnect())
+                    break; // Idle until the source is stopped (starting it again connects again)
+                continue;
             }
 
             for (int i = 0; i < (int)8192 / 2; i++)

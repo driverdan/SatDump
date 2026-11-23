@@ -1,6 +1,7 @@
 #include "rtltcp.h"
 #include "imgui/imgui_stdlib.h"
 #include "common/widgets/stepped_slider.h"
+#include <algorithm>
 
 void RTLTCPSource::set_gains()
 {
@@ -110,27 +111,70 @@ void RTLTCPSource::start()
 
     DSPSampleSource::start(); // Do NOT reset the stream
 
+    is_started = true;
+
+    configure();
+
+    thread_should_run = true;
+    work_thread = std::thread(&RTLTCPSource::mainThread, this);
+}
+
+// Sends every setting to the dongle, on start and after connecting again
+void RTLTCPSource::configure()
+{
     uint64_t current_samplerate = samplerate_widget.get_value();
 
     client.setSampleRate(current_samplerate);
-
-    is_started = true;
 
     set_frequency(d_frequency);
 
     set_gains();
     set_bias();
     set_ppm();
+}
 
-    thread_should_run = true;
-    work_thread = std::thread(&RTLTCPSource::mainThread, this);
+// Tries to connect again after the connection was lost, and configures the dongle again.
+// Returns false once every attempt failed, or when the source is being stopped.
+bool RTLTCPSource::reconnect()
+{
+    client.disconnect();
+
+    int delay_ms = reconnect_first_delay_ms;
+    for (int attempt = 1; attempt <= reconnect_attempts; attempt++)
+    {
+        // The wait ends early when stop() is called
+        {
+            std::unique_lock<std::mutex> lock(reconnect_mtx);
+            if (reconnect_cv.wait_for(lock, std::chrono::milliseconds(delay_ms), [this]() { return !thread_should_run; }))
+                return false;
+        }
+
+        if (client.connectToRTL((char *)ip_address.c_str(), port, [this]() { return thread_should_run.load(); }))
+        {
+            logger->info("RTL-TCP reconnected (attempt %d/%d)", attempt, reconnect_attempts);
+            configure();
+            return true;
+        }
+
+        if (!thread_should_run)
+            return false;
+        logger->warn("RTL-TCP reconnection attempt %d/%d failed (%s)", attempt, reconnect_attempts, client.connectError().c_str());
+        delay_ms = std::min(delay_ms * 2, reconnect_max_delay_ms);
+    }
+
+    logger->error("RTL-TCP could not reconnect after %d attempts, no more samples will be received. Stop and start the source to try again.", reconnect_attempts);
+    return false;
 }
 
 void RTLTCPSource::stop()
 {
     if (is_started)
     {
-        thread_should_run = false;
+        {
+            std::lock_guard<std::mutex> lock(reconnect_mtx);
+            thread_should_run = false;
+        }
+        reconnect_cv.notify_all();
         logger->info("Waiting for the thread...");
         if (is_started)
             output_stream->stopWriter();

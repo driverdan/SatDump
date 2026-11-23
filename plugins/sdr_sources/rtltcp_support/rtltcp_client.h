@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <string>
+#include <functional>
+#include <mutex>
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -16,6 +18,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <poll.h>
 #endif
 
 // The commands are sent with send() and MSG_NOSIGNAL, so that writing to a connection the
@@ -42,7 +46,10 @@ public:
     RTLTCPClient() {
     }
 
-    bool connectToRTL(char* host, uint16_t port) {
+    // With keep_going, the connection is attempted without blocking for more than
+    // CONNECT_POLL_MS at a time, and given up once keep_going() returns false (on Windows,
+    // connect() still blocks).
+    bool connectToRTL(char* host, uint16_t port, std::function<bool()> keep_going = nullptr) {
         if (connected) {
             return true;
         }
@@ -98,13 +105,18 @@ public:
             return false;
         }
         struct hostent* server = gethostbyname(host);
+        if (server == NULL) {
+            connect_error = std::string("could not resolve ") + host;
+            close(sockfd);
+            return false;
+        }
         struct sockaddr_in serv_addr;
         bzero(&serv_addr, sizeof(struct sockaddr_in));
         serv_addr.sin_family = AF_INET;
         bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
         serv_addr.sin_port = htons(port);
-        if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-            // TODO: log error
+        if (!connectSocket((struct sockaddr*)&serv_addr, sizeof(serv_addr), keep_going)) {
+            close(sockfd);
             return false;
         }
 #ifdef SO_NOSIGPIPE
@@ -113,7 +125,10 @@ public:
 #endif
 #endif
 
-        connected = true;
+        {
+            std::lock_guard<std::mutex> lock(send_mtx);
+            connected = true;
+        }
 
         printf("Connected");
 
@@ -121,6 +136,7 @@ public:
     }
 
     void disconnect() {
+        std::lock_guard<std::mutex> lock(send_mtx);
         if (!connected) {
             return;
         }
@@ -142,6 +158,12 @@ public:
         command_t cmd;
         cmd.cmd = command;
         cmd.param = htonl(param);
+        // Not while the socket is being replaced, and not on a closed one, whose number may
+        // already be reused by something else
+        std::lock_guard<std::mutex> lock(send_mtx);
+        if (!connected) {
+            return;
+        }
 #ifdef _WIN32
         send(sock, (char*)&cmd, sizeof(command_t), 0);
 #else
@@ -179,8 +201,13 @@ public:
     }
 
     // Why the last call to receiveData() failed
-    std::string receiveError() {
+    std::string receiveError() const {
         return receive_error;
+    }
+
+    // Why the last call to connectToRTL() failed, if it is known
+    std::string connectError() const {
+        return connect_error;
     }
 
     void setFrequency(double freq) {
@@ -224,6 +251,53 @@ public:
     }
 
 private:
+#ifndef _WIN32
+    static const int CONNECT_POLL_MS = 50;
+
+    bool connectSocket(struct sockaddr* addr, socklen_t len, std::function<bool()>& keep_going) {
+        connect_error.clear();
+        if (!keep_going) {
+            if (connect(sockfd, addr, len) < 0) {
+                connect_error = strerror(errno);
+                return false;
+            }
+            return true;
+        }
+
+        int flags = fcntl(sockfd, F_GETFL, 0);
+        fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+        int ret = connect(sockfd, addr, len);
+        if (ret < 0 && errno != EINPROGRESS) {
+            connect_error = strerror(errno);
+            return false;
+        }
+        while (ret < 0) {
+            if (!keep_going()) {
+                connect_error = "cancelled";
+                return false;
+            }
+            pollfd p{sockfd, POLLOUT, 0};
+            int n = poll(&p, 1, CONNECT_POLL_MS);
+            if (n < 0 && errno != EINTR) {
+                connect_error = strerror(errno);
+                return false;
+            }
+            if (n > 0) {
+                int err = 0;
+                socklen_t err_len = sizeof(err);
+                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &err, &err_len);
+                if (err != 0) {
+                    connect_error = strerror(err);
+                    return false;
+                }
+                ret = 0;
+            }
+        }
+        fcntl(sockfd, F_SETFL, flags);
+        return true;
+    }
+#endif
+
 #ifdef _WIN32
     SOCKET sock;
 #else
@@ -231,5 +305,7 @@ private:
 #endif
 
     bool connected = false;
+    std::mutex send_mtx;
     std::string receive_error;
+    std::string connect_error;
 };

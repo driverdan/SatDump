@@ -9,6 +9,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <ctime>
+#include <memory>
 
 // The RTL-TCP source is run against a rtl_tcp server made by the test, which records the
 // commands it is sent and plays back samples. No dongle and no rtl_tcp are involved.
@@ -23,19 +25,38 @@ namespace
     using test_helpers::ValueGuard;
     using Commands = std::vector<Command>;
 
-    // A source set up like "satdump legacy live" does it, pointed at the server
-    std::shared_ptr<dsp::DSPSampleSource> makeSource(FakeRtlTcp &server, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000, uint64_t samplerate = 2400000)
+    // Sets a source up like "satdump legacy live" does it, pointed at a server on port
+    std::shared_ptr<dsp::DSPSampleSource> setUp(std::shared_ptr<dsp::DSPSampleSource> source, int port, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000, uint64_t samplerate = 2400000)
     {
         settings["ip_address"] = "127.0.0.1";
-        settings["port"] = server.port();
+        settings["port"] = port;
 
-        auto source = RTLTCPSource::getInstance(RTLTCPSource::getAvailableSources()[0]);
         source->open();
         source->set_frequency(frequency);
         source->set_samplerate(samplerate);
         source->set_settings(settings);
         return source;
     }
+
+    std::shared_ptr<dsp::DSPSampleSource> makeSource(FakeRtlTcp &server, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000, uint64_t samplerate = 2400000)
+    {
+        return setUp(RTLTCPSource::getInstance(RTLTCPSource::getAvailableSources()[0]), server.port(), settings, frequency, samplerate);
+    }
+
+    // A RTLTCPSource that tries to reconnect with other delays than the default ones, which
+    // add up to about 20 seconds
+    class QuickRetrySource : public RTLTCPSource
+    {
+    public:
+        QuickRetrySource(int attempts, int first_delay_ms, int max_delay_ms) : RTLTCPSource(RTLTCPSource::getAvailableSources()[0])
+        {
+            reconnect_attempts = attempts;
+            reconnect_first_delay_ms = first_delay_ms;
+            reconnect_max_delay_ms = max_delay_ms;
+        }
+    };
+
+    double secondsSince(std::chrono::steady_clock::time_point t) { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); }
 
     // Reads `count` samples from the source (bounded by the reads of the stream itself:
     // the server never stops sending)
@@ -437,9 +458,11 @@ TEST_CASE("RTLTCPSource stop turns the bias tee off and disconnects", "[plugins]
     source.reset();
     CHECK(server.commands().size() == 8);
 }
+
 // When rtl_tcp exits, the source used to output its last buffer again and again, forever,
 // with a core busy: the read error was ignored. It now logs that the connection was lost and
-// outputs nothing more.
+// outputs nothing more until it has reconnected (here the server does not come back, and
+// stop() ends the reconnection attempts).
 TEST_CASE("RTLTCPSource stops outputting samples when the server closes the connection", "[plugins][sdr_sources][rtltcp]")
 {
     // Three whole buffers of the source, without the dongle information
@@ -462,7 +485,7 @@ TEST_CASE("RTLTCPSource stops outputting samples when the server closes the conn
         CHECK(counter.samples == count);
 
         INFO(log.dump());
-        CHECK(log.contains("RTL-TCP connection lost (the server closed the connection)", slog::LOG_ERROR));
+        CHECK(log.contains("RTL-TCP connection lost (the server closed the connection), trying to reconnect", slog::LOG_ERROR));
 
         CHECK_NOTHROW(source->stop());
     }
@@ -516,7 +539,7 @@ TEST_CASE("RTLTCPSource commands sent after the server left do not end the progr
 }
 
 // Once stopped, the source connects again on the next start
-TEST_CASE("RTLTCPSource connects again after the connection was lost", "[plugins][sdr_sources][rtltcp]")
+TEST_CASE("RTLTCPSource connects again when started after the connection was lost", "[plugins][sdr_sources][rtltcp]")
 {
     FakeRtlTcp first(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
     auto source = makeSource(first);
@@ -538,5 +561,92 @@ TEST_CASE("RTLTCPSource connects again after the connection was lost", "[plugins
     CHECK(second.connected());
     REQUIRE(samples.size() >= 8192);
     CHECK_THAT(samples[8191].imag, WithinAbs((200 - 127.4f) / 128.0f, 1e-6));
+}
+
+TEST_CASE("RTLTCPSource reconnects and configures the dongle again when the server comes back", "[plugins][sdr_sources][rtltcp]")
+{
+    cli_test::LogCapture log;
+    std::vector<uint8_t> first_iq(8192 * 3, 100);
+    auto first = std::make_unique<FakeRtlTcp>(first_iq, false, 0, AfterIQ::Close);
+    int port = first->port();
+
+    auto source = setUp(std::make_shared<QuickRetrySource>(50, 20, 50), port, {{"lna_agc", true}, {"tuner_agc", false}, {"gain", 49}});
+    source->start();
+    REQUIRE(first->waitForCommands(7).size() == 7);
+    {
+        Counter counter(source);
+        REQUIRE(first->waitForDisconnect());
+
+        // Nothing is output while the server is gone
+        size_t before = settledCount(counter);
+        CHECK(before == first_iq.size() / 2);
+        first.reset();
+
+        // A change made meanwhile is sent on reconnection
+        source->set_frequency(1694500000);
+
+        FakeRtlTcp second(std::vector<uint8_t>(8192 * 2, 200), false, 0, AfterIQ::Silence, port);
+        CHECK(second.waitForCommands(7) == Commands{{CMD_SAMPLERATE, 2400000}, {CMD_FREQUENCY, 1694500000}, {CMD_AGC_MODE, 1}, {CMD_GAIN_MODE, 1}, {CMD_GAIN, 490}, {CMD_BIAS_TEE, 0}, {CMD_PPM, 0}});
+
+        // And the samples flow again
+        CHECK(test_helpers::waitUntil([&]() { return counter.samples >= before + 8192; }, std::chrono::seconds(10)));
+
+        INFO(log.dump());
+        CHECK(log.contains("RTL-TCP connection lost (the server closed the connection), trying to reconnect", slog::LOG_ERROR));
+        CHECK(log.contains("RTL-TCP reconnected", slog::LOG_INFO));
+        CHECK_FALSE(log.contains("could not reconnect"));
+
+        source->stop();
+        CHECK(second.waitForDisconnect());
+    }
+}
+
+TEST_CASE("RTLTCPSource gives up reconnecting after a few attempts when the server stays gone", "[plugins][sdr_sources][rtltcp]")
+{
+    cli_test::LogCapture log;
+    FakeRtlTcp server(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
+    auto source = setUp(std::make_shared<QuickRetrySource>(3, 10, 20), server.port());
+    source->start();
+    {
+        Counter counter(source);
+        REQUIRE(server.waitForDisconnect());
+        REQUIRE(test_helpers::waitUntil([&]() { return log.contains("RTL-TCP could not reconnect after 3 attempts", slog::LOG_ERROR); }, std::chrono::seconds(10)));
+
+        INFO(log.dump());
+        CHECK(log.contains("RTL-TCP reconnection attempt 3/3 failed (Connection refused)", slog::LOG_WARN));
+        CHECK_FALSE(log.contains("attempt 4/"));
+
+        // Then idle: no samples, and next to no CPU
+        size_t count = counter.samples;
+        std::clock_t cpu_start = std::clock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        double cpu = double(std::clock() - cpu_start) / CLOCKS_PER_SEC;
+        CHECK(counter.samples == count);
+        CHECK(cpu < 0.2);
+
+        auto t = std::chrono::steady_clock::now();
+        source->stop();
+        CHECK(secondsSince(t) < 1.0);
+    }
+}
+
+TEST_CASE("RTLTCPSource stop interrupts the wait before a reconnection attempt", "[plugins][sdr_sources][rtltcp]")
+{
+    cli_test::LogCapture log;
+    FakeRtlTcp server(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
+    auto source = setUp(std::make_shared<QuickRetrySource>(5, 60000, 60000), server.port());
+    source->start();
+    {
+        Drain drain(source);
+        REQUIRE(server.waitForDisconnect());
+        REQUIRE(test_helpers::waitUntil([&]() { return log.contains("trying to reconnect"); }, std::chrono::seconds(10)));
+
+        auto t = std::chrono::steady_clock::now();
+        source->stop();
+        CHECK(secondsSince(t) < 1.0);
+
+        INFO(log.dump());
+        CHECK_FALSE(log.contains("reconnection attempt"));
+    }
 }
 #endif

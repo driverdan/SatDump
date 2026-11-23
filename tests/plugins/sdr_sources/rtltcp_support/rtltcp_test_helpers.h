@@ -170,11 +170,20 @@ namespace rtltcp_test
             }
 
             close(fd);
+
+            // As rtl_tcp exiting, the port is closed too: connecting again is refused
+            if (after_iq != AfterIQ::Silence)
+            {
+                close(listen_fd);
+                listen_fd = -1;
+            }
             client_left = true;
         }
 
     public:
-        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0, AfterIQ after = AfterIQ::Silence)
+        // With a port, that port is used instead of a free one, e.g. to bring a server back on
+        // the port of one that left
+        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0, AfterIQ after = AfterIQ::Silence, int port = 0)
             : bytes_per_second(samplerate * 2), after_iq(after)
         {
             if (send_dongle_info)
@@ -186,6 +195,9 @@ namespace rtltcp_test
             sockaddr_in addr{};
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            addr.sin_port = htons(port);
+            int reuse = 1;
+            setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
             socklen_t len = sizeof(addr);
             bind(listen_fd, (sockaddr *)&addr, sizeof(addr));
             listen(listen_fd, 1);
@@ -200,7 +212,8 @@ namespace rtltcp_test
             should_stop = true;
             if (th.joinable())
                 th.join();
-            close(listen_fd);
+            if (listen_fd >= 0)
+                close(listen_fd);
         }
 
         FakeRtlTcp(const FakeRtlTcp &) = delete;
