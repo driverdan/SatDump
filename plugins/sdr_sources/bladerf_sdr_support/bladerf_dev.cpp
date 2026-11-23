@@ -291,10 +291,6 @@ namespace satdump
                     continue;
                 }
 
-                // Get channel count
-                int rx_channel_cnt = bladerf_get_channel_count(bladerf_dev_obj, BLADERF_RX);
-                int tx_channel_cnt = bladerf_get_channel_count(bladerf_dev_obj, BLADERF_TX);
-
                 // Get the board version
                 int bladerf_model;
                 const char *bladerf_name = bladerf_get_board_name(bladerf_dev_obj);

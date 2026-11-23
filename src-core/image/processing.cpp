@@ -291,7 +291,7 @@ namespace satdump
             {
                 image::Image img2(img.depth(), img.height(), img.width(), img.channels());
 
-                size_t h = img.height(), w = img.width();
+                size_t h = img.height();
 
                 for (size_t x = 0; x < img.width(); x++)
                     for (size_t y = 0; y < img.height(); y++)
@@ -308,7 +308,7 @@ namespace satdump
             {
                 image::Image img2(img.depth(), img.height(), img.width(), img.channels());
 
-                size_t h = img.height(), w = img.width();
+                size_t w = img.width();
 
                 for (size_t x = 0; x < img.width(); x++)
                     for (size_t y = 0; y < img.height(); y++)

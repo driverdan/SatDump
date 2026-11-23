@@ -6,9 +6,6 @@ namespace satdump
 {
     class HardToSoftCmdHandler : public CmdHandler
     {
-    private:
-        int period;
-
     public:
         HardToSoftCmdHandler() : CmdHandler("hard2soft") {}
 

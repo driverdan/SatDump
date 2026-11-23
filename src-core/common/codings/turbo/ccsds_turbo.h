@@ -34,8 +34,6 @@ namespace codings
         class CCSDSTurbo
         {
         private:
-            int d_base;
-            int d_octets;
             turbo_rate_t d_code_type;
 
             float d_rate;

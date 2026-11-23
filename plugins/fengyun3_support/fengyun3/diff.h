@@ -11,8 +11,6 @@ namespace fengyun3
         char inBuf = 0;    // Counter used at the beggining
         uint8_t buffer[2]; // Smaller buffer for internal use
 
-        uint8_t mask[4] = {0b00000000, 0b11000000, 0b11110000, 0b11111100};
-
     public:
         void work(uint8_t *in, int len, uint8_t *out);
 

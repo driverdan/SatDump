@@ -11,7 +11,6 @@ namespace fengyun3
         {
         private:
             std::vector<uint16_t> channels[18];
-            unsigned short lineBuf[1000];
 
         public:
             MWTS3Reader();

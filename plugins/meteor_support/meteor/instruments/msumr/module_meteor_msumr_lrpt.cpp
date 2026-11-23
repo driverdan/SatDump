@@ -64,42 +64,35 @@ namespace meteor
             if (has_calib)
             {
                 product.set_calibration("meteor_msumr", calib_cfg);
-                int next_channel = 0;
                 if ((1 << 0) & lrpt_channels)
                 {
                     product.set_channel_unit(0, CALIBRATION_ID_REFLECTIVE_RADIANCE);
                     product.set_channel_wavenumber(0, msu_cfg["wavenumbers"][0].get<double>());
-                    next_channel++;
                 }
                 if ((1 << 1) & lrpt_channels)
                 {
                     product.set_channel_unit(1, CALIBRATION_ID_REFLECTIVE_RADIANCE);
                     product.set_channel_wavenumber(1, msu_cfg["wavenumbers"][1].get<double>());
-                    next_channel++;
                 }
                 if ((1 << 2) & lrpt_channels)
                 {
                     product.set_channel_unit(2, CALIBRATION_ID_REFLECTIVE_RADIANCE);
                     product.set_channel_wavenumber(2, msu_cfg["wavenumbers"][2].get<double>());
-                    next_channel++;
                 }
                 if ((1 << 3) & lrpt_channels)
                 {
                     product.set_channel_unit(3, CALIBRATION_ID_EMISSIVE_RADIANCE);
                     product.set_channel_wavenumber(3, msu_cfg["wavenumbers"][3].get<double>());
-                    next_channel++;
                 }
                 if ((1 << 4) & lrpt_channels)
                 {
                     product.set_channel_unit(4, CALIBRATION_ID_EMISSIVE_RADIANCE);
                     product.set_channel_wavenumber(4, msu_cfg["wavenumbers"][4].get<double>());
-                    next_channel++;
                 }
                 if ((1 << 5) & lrpt_channels)
                 {
                     product.set_channel_unit(5, CALIBRATION_ID_EMISSIVE_RADIANCE);
                     product.set_channel_wavenumber(5, msu_cfg["wavenumbers"][5].get<double>());
-                    next_channel++;
                 }
             }
             else

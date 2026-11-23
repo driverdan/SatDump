@@ -295,7 +295,6 @@ double AtmosphericGasesITU::get_attenuation()
     double attenuation;
     double rn = EARTH_RADIUS;
     double prev_alpha = 0;
-    double alpha_sum = 0;
 
     /**
      * Method is only valid for elevation angles above 1 degree
@@ -325,14 +324,6 @@ double AtmosphericGasesITU::get_attenuation()
         d_oxygen_pressure = get_pressure(delta_sum);
         d_water_pressure = get_water_vapour_pressure(delta_sum);
         prev_alpha = alpha(i, rn, delta, prev_alpha);
-        /**
-         * Ignore some NaN
-         * TODO: Investigate this issue
-         */
-        if (!std::isnan(prev_alpha))
-        {
-            alpha_sum += prev_alpha;
-        }
         attenuation = prev_alpha * gamma();
         if (!std::isnan(attenuation))
         {

@@ -121,7 +121,6 @@ namespace satdump
 
                 for (int i = 0; i < outputs.size(); i++)
                 {
-                    auto &io = *((IOInfo *)outputs[i].blkdata.get());
                     add_param_simple(p, "output_" + std::to_string(i) + "_freq", "freq");
                     add_param_simple(p, "output_" + std::to_string(i) + "_bw", "float");
                     add_param_simple(p, "output_" + std::to_string(i) + "_dec", "int");

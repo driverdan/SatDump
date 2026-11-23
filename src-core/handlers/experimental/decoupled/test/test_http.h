@@ -29,7 +29,6 @@ namespace satdump
 
             nng_http_server *http_server;
             nng_http_handler *handler_api;
-            nng_http_handler *handler_apiG;
             nng_http_handler *handler_apiP;
             nng_socket socket;
 

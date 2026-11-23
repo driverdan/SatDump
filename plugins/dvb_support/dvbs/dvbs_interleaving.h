@@ -17,7 +17,6 @@ namespace dvbs
         static const int d_NSYNC = 0xB8;
         static const int d_MUX_PKT = 8;
 
-        const int d_blocks = 136;
         const int d_I = 12;
         const int d_M = 17;
 

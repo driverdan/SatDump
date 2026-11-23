@@ -7,7 +7,6 @@ namespace satdump
     class Soft2HardTool : public BitViewTool
     {
     private:
-        int diff_mode = 0;
         bool bits_mode = false;
         bool should_process = false;
 

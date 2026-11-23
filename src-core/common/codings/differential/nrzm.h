@@ -15,7 +15,6 @@ namespace diff
     class NRZMDiff
     {
     private:
-        uint8_t mask;
         uint8_t lastBit = 0;
 
     public:

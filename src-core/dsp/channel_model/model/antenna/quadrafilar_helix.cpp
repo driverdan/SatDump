@@ -18,11 +18,7 @@ namespace antenna
 
     double QuadrifilarHelixAntenna::get_gain() { return 4; }
 
-    double QuadrifilarHelixAntenna::get_gain_rolloff()
-    {
-        double error_deg = d_pointing_error * RAD_TO_DEG;
-        return -1.5 * (-4 + 10 * std::log10(1.256 * (1 + std::cos(d_pointing_error))));
-    }
+    double QuadrifilarHelixAntenna::get_gain_rolloff() { return -1.5 * (-4 + 10 * std::log10(1.256 * (1 + std::cos(d_pointing_error)))); }
 
     double QuadrifilarHelixAntenna::get_beamwidth() { return 150; }
 } // namespace antenna

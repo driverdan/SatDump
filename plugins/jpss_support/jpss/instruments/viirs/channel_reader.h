@@ -42,13 +42,10 @@ namespace jpss
 
             void bit_slicer_detector(int &len, int fillsize)
             {
-                int bits = 0, bytes = 0;
+                int bytes = 0;
 
                 while (fillsize % 8 != 0)
-                {
-                    bits++;
                     fillsize--;
-                }
 
                 bytes = len - (fillsize / 8);
 

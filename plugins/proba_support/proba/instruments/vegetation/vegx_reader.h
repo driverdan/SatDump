@@ -22,11 +22,6 @@ namespace proba
             int seg_size_x;
             int seg_size_y;
 
-            uint16_t *tmp_words;
-
-            bool shouldStop = false;
-            bool done = false;
-
             image::Image decompressBPE(std::vector<uint8_t> &pkt);
 
         public:

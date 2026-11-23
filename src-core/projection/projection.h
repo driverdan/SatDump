@@ -55,8 +55,6 @@ namespace satdump
 
         private:
             nlohmann::json d_cfg;
-            bool fwd_valid = false;
-            bool rev_valid = false;
             proj_type_t fwd_type = PROJ_INVALID;
             proj_type_t inv_type = PROJ_INVALID;
 

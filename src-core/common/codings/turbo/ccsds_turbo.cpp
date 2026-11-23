@@ -7,8 +7,7 @@ namespace codings
 {
     namespace turbo
     {
-        CCSDSTurbo::CCSDSTurbo(turbo_base_t base, turbo_rate_t type)
-            : d_base(base), d_code_type(type)
+        CCSDSTurbo::CCSDSTurbo(turbo_base_t base, turbo_rate_t type) : d_code_type(type)
         {
             // d_pack = new blocks::kernel::pack_k_bits(8);
             d_info_length = base * 8;

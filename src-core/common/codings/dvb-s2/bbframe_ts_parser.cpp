@@ -102,8 +102,6 @@ namespace dvbs2
         int tei_p = 0;
         uint8_t tmp;
 
-        int errors = 0;
-
         int produced = 0;
 
         for (int currentBBIndex = 0; currentBBIndex < cnt; currentBBIndex++)
@@ -205,8 +203,6 @@ namespace dvbs2
 
                     if (tmp != crc)
                     {
-                        errors++;
-
                         if (spanning)
                             packet[1] |= TS_ERROR_INDICATOR;
                         else

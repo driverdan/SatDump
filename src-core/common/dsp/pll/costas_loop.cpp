@@ -3,7 +3,7 @@
 namespace dsp
 {
     CostasLoopBlock::CostasLoopBlock(std::shared_ptr<dsp::stream<complex_t>> input, float loop_bw, unsigned int order, float freq_limit)
-        : Block(input), order(order), loop_bw(loop_bw), freq_limit_min(-freq_limit), freq_limit_max(freq_limit)
+        : Block(input), order(order), freq_limit_min(-freq_limit), freq_limit_max(freq_limit)
     {
         float damping = sqrtf(2.0f) / 2.0f;
         float denom = (1.0 + 2.0 * damping * loop_bw + loop_bw * loop_bw);

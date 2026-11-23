@@ -43,7 +43,6 @@ namespace satdump
             // Add noise
             double noise_imp = 1;
             double noise_snr_linear = 1e3 * pow(10, noise_level / 10);
-            complex_t noise_target_level = complex_t(sqrt((noise_imp * noise_snr_linear) / 2));
 
             for (size_t i = 0; i < nsamples; i++)
             {

@@ -7,13 +7,8 @@
 
 namespace viterbi
 {
-    CCDecoder::CCDecoder(int frame_size, int k, int rate, std::vector<int> polys, int start_state, int end_state)
-        : d_k(k),
-          d_rate(rate),
-          d_polys(polys),
-          d_start_state_chaining(start_state),
-          d_start_state_nonchaining(start_state),
-          d_end_state_nonchaining(end_state)
+    CCDecoder::CCDecoder(int frame_size, int k, int rate, std::vector<int> polys, int start_state, int /* end_state: ignored, only chaining mode is implemented */)
+        : d_k(k), d_rate(rate), d_polys(polys), d_start_state_chaining(start_state)
     {
         // Set max frame size here; all buffers and settings will be
         // based on this value.

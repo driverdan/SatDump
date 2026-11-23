@@ -169,8 +169,6 @@ namespace sstv
 
         std::vector<uint32_t> procYUV2Y(YUV2YCfg &cfg, std::vector<float> &line)
         {
-            int line_length = line.size();
-
             // Y / UV lines
             auto l_y1 = getLine(line, cfg.color_offset_y1, cfg.color_time_y1, cfg.line_time, cfg.img_width);
             auto l_u = getLine(line, cfg.color_offset_u, cfg.color_time_u, cfg.line_time, cfg.img_width);
