@@ -4,7 +4,10 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
+#include <iterator>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -12,6 +15,7 @@
 #include <sstream>
 #include <typeindex>
 #include <memory>
+#include <utility>
 
 namespace codings
 {
