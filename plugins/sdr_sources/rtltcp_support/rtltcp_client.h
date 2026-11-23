@@ -188,19 +188,28 @@ public:
 #ifdef _WIN32
                 WSAPOLLFD p{sock, POLLRDNORM, 0};
                 int n = WSAPoll(&p, 1, RECEIVE_POLL_MS);
+                if (n == SOCKET_ERROR) {
+                    receive_error = "receive error " + std::to_string(WSAGetLastError());
+                    return false;
+                }
 #else
                 pollfd p{sockfd, POLLIN, 0};
                 int n = poll(&p, 1, RECEIVE_POLL_MS);
-                if (n < 0 && errno == EINTR) { continue; }
+                if (n < 0) {
+                    if (errno == EINTR) { continue; }
+                    receive_error = std::string("receive error: ") + strerror(errno);
+                    return false;
+                }
 #endif
                 if (n == 0) { continue; }
-                // On an error, the read below reports it
+                // On a socket error or hang-up, the read below reports it
             }
 #ifdef _WIN32
             ret = recv(sock, (char*)&buf[received], count - received, 0);
 #else
-            ret = read(sockfd, &buf[received], count - received);
-            if (ret < 0 && errno == EINTR) { continue; }
+            // With keep_going, never block here: poll() said readable, but do not rely on it
+            ret = keep_going ? recv(sockfd, &buf[received], count - received, MSG_DONTWAIT) : read(sockfd, &buf[received], count - received);
+            if (ret < 0 && (errno == EINTR || (keep_going && (errno == EAGAIN || errno == EWOULDBLOCK)))) { continue; }
 #endif
             if (ret == 0) {
                 receive_error = "the server closed the connection";
