@@ -22,12 +22,15 @@ namespace satdump
     /**
      * @brief Perform a HTTP Request on the
      * provided URL and return the result as
-     * a string.
+     * a string. Redirects are followed.
      *
      * @param url_str URL to use
-     * @param result HTTP response, as a string
+     * @param result HTTP response, as a string. The response
+     * is appended to it, also when the request fails
      * @param added_header optional additional headers
      * @param progress optional progress float pointer
+     * @return 0 on success, 1 if the request failed or
+     * the final HTTP status is 300 or above
      */
     int perform_http_request(std::string url, std::string &result, std::string added_header = "", float *progress = nullptr);
 

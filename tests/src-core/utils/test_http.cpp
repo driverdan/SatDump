@@ -1,8 +1,10 @@
 #include "helpers/sockets.h"
+#include "helpers/temp_files.h"
 #include "satdump_vars.h"
 #include "utils/http.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <curl/curl.h>
@@ -123,9 +125,10 @@ namespace
         int port = 0;
         std::string request;
 
-        OneShotHttpServer(const std::string &status, const std::string &body)
+        // headers are extra response header lines, each ending with \r\n
+        OneShotHttpServer(const std::string &status, const std::string &body, const std::string &headers = "")
         {
-            response = "HTTP/1.1 " + status + "\r\nContent-Type: text/plain\r\nContent-Length: " + std::to_string(body.size()) + "\r\nConnection: close\r\n\r\n" + body;
+            response = "HTTP/1.1 " + status + "\r\nContent-Type: text/plain\r\nContent-Length: " + std::to_string(body.size()) + "\r\n" + headers + "Connection: close\r\n\r\n" + body;
 
             listen_fd = socket(AF_INET, SOCK_STREAM, 0);
             if (listen_fd < 0)
@@ -223,14 +226,39 @@ TEST_CASE("perform_http_request appends to an existing result string", "[utils][
     CHECK(result == "previous;body");
 }
 
-TEST_CASE("perform_http_request does not treat HTTP error statuses as failures", "[utils][http]")
+TEST_CASE("perform_http_request fails on HTTP error statuses", "[utils][http]")
 {
-    // CURLOPT_FAILONERROR is not set, so a 404 still returns 0 along with the error page
+    // The error page is still appended to the result
     NoProxy np;
-    OneShotHttpServer server("404 Not Found", "nothing here");
+    std::string status = GENERATE(as<std::string>{}, "404 Not Found", "500 Internal Server Error");
+    OneShotHttpServer server(status, "nothing here");
     std::string result;
-    CHECK(satdump::perform_http_request(server.url("/missing"), result) == 0);
+    CHECK(satdump::perform_http_request(server.url("/missing"), result) == 1);
     CHECK(result == "nothing here");
+}
+
+TEST_CASE("perform_http_request follows redirects", "[utils][http]")
+{
+    // #75: the redirect page used to be returned as the document
+    NoProxy np;
+    OneShotHttpServer target("200 OK", "the document");
+    OneShotHttpServer redirect("301 Moved Permanently", "<html>Object Moved</html>", "Location: " + target.url("/moved/file.txt") + "\r\n");
+    std::string result;
+    int ret = satdump::perform_http_request(redirect.url("/file.txt"), result, "X-Unit-Test: yes");
+    redirect.finish();
+    target.finish();
+
+    CHECK(ret == 0);
+    CHECK(result == "the document");
+    CHECK(target.request.rfind("GET /moved/file.txt HTTP/1.1\r\n", 0) == 0);
+}
+
+TEST_CASE("perform_http_request fails on a redirect it cannot follow", "[utils][http]")
+{
+    NoProxy np;
+    OneShotHttpServer server("302 Found", "no location given");
+    std::string result;
+    CHECK(satdump::perform_http_request(server.url("/"), result) == 1);
 }
 
 TEST_CASE("perform_http_request fails on a refused connection", "[utils][http]")
@@ -241,6 +269,17 @@ TEST_CASE("perform_http_request fails on a refused connection", "[utils][http]")
     CHECK(result.empty());
 }
 
+#endif
+
+// file:// URLs are built from a POSIX path
+#ifndef _WIN32
+TEST_CASE("perform_http_request reads file URLs, which have no HTTP status", "[utils][http]")
+{
+    test_helpers::TempFile file("http_file_url.txt", "local content");
+    std::string result;
+    CHECK(satdump::perform_http_request("file://" + file.path.string(), result) == 0);
+    CHECK(result == "local content");
+}
 #endif
 
 TEST_CASE("perform_http_request fails on an unsupported URL scheme", "[utils][http]")

@@ -1,6 +1,8 @@
 #include "cli_test_helpers.h"
+#include "goes_support/goes/hrit/dcs/dcs_settings.h"
 #include "goes_support/goes/hrit/module_goes_lrit_data_decoder.h"
 #include "helpers/guards.h"
+#include "helpers/satdump_guards.h"
 #include "helpers/temp_files.h"
 #include "helpers/wait.h"
 #include "init.h"
@@ -124,6 +126,7 @@ namespace
     struct DCPLoader : goes::hrit::GOESLRITDataDecoderModule
     {
         static void load() { loadDCPs(); }
+        static void update() { updateDCPs({}); }
         static DCPList &list() { return dcp_list; }
         static std::mutex &mutex() { return dcp_mtx; }
     };
@@ -332,6 +335,100 @@ TEST_CASE("Bad PDT and HADS lines are skipped and leave the DCP list usable", "[
         f.load();
         CHECK(DCPLoader::list().size() == 1);
         CHECK(DCPLoader::list().count(0xABCDEF56) == 1);
+    }
+}
+
+// #75: the PDT servers answered with a redirect page, which was saved as the PDT file
+TEST_CASE("Downloaded PDT and HADS files are told apart from web pages", "[plugins][goes_support][goes_dcs]")
+{
+    const std::string spa_page = "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <title>NOAA DADDS</title>\n";
+
+    CHECK(goes::hrit::isPdtFile(pdtLine("ABCDEF12") + "\n" + pdtLine("ABCDEF34") + "\n"));
+    CHECK(goes::hrit::isPdtFile(pdtLine("abcdef12") + "\r\n"));
+    CHECK(goes::hrit::isPdtFile(pdtLine("ABCDEF12")));
+    CHECK_FALSE(goes::hrit::isPdtFile(REDIRECT_PAGE));
+    CHECK_FALSE(goes::hrit::isPdtFile(spa_page));
+    CHECK_FALSE(goes::hrit::isPdtFile(""));
+    CHECK_FALSE(goes::hrit::isPdtFile(pdtLine("ABCDEF12").substr(0, 42) + "\n" + pdtLine("ABCDEF34") + "\n"));
+    CHECK_FALSE(goes::hrit::isPdtFile(pdtLine("ABCDEFXY")));
+    CHECK_FALSE(goes::hrit::isPdtFile(hadsLine("ABCDEF12")));
+
+    CHECK(goes::hrit::isHadsFile(hadsLine("ABCDEF12") + "\n" + hadsLine("ABCDEF34") + "\n"));
+    CHECK(goes::hrit::isHadsFile(hadsLine("ABCDEF12") + "\r\n"));
+    CHECK_FALSE(goes::hrit::isHadsFile(REDIRECT_PAGE));
+    CHECK_FALSE(goes::hrit::isHadsFile(spa_page));
+    CHECK_FALSE(goes::hrit::isHadsFile(""));
+    CHECK_FALSE(goes::hrit::isHadsFile("ABCDEF34|TEST1|NWS| AK|AJK|58 22 53|-134 38 46|005200|60\n"));
+    CHECK_FALSE(goes::hrit::isHadsFile("ABCDEF3|" + hadsLine("ABCDEF34").substr(9)));
+    CHECK_FALSE(goes::hrit::isHadsFile(pdtLine("ABCDEF12")));
+}
+
+// updateDCPs() downloads the PDT and HADS files from the configured URLs, here file:// ones,
+// into satdump::user_path, then reloads the DCP list from them
+// (built from a POSIX path)
+#ifndef _WIN32
+TEST_CASE("updateDCPs() skips downloads that are not PDT or HADS files", "[plugins][goes_support][goes_dcs]")
+{
+    LoaderFixture f;
+    test_helpers::ConfigGuard cfg;
+    test_helpers::ValueGuard<std::string> user_cfg(satdump::satdump_cfg.user_cfg_path, f.tmp.file("settings.json"));
+    TempDir server{"goes_dcp_server"};
+    auto url = [&](const std::string &name) { return "file://" + server.file(name); };
+
+    test_helpers::writeFile(server.file("redirect.html"), REDIRECT_PAGE);
+    test_helpers::writeFile(server.file("pdts.txt"), pdtLine("ABCDEF12") + "\n");
+    test_helpers::writeFile(server.file("hads.txt"), hadsLine("ABCDEF34") + "\n");
+
+    auto &goes_cfg = satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"];
+    goes_cfg["last_pdt_update"] = 0;
+
+    SECTION("a web page, then a PDT file: the PDT file is saved")
+    {
+        goes_cfg["pdt_urls"] = {url("redirect.html"), url("missing.txt"), url("pdts.txt")};
+        goes_cfg["hads_urls"] = {url("redirect.html"), url("hads.txt")};
+        DCPLoader::update();
+
+        CHECK(readFile(f.tmp.file("PDTS_COMPRESSED.txt")) == pdtLine("ABCDEF12") + "\n");
+        CHECK(readFile(f.tmp.file("all_dcp_defs.txt")) == hadsLine("ABCDEF34") + "\n");
+        CHECK(f.log.contains("is not a PDT file"));
+        CHECK(f.log.contains("is not a HADS file"));
+        CHECK(goes_cfg["last_pdt_update"].get<time_t>() > 0);
+        CHECK(DCPLoader::list().size() == 2);
+    }
+
+    SECTION("only web pages: the saved files are kept, and the update is not recorded")
+    {
+        f.pdt(pdtLine("ABCDEF99") + "\n");
+        goes_cfg["pdt_urls"] = {url("redirect.html")};
+        goes_cfg["hads_urls"] = {url("redirect.html")};
+        DCPLoader::update();
+
+        CHECK(readFile(f.tmp.file("PDTS_COMPRESSED.txt")) == pdtLine("ABCDEF99") + "\n");
+        CHECK_FALSE(std::filesystem::exists(f.tmp.file("all_dcp_defs.txt")));
+        CHECK(f.log.contains("Unable to download PDTs"));
+        CHECK(f.log.contains("Unable to download HADS data"));
+        CHECK(goes_cfg["last_pdt_update"] == 0);
+    }
+}
+#endif
+
+TEST_CASE("The former default PDT URLs are replaced by the DADDS one", "[plugins][goes_support][goes_dcs]")
+{
+    const std::string dadds = "https://dadds-dcs-api.data.nesdis.noaa.gov/pdts/PDTS_COMPRESSED.txt";
+    const std::vector<std::string> old_defaults = {"https://dcs1.noaa.gov/PDTS_COMPRESSED.txt", "https://dcs2.noaa.gov/PDTS_COMPRESSED.txt", "https://dcs3.noaa.gov/PDTS_COMPRESSED.txt",
+                                                   "https://dcs4.noaa.gov/PDTS_COMPRESSED.txt"};
+
+    CHECK(goes::hrit::migratePdtUrls(old_defaults) == std::vector<std::string>{dadds});
+    CHECK(goes::hrit::migratePdtUrls({"https://example.com/pdts.txt", old_defaults[1], dadds}) == std::vector<std::string>{"https://example.com/pdts.txt", dadds});
+    CHECK(goes::hrit::migratePdtUrls({"https://example.com/pdts.txt"}) == std::vector<std::string>{"https://example.com/pdts.txt"});
+    CHECK(goes::hrit::migratePdtUrls({}).empty());
+
+    SECTION("in the user config, when the plugin starts")
+    {
+        test_helpers::ConfigGuard cfg;
+        satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"] = old_defaults;
+        goes::hrit::initDcsConfig();
+        CHECK(satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"] == nlohmann::ordered_json::array({dadds}));
     }
 }
 

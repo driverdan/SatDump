@@ -49,6 +49,7 @@ namespace satdump
             curl_easy_setopt(curl, CURLOPT_URL, url_str.c_str());
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_std_string);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 100);
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, CURL_TIMEOUT);
 
@@ -81,7 +82,16 @@ namespace satdump
                     logger->error("curl_easy_perform() failed: %s", curl_easy_strerror(res));
             }
             else
-                ret = 0;
+            {
+                // An error page, or a redirect that was not followed, is not the requested document.
+                // Protocols without a status (e.g. file://) report 0.
+                long response_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+                if (response_code >= 300)
+                    logger->error("HTTP request to %s failed with status %ld", url_str.c_str(), response_code);
+                else
+                    ret = 0;
+            }
 
             curl_easy_cleanup(curl);
 
