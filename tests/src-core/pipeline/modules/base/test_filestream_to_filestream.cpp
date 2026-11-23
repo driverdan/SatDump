@@ -27,9 +27,6 @@ namespace
             while (should_run())
             {
                 read_data(buf, 8);
-                // Inputs used here are multiples of 8 bytes: stop on the read that hit EOF
-                if (input_data_type == pl::DATA_FILE && !should_run())
-                    break;
                 if (input_data_type == pl::DATA_FILE && chunks == 0)
                     stats_mid = getModuleStats();
                 for (auto &b : buf)
@@ -102,10 +99,7 @@ TEST_CASE("FileStreamToFileStreamModule without output does not create a file", 
     CHECK_FALSE(std::filesystem::exists(tmp.file("result.bin")));
 }
 
-// Bug: filestream_to_filestream.cpp:53 : once the input is exhausted, the last read fails and
-// data_in.tellg() returns -1, which is stored in the unsigned `progress`, so the final stats
-// report an astronomically large percentage instead of 100%.
-TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a whole file", "[pipeline][modules][filestream_to_filestream][!shouldfail]")
+TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a whole file", "[pipeline][modules][filestream_to_filestream]")
 {
     TempDir tmp("pipe_fsfs");
     std::string input = tmp.file("in.raw");
@@ -118,6 +112,40 @@ TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a
     m.process();
 
     CHECK(m.stats()["progress"].get<double>() == Catch::Approx(100.0));
+}
+
+// Issue #220: after the last full read EOF was not yet set, so the loop ran once more, its read
+// came up empty and the last buffer was processed a second time.
+TEST_CASE("FileStreamToFileStreamModule processes the last buffer of a file only once", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "ABCDEFGH12345678");
+
+    XorModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+    m.process();
+
+    CHECK(m.chunks == 2);
+    CHECK(readFile(tmp.file("result.bin")) == xorString("ABCDEFGH12345678"));
+}
+
+TEST_CASE("FileStreamToFileStreamModule does not process anything from an empty file", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "");
+
+    XorModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+    m.process();
+
+    CHECK(m.chunks == 0);
+    CHECK(readFile(tmp.file("result.bin")) == "");
 }
 
 TEST_CASE("FileStreamToFileStreamModule streams FIFO input to FIFO output", "[pipeline][modules][filestream_to_filestream]")

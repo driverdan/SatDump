@@ -20,6 +20,7 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                 {
                     data_in = std::ifstream(d_input_file, std::ios::binary);
+                    data_in.peek(); // Sets EOF on an empty file, so should_run() is false from the start
                     logger->info("Using input file %s", d_input_file.c_str());
                 }
                 progress = 0;
@@ -50,7 +51,11 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                 {
                     data_in.read((char *)buffer, size);
-                    progress = data_in.tellg();
+                    progress += data_in.gcount();
+                    // Look ahead so EOF is set right after the last byte is read. Otherwise
+                    // should_run() stays true for one more loop, whose read comes up empty
+                    // and leaves the previous buffer to be processed a second time.
+                    data_in.peek();
                 }
                 else
                 {
