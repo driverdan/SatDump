@@ -88,20 +88,25 @@ namespace satdump
                 return result_img;
             }
 
+            // Projection::init() needs the source image size, so take it from the image itself
+            auto src_prj_cfg = image::get_metadata_proj_cfg(*op.img);
+            src_prj_cfg["width"] = op.img->width();
+            src_prj_cfg["height"] = op.img->height();
+
             // Attempt to init source proj
             Projection src_proj;
             //            proj::projection_t src_proj;
             bool src_proj_err = false;
             try
             {
-                src_proj = image::get_metadata_proj_cfg(*op.img);
+                src_proj = src_prj_cfg;
             }
             catch (std::exception &)
             {
                 src_proj_err = true;
             }
 
-            if (src_proj.getInvType() != Projection::PROJ_RAYTRACER && src_proj.init(true, false) && !src_proj_err)
+            if (!src_proj_err && src_proj.getInvType() != Projection::PROJ_RAYTRACER && src_proj.init(true, false))
             { // If the input is a standard projection
                 geodetic::geodetic_coords_t pos;
                 for (int x = 0; x < (int)result_img.width(); x++)
@@ -221,9 +226,7 @@ namespace satdump
                 }
                 else
                 {
-                    auto prj_cfg = image::get_metadata_proj_cfg(*op.img);
-                    prj_cfg["width"] = op.img->width();
-                    prj_cfg["height"] = op.img->height();
+                    auto &prj_cfg = src_prj_cfg;
                     warp::WarpOperation operation;
                     operation.ground_control_points = compute_gcps(prj_cfg);
                     operation.input_image = op.img;
