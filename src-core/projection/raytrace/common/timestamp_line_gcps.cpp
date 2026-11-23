@@ -91,17 +91,14 @@ namespace satdump
                 {
                     double x_total = 0;
                     double y_total = 0;
-                    double z_total = 0;
                     for (auto &g : s.g)
                     {
                         x_total += cos(g.lat * DEG_TO_RAD) * cos(g.lon * DEG_TO_RAD);
                         y_total += cos(g.lat * DEG_TO_RAD) * sin(g.lon * DEG_TO_RAD);
-                        z_total += sin(g.lat * DEG_TO_RAD);
                     }
 
                     x_total /= s.g.size();
                     y_total /= s.g.size();
-                    z_total /= s.g.size();
 
                     s.clon = atan2(y_total, x_total) * RAD_TO_DEG;
                 }

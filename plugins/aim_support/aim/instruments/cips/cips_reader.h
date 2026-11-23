@@ -52,8 +52,6 @@ namespace aim
             int img_width = 0;
             int img_height = 0;
 
-            int img_c = 0;
-
             void add_image()
             {
                 images.push_back(image::Image(16, img_width, img_height, 1));

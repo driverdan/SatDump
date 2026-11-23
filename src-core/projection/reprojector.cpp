@@ -108,7 +108,7 @@ namespace satdump
                 {
                     for (int y = 0; y < (int)result_img.height(); y++)
                     {
-                        double lon, lat, x2, y2;         // To allow OMP...
+                        double x2, y2;                   // To allow OMP...
                         if (trg_proj.inverse(x, y, pos)) //  proj::projection_perform_inv(&trg_proj, x, y, &lon, &lat))
                             continue;
                         if (src_proj.forward(pos, x2, y2)) // proj::projection_perform_fwd(&src_proj, lon, lat, &x2, &y2))
@@ -251,7 +251,7 @@ namespace satdump
                         {
                             for (int y = 0; y < (int)result_img.height(); y++)
                             {
-                                double lon, lat, x2, y2;         // To allow OMP...
+                                double x2, y2;                   // To allow OMP...
                                 if (trg_proj.inverse(x, y, pos)) // proj::projection_perform_inv(&trg_proj, x, y, &lon, &lat))
                                     continue;
                                 if (::proj::projection_perform_fwd(&src_proj, pos.lon, pos.lat, &x2, &y2))

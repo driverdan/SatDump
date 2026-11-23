@@ -108,8 +108,6 @@ namespace proba
                 gps_ascii_reader = std::make_unique<gps_ascii::GPSASCII>(d_output_file_hint.substr(0, d_output_file_hint.rfind('/')) + "/gps_logs.txt");
             }
 
-            int i = 0;
-
             // bool is_pv_x = true;
 
             vegetation::VegetationX vegx_reader1(352, 128, 15);

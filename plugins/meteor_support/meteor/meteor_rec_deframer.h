@@ -110,7 +110,6 @@ namespace meteor
         uint8_t *shift_buffer;
 
         bool synced = 0;
-        int runs_since_sync = 0;
         int skip_bits = 0;
 
         uint8_t sync_reg_1[2];
@@ -266,7 +265,6 @@ namespace meteor
         uint8_t *shift_buffer;
 
         bool synced = 0;
-        int runs_since_sync = 0;
 
         int skip_bits = 0;
 

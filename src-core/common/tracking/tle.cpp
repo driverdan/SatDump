@@ -278,7 +278,6 @@ namespace satdump
 
     std::vector<TLE> get_from_spacetrack_latest_list(std::vector<int> norad)
     {
-        time_t last_update = std::stoull(db->get_meta("tles_last_updated", "0"));
         std::string sc_login = satdump_cfg.getValueFromSatDumpGeneral<std::string>("tle_space_track_login");
         std::string sc_passw = satdump_cfg.getValueFromSatDumpGeneral<std::string>("tle_space_track_password");
 
@@ -351,7 +350,6 @@ namespace satdump
         // Parse the downloaded TLE
         try
         {
-            bool parsed = true;
             nlohmann::json res;
             try
             {
@@ -359,7 +357,6 @@ namespace satdump
             }
             catch (std::exception &)
             {
-                parsed = false;
             }
 
             std::vector<TLE> tles;

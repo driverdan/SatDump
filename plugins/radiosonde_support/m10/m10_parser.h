@@ -11,8 +11,6 @@ namespace satdump
         class M10ParserBlock : public Block
         {
         private:
-            uint8_t frame_shifter[204];
-
             std::string time;
             double lat, lon, alt;
 

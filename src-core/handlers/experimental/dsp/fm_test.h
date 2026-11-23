@@ -43,8 +43,6 @@ namespace satdump
             std::shared_ptr<ndsp::QuadratureDemodBlock> rx_quad;
             std::shared_ptr<ndsp::Block> rx_audio_sink;
 
-            bool is_txing = false;
-
         public:
             FMTestHandler();
             ~FMTestHandler();

@@ -31,8 +31,7 @@ namespace satdump
 
         auto callback = [&](std::string, uint8_t *data, int len)
         {
-            double time = *((double *)data);
-
+            // The first 8 bytes are a timestamp (double), the frame follows
             elektro_arktika::ggak::GGAKFrame *frm = ((elektro_arktika::ggak::GGAKFrame *)(data + 8));
 
             logger->trace("Input Frame No %d - %d", (int)frm->master_counter, (int)merger.getState());

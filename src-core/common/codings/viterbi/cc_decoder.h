@@ -46,10 +46,8 @@ namespace viterbi
         int d_decision_t_size;
         int *d_start_state;
         int d_start_state_chaining;
-        int d_start_state_nonchaining;
         int *d_end_state;
         int d_end_state_chaining;
-        int d_end_state_nonchaining;
         unsigned int d_veclen;
 
         int parity(int x);

@@ -212,7 +212,6 @@ namespace satdump
                      std::tm timeS;
                      memset(&timeS, 0, sizeof(std::tm));
                      uint32_t test1, test2;
-                     int day_repeat_cycle;
                      if (sscanf(f->name.c_str(), "W_NO-KSAT-Tromso,SAT,AWS%1d-MWR-1B-RAD_C_OHB__%4d%2d%2d%2d%2d%2d_G_O_%14u_%14u_C_N____.nc%n", &sat_num, &timeS.tm_year, &timeS.tm_mon, &timeS.tm_mday,
                                 &timeS.tm_hour, &timeS.tm_min, &timeS.tm_sec, &test1, &test2, &len) == 9 &&
                          len == f->name.size())

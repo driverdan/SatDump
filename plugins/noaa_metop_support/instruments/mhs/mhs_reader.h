@@ -47,7 +47,6 @@ namespace noaa_metop
             // std::ofstream deb_out;
 
             // NOAA specific stuff
-            unsigned int last = 0;
             std::array<uint8_t, 50> MIU_data[80];
             uint32_t major_cycle_count = 0;
             uint32_t last_major_cycle = 0;

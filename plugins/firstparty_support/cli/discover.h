@@ -6,9 +6,6 @@ namespace satdump
 {
     class DiscoverProductsCmdHandler : public CmdHandler
     {
-    private:
-        int period;
-
     public:
         DiscoverProductsCmdHandler() : CmdHandler("prodisc") {}
 

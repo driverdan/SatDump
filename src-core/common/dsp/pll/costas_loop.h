@@ -15,7 +15,6 @@ namespace dsp
         int order;
 
         float phase = 0, freq = 0;
-        float loop_bw;
         float alpha, beta;
 
         float freq_limit_min, freq_limit_max;

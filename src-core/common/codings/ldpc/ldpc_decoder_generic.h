@@ -53,7 +53,6 @@ namespace codings
             int16_t to_vn;
             int cn_deg;
             int cn_row_base; // offset to base of corresponding row in the PCM
-            int vn_offset;
             int cn_offset; // CN offset in the buffer holding CN to VN messages
         };
     }

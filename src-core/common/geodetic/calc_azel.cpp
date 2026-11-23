@@ -20,10 +20,6 @@ namespace geodetic
         double lat_obs = (M_PI / 180) * obs.lat;
         double lon_obs = (M_PI / 180) * obs.lon;
 
-        /* Add radius of earth to altitudes */
-        double r_ground = radius_e + ground_pos.alt;
-        double r_obs = radius_e + obs.alt;
-
         /* WGS 84 Geoid */
         double N = radius_e / sqrt(1 - pow(ecc, 2) * pow(sin(lat_ground), 2));
 

@@ -5,10 +5,4 @@ FreeSpacePathLossAttenuation::FreeSpacePathLossAttenuation() : GenericAttenuatio
 
 FreeSpacePathLossAttenuation::~FreeSpacePathLossAttenuation() {}
 
-double FreeSpacePathLossAttenuation::get_attenuation()
-{
-    double attenuation = 0;
-    double path_loss = 0;
-
-    return 92.45 + 20 * std::log10(slant_range * frequency);
-}
+double FreeSpacePathLossAttenuation::get_attenuation() { return 92.45 + 20 * std::log10(slant_range * frequency); }

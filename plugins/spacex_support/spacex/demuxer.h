@@ -21,7 +21,7 @@ namespace spacex
         void abortPacket();                                                                         // Abort this one!
         void readPacket(uint8_t *h);                                                                // Start a new packet
         void pushPayload(uint8_t *data, int length);                                                // Fill a packet up
-        int currentPacketPayloadLength, totalPacketLength, remainingPacketLength, currentPacketEnd; // Few utils variables
+        int currentPacketPayloadLength, totalPacketLength, remainingPacketLength;                   // Few utils variables
         bool workingOnPacket, inHeader;                                                             // Same
        // uint8_t headerBuffer[6];                                                                    // Buffer used to buffer a header overlaping 2 CADUs
        // int inHeaderBuffer;                                                                         // Used to fill it up properly

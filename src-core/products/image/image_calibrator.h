@@ -15,7 +15,6 @@ namespace satdump
             nlohmann::json d_cfg;
 
         private:
-            int depth_diff = 0;
             uint32_t val = 0;
 
         public:

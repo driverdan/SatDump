@@ -640,7 +640,7 @@ namespace inmarsat
                         int payload_length = descriptor.length - 2 - 8 - address_length;
                         int k = 8 + address_length;
                         data.clear();
-                        for (int i = 0; k < 8 + address_length + payload_length; i++)
+                        while (k < 8 + address_length + payload_length)
                         {
                             data.push_back(pkt[k]);
                             k++;
