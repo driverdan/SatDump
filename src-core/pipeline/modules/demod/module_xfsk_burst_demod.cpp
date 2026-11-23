@@ -98,7 +98,7 @@ namespace satdump
                 ////////////////////////////////////////////////////////////////
 
                 int dat_size = 0;
-                while (demod_should_run())
+                while (demod_should_run(rec->output_stream))
                 {
 #if 1
                     dat_size = rec->output_stream->read();

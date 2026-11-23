@@ -132,7 +132,7 @@ namespace generic_analog
         float *work_buffer_float = dsp::create_volk_buffer<float>(d_buffer_size);
 
         int dat_size = 0;
-        while (demod_should_run())
+        while (demod_should_run(agc->output_stream))
         {
             dat_size = agc->output_stream->read();
 

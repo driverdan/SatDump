@@ -145,3 +145,54 @@ TEST_CASE("Block chains pass data through every stage", "[common][dsp][block]")
     INFO("first mismatch at sample " << first);
     REQUIRE(mismatches == 0);
 }
+
+TEST_CASE("Block chains pass the end of the stream on after all the data", "[common][dsp][block]")
+{
+    auto input = std::make_shared<dsp::stream<float>>();
+    ScaleTestBlock a(input, 2.0f);
+    ScaleTestBlock b(a.output_stream, -3.0f);
+
+    std::vector<float> data(5000);
+    for (size_t i = 0; i < data.size(); i++)
+        data[i] = (float)(i % 17);
+
+    a.start();
+    b.start();
+
+    // Read by hand: the end of the stream is what tells everything came out
+    std::vector<float> out;
+    auto reader = std::async(std::launch::async,
+                             [&]()
+                             {
+                                 while (true)
+                                 {
+                                     int n = b.output_stream->read();
+                                     if (n < 0)
+                                         break;
+                                     out.insert(out.end(), b.output_stream->readBuf, b.output_stream->readBuf + n);
+                                     b.output_stream->flush();
+                                 }
+                             });
+
+    for (size_t pos = 0; pos < data.size(); pos += 512)
+    {
+        int n = (int)std::min<size_t>(512, data.size() - pos);
+        std::copy(data.begin() + pos, data.begin() + pos + n, input->writeBuf);
+        REQUIRE(input->swap(n));
+    }
+    input->setEOS();
+
+    bool ended = reader.wait_for(dsp_test::kTimeout) == std::future_status::ready;
+    a.stop();
+    b.stop();
+    if (!ended)
+        b.output_stream->stopReader();
+    reader.wait();
+
+    REQUIRE(ended);
+    CHECK(a.output_stream->isEOS());
+    CHECK(b.output_stream->isEOS());
+    REQUIRE(out.size() == data.size());
+    for (size_t i = 0; i < data.size(); i++)
+        REQUIRE(out[i] == -6.0f * data[i]);
+}

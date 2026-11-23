@@ -38,7 +38,10 @@ namespace dsp
         }
         else
         {
+            // Nothing more to read, so the thread can end instead of spinning until stop()
+            output_stream->setEOS();
             d_eof = true;
+            should_run = false;
         }
     }
 

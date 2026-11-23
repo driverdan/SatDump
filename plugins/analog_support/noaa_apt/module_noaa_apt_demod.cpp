@@ -88,7 +88,7 @@ namespace noaa_apt
         }
 
         int dat_size = 0;
-        while (demod_should_run())
+        while (demod_should_run(qua->output_stream))
         {
             dat_size = qua->output_stream->read();
 

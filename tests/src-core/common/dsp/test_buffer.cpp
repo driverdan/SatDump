@@ -136,6 +136,35 @@ TEST_CASE("stream stopWriter aborts a pending swap", "[common][dsp][buffer]")
     CHECK(s.swap(2) == true);
 }
 
+TEST_CASE("stream end of stream comes after the data swapped before it", "[common][dsp][buffer]")
+{
+    dsp::stream<float> s(8);
+    CHECK_FALSE(s.isEOS());
+
+    REQUIRE(s.swap(3));
+    s.setEOS();
+    CHECK_FALSE(s.isEOS()); // The last buffer was not read yet
+
+    REQUIRE(s.read() == 3);
+    CHECK_FALSE(s.isEOS());
+    s.flush();
+    CHECK(s.isEOS());
+
+    // There is nothing more: read returns at once instead of waiting
+    CHECK(s.read() == -1);
+}
+
+TEST_CASE("stream setEOS wakes a blocked reader", "[common][dsp][buffer]")
+{
+    dsp::stream<float> s(8);
+    auto reader = std::async(std::launch::async, [&]() { return s.read(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    s.setEOS();
+    REQUIRE(reader.wait_for(dsp_test::kTimeout) == std::future_status::ready);
+    CHECK(reader.get() == -1);
+    CHECK(s.isEOS());
+}
+
 TEST_CASE("stream transfers a long sequence between threads in order", "[common][dsp][buffer]")
 {
     auto s = std::make_shared<dsp::stream<int>>(1024);

@@ -80,14 +80,18 @@ namespace dsp
             return true;
         }
 
+        // Returns the number of samples ready in readBuf, or -1 once the reader was stopped or
+        // the end of the stream was reached (see setEOS())
         int read()
         {
-            // Wait for data to be ready or to be stopped
+            // Wait for data to be ready, the end of the stream or to be stopped
             std::unique_lock<std::mutex> lck(rdyMtx);
             rdyCV.wait(lck, [this]
-                       { return (dataReady || readerStop); });
+                       { return (dataReady || readerStop || eos); });
 
-            return (readerStop ? -1 : dataSize);
+            if (readerStop || !dataReady)
+                return -1;
+            return dataSize;
         }
 
         void flush()
@@ -131,6 +135,27 @@ namespace dsp
         }
 
         void clearReadStop() { readerStop = false; }
+
+        /*
+        Called by the writer once it has swapped its last buffer: there will be no more data.
+        The reader still gets everything swapped before, then read() returns -1.
+        */
+        void setEOS()
+        {
+            {
+                std::lock_guard<std::mutex> lck(rdyMtx);
+                eos = true;
+            }
+            rdyCV.notify_all();
+        }
+
+        // True once the writer called setEOS() and the reader has flushed the last buffer
+        bool isEOS()
+        {
+            std::lock_guard<std::mutex> lck(rdyMtx);
+            return eos && !dataReady;
+        }
+
         int getDataSize() { return dataSize; }
         bool getReady() { return dataReady; }
 
@@ -148,6 +173,7 @@ namespace dsp
 
         bool readerStop = false;
         bool writerStop = false;
+        bool eos = false;
 
         int dataSize = 0;
     };

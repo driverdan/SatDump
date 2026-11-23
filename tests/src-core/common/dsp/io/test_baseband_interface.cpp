@@ -174,6 +174,22 @@ TEST_CASE("BasebandReader should_repeat loops back to the start", "[common][dsp]
     rd.close();
 }
 
+TEST_CASE("BasebandReader returns how many samples a read at the end of the file got", "[common][dsp][baseband_reader]")
+{
+    dsp_test_io::TempPath tmp("rd_short");
+    std::vector<int16_t> data(2 * 100, 1000);
+    dsp_test_io::writeBytes(tmp.path(), data);
+
+    dsp::BasebandReader rd;
+    rd.set_file(tmp.path(), dsp::CS_16);
+    std::vector<complex_t> buf(64);
+    CHECK(rd.read_samples(buf.data(), 64) == 64);
+    CHECK(rd.read_samples(buf.data(), 64) == 36);
+    CHECK(rd.is_eof());
+    CHECK(rd.read_samples(buf.data(), 64) == 0);
+    rd.close();
+}
+
 TEST_CASE("BasebandReader is_eof is false when nothing is open", "[common][dsp][baseband_reader]")
 {
     dsp::BasebandReader rd;

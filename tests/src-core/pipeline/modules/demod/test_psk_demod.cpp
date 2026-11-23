@@ -13,8 +13,8 @@
 // it is set up like the "soft" step of the goes_hrit pipeline, on a 2.4 Msps baseband.
 //
 // Most tests run it the way a live pipeline does, on a DSP stream: everything sent then
-// comes out. From a file the demodulator stops as soon as the file is read, dropping what
-// its blocks still hold, so how much comes out depends on timing.
+// comes out. From a file, the demodulator runs until the end of the file has gone through
+// all of its blocks, so everything comes out as well.
 
 using namespace pipeline_test;
 using namespace test_helpers;
@@ -355,6 +355,10 @@ TEST_CASE("PSKDemodModule demodulates a baseband file", "[pipeline][modules][dem
     CAPTURE(res.offset, res.inverted, soft.size());
     CHECK(res.errors == 0);
 
+    // Up to the end of the file
+    CHECK(soft.size() > (size_t)symbols - 100);
+    CHECK(soft.size() < (size_t)symbols + 100);
+
     auto stats = m->getModuleStats();
     CHECK(stats["peak_snr"].get<float>() > 15.0f);
     CHECK(stats["progress"].is_number());
@@ -366,5 +370,47 @@ TEST_CASE("PSKDemodModule demodulates a baseband file", "[pipeline][modules][dem
         CHECK(std::filesystem::file_size(dump) > std::filesystem::file_size(input) / 4);
         // The last buffer of the file is recorded whole
         CHECK(std::filesystem::file_size(dump) <= std::filesystem::file_size(input) + 12000 * sizeof(complex_t));
+    }
+}
+
+TEST_CASE("PSKDemodModule demodulates a baseband file to its end", "[pipeline][modules][demod][psk_demod]")
+{
+    // A few buffers of the file source only, which is less than what the blocks of the
+    // demodulator hold: none of it came out when the demodulator stopped at the end of the file
+    DemodEnv env;
+    const int symbols = 20000;
+    auto sent = randomBits(symbols, 4);
+    std::string input = env.tmp.file("in.cf32");
+    auto params = hritParams(2.4e6);
+
+    SECTION("at 2.4 Msps") { writeBytes(input, modulate(sent, 2.4e6)); }
+
+    SECTION("at 6 Msps, resampled")
+    {
+        params["samplerate"] = 6e6;
+        writeBytes(input, modulate(sent, 6e6));
+    }
+
+    // The end used to depend on timing, so it is checked several times
+    for (int run = 0; run < 3; run++)
+    {
+        CAPTURE(run);
+        std::string output = env.tmp.file("out" + std::to_string(run));
+        auto m = pl::demod::PSKDemodModule::getInstance(input, output, params);
+        m->setInputType(pl::DATA_FILE);
+        m->setOutputType(pl::DATA_FILE);
+        m->init();
+        m->process();
+
+        auto soft = readBytes<int8_t>(m->getOutput());
+        CAPTURE(soft.size());
+        REQUIRE(soft.size() > (size_t)symbols - 100);
+        CHECK(soft.size() < (size_t)symbols + 100);
+
+        // The last symbols are demodulated too
+        auto res = match(soft, sent, soft.size() - 6000, 5000);
+        CAPTURE(res.offset, res.inverted);
+        CHECK(res.errors == 0);
+        CHECK(std::abs(res.offset) < 100);
     }
 }

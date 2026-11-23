@@ -99,10 +99,42 @@ TEST_CASE("FileSourceBlock converts cs16 files", "[common][dsp][file_source]")
     REQUIRE(mismatches == 0);
 }
 
-// Bug: baseband_interface.h:233 - BasebandReader::read_samples always returns buffer_size, even
-// when the read hit EOF short (or read nothing). FileSourceBlock then emits a whole extra buffer
-// of stale samples at the end of every file.
-TEST_CASE("FileSourceBlock outputs exactly the samples in the file", "[common][dsp][file_source][!shouldfail]")
+TEST_CASE("FileSourceBlock ends its output stream after the last buffer", "[common][dsp][file_source]")
+{
+    dsp_test_io::TempPath tmp("src_eos");
+    auto data = ramp(1000);
+    dsp_test_io::writeBytes(tmp.path(), data);
+
+    dsp::FileSourceBlock src(tmp.path(), dsp::CF_32, 256);
+    src.start();
+
+    // Read like the next block does, until the end of the stream
+    size_t got = 0;
+    auto reader = std::async(std::launch::async,
+                             [&]()
+                             {
+                                 int n;
+                                 while ((n = src.output_stream->read()) >= 0)
+                                 {
+                                     got += n;
+                                     src.output_stream->flush();
+                                 }
+                             });
+
+    bool ended = reader.wait_for(dsp_test::kTimeout) == std::future_status::ready;
+    if (!ended)
+        src.output_stream->stopReader();
+    reader.wait();
+    src.stop();
+
+    REQUIRE(ended);
+    CHECK(src.eof());
+    CHECK(src.output_stream->isEOS());
+    CHECK(got >= data.size());
+}
+
+// A short read at the end of the file gives fewer samples, not a whole buffer of stale ones
+TEST_CASE("FileSourceBlock outputs exactly the samples in the file", "[common][dsp][file_source]")
 {
     dsp_test_io::TempPath tmp("src_count");
     auto data = ramp(1000);
