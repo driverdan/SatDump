@@ -17,6 +17,12 @@
 #include <unistd.h>
 #endif
 
+#ifdef __linux__
+#include <memory>
+#include <sys/resource.h>
+#include <system_error>
+#endif
+
 // The only broker used here is a minimal fake on 127.0.0.1 run by the test itself. It answers the
 // CONNECT with a CONNACK, records everything the client sends, and can push packets to the client.
 // It uses POSIX sockets, so the tests needing it (or a closed port) are POSIX only.
@@ -195,10 +201,9 @@ TEST_CASE("MQTTClient connects, publishes, subscribes and receives over loopback
     }
 }
 
-// Bug: MQTTClient::~MQTTClient (mqtt_client.cpp:51-61) never closes sockfd, so every client leaks
-// its socket and the broker never sees the connection end. (Whether the queued DISCONNECT is sent
-// at all is also racy, as the refresher thread may stop before flushing it.)
-TEST_CASE("MQTTClient destructor closes the broker connection", "[utils][mqtt][!shouldfail]")
+// The destructor closes the socket. (Whether the queued DISCONNECT is sent at all is racy, as the
+// refresher thread may stop before flushing it, so only the end of the connection is checked.)
+TEST_CASE("MQTTClient destructor closes the broker connection", "[utils][mqtt]")
 {
     FakeBroker broker;
     {
@@ -206,5 +211,92 @@ TEST_CASE("MQTTClient destructor closes the broker connection", "[utils][mqtt][!
         REQUIRE(broker.waitFor(std::string("\x00\x04MQTT", 6)));
     }
     CHECK(broker.waitClosed(std::chrono::milliseconds(1000)));
+}
+
+// Issue #212: when the constructor throws after opening the socket, the destructor does not run,
+// so the constructor itself must close the socket (and free the buffers).
+TEST_CASE("MQTTClient closes the socket when the constructor throws", "[utils][mqtt]")
+{
+    FakeBroker broker;
+    // The TCP connection succeeds, but a 16-byte send buffer cannot hold the CONNECT packet
+    CHECK_THROWS_AS(satdump::MQTTClient("127.0.0.1", std::to_string(broker.port), 16), satdump::satdump_exception_t);
+    CHECK(broker.waitClosed(std::chrono::milliseconds(1000)));
+}
+
+TEST_CASE("MQTTClient closes the socket when the buffers cannot be allocated", "[utils][mqtt]")
+{
+    FakeBroker broker;
+    // A bufsize of -1 asks malloc for SIZE_MAX bytes, so both buffers are null and mqtt_init fails
+    CHECK_THROWS_AS(satdump::MQTTClient("127.0.0.1", std::to_string(broker.port), -1), satdump::satdump_exception_t);
+    CHECK(broker.waitClosed(std::chrono::milliseconds(1000)));
+}
+#endif
+
+#ifdef __linux__
+// The refresher thread is created last in the constructor. If that throws, the constructor must
+// still close the socket. Thread creation is made to fail by lowering RLIMIT_NPROC to 0 around
+// the constructor, which is restored before any check. The listening socket is a bare one (no
+// broker thread), as the kernel completes the TCP connection from the backlog without accept().
+TEST_CASE("MQTTClient closes the socket when the refresher thread cannot start", "[utils][mqtt]")
+{
+    int listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    REQUIRE(listen_fd >= 0);
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    socklen_t len = sizeof(addr);
+    REQUIRE(bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) == 0);
+    REQUIRE(listen(listen_fd, 1) == 0);
+    REQUIRE(getsockname(listen_fd, (sockaddr *)&addr, &len) == 0);
+    const std::string port = std::to_string(ntohs(addr.sin_port));
+
+    rlimit old_limit;
+    REQUIRE(getrlimit(RLIMIT_NPROC, &old_limit) == 0);
+    rlimit low_limit = old_limit;
+    low_limit.rlim_cur = 0;
+
+    bool threw = false;
+    std::unique_ptr<satdump::MQTTClient> unexpected;
+    if (setrlimit(RLIMIT_NPROC, &low_limit) == 0)
+    {
+        try
+        {
+            unexpected = std::make_unique<satdump::MQTTClient>("127.0.0.1", port, 1024);
+        }
+        catch (std::system_error &)
+        {
+            threw = true;
+        }
+        catch (...)
+        {
+            setrlimit(RLIMIT_NPROC, &old_limit);
+            close(listen_fd);
+            throw;
+        }
+        setrlimit(RLIMIT_NPROC, &old_limit);
+    }
+    else
+    {
+        close(listen_fd);
+        SKIP("setrlimit(RLIMIT_NPROC) failed");
+    }
+
+    if (!threw)
+    {
+        // Privileged users are exempt from RLIMIT_NPROC, so the thread may start anyway
+        unexpected.reset();
+        close(listen_fd);
+        SKIP("Thread creation did not fail under RLIMIT_NPROC = 0");
+    }
+
+    // The client never sent anything, so the first recv on the accepted side sees the close
+    int c = accept(listen_fd, nullptr, nullptr);
+    REQUIRE(c >= 0);
+    pollfd p{c, POLLIN, 0};
+    char buf[16];
+    bool closed = poll(&p, 1, 1000) > 0 && recv(c, buf, sizeof(buf), 0) == 0;
+    close(c);
+    close(listen_fd);
+    CHECK(closed);
 }
 #endif

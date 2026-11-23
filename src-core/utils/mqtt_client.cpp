@@ -34,7 +34,12 @@ namespace satdump
         // Setup client
         sendbuf = (uint8_t *)malloc(bufsize);
         recvbuf = (uint8_t *)malloc(bufsize);
-        mqtt_init(&client, sockfd, sendbuf, bufsize, recvbuf, bufsize, publish_callback);
+        if (mqtt_init(&client, sockfd, sendbuf, bufsize, recvbuf, bufsize, publish_callback) != MQTT_OK)
+        {
+            // The destructor does not run when the constructor throws
+            release();
+            throw satdump_exception("Failed to allocate MQTT buffers");
+        }
         client.publish_response_callback_state = this;
 
         // Send connection request to the broker.
@@ -42,10 +47,22 @@ namespace satdump
 
         // Check that we don't have any errors
         if (client.error != MQTT_OK)
-            throw satdump_exception("error: " + std::string(mqtt_error_str(client.error)));
+        {
+            std::string error = mqtt_error_str(client.error);
+            release();
+            throw satdump_exception("error: " + error);
+        }
 
-        // Start refresh thread
-        run_refresh_th = std::thread(client_refresher, &client);
+        // Start refresh thread (std::thread throws std::system_error if it cannot)
+        try
+        {
+            run_refresh_th = std::thread(client_refresher, &client);
+        }
+        catch (...)
+        {
+            release();
+            throw;
+        }
     }
 
     MQTTClient::~MQTTClient()
@@ -56,8 +73,25 @@ namespace satdump
         if (run_refresh_th.joinable())
             run_refresh_th.join();
 
+        release();
+    }
+
+    void MQTTClient::release()
+    {
         free(sendbuf);
         free(recvbuf);
+        sendbuf = nullptr;
+        recvbuf = nullptr;
+
+        if (sockfd != -1)
+        {
+#ifdef _WIN32
+            closesocket(sockfd);
+#else
+            close(sockfd);
+#endif
+            sockfd = -1;
+        }
     }
 
     void MQTTClient::publish(std::string topic, uint8_t *data, int len, uint8_t publish_flags)
