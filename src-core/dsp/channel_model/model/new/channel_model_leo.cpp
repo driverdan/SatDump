@@ -3,6 +3,7 @@
 #include "../attenuation/atmospheric_gases_regression.h"
 #include "../attenuation/free_space_path_loss.h"
 #include "common/geodetic/geodetic_coordinates.h"
+#include <stdexcept>
 
 ChannelModelLEO::ChannelModelLEO(bool uplink_mode,                                    //                   //
                                  impairment_enum_t fspl_attenuation_enum,             //
