@@ -66,12 +66,14 @@ double AtmosphericGasesITU::get_temperature(double alt)
      */
     else if (geopotential_alt > 71 && geopotential_alt <= 84.852)
     {
-        temperature = 270.65 - 2.8 * (geopotential_alt - 51);
+        temperature = 214.65 - 2.0 * (geopotential_alt - 71);
     }
     /**
      * Mesopause
+     * Above 84.852 km geopotential (86 km geometric), ITU-R P.835
+     * gives the profile against the geometric altitude
      */
-    else if (geopotential_alt > 86 && geopotential_alt <= 91)
+    else if (geopotential_alt > 84.852 && alt <= 91)
     {
         temperature = 186.8673;
     }
@@ -111,14 +113,14 @@ double AtmosphericGasesITU::get_pressure(double alt)
      */
     else if (geopotential_alt > 20 && geopotential_alt <= 32)
     {
-        pressure = 54.74980 * std::pow(216.65 / (216.65 + geopotential_alt - 20), -34.1632);
+        pressure = 54.74980 * std::pow(216.65 / (216.65 + geopotential_alt - 20), 34.1632);
     }
     /**
      * Stratosphere
      */
     else if (geopotential_alt > 32 && geopotential_alt <= 47)
     {
-        pressure = 8.680422 * std::pow(228.65 / (228.65 + 2.8 * (geopotential_alt - 32)), -34.1632 / 2.8);
+        pressure = 8.680422 * std::pow(228.65 / (228.65 + 2.8 * (geopotential_alt - 32)), 34.1632 / 2.8);
     }
     /**
      * Stratopause
@@ -143,10 +145,12 @@ double AtmosphericGasesITU::get_pressure(double alt)
     }
     /**
      * Mesopause
+     * Above 84.852 km geopotential (86 km geometric), ITU-R P.835
+     * gives the profile against the geometric altitude
      */
-    else if (geopotential_alt > 86)
+    else if (geopotential_alt > 84.852)
     {
-        pressure = std::exp(a0 + a1 * geopotential_alt + a2 * std::pow(geopotential_alt, 2) + a3 * std::pow(geopotential_alt, 3) + a4 * std::pow(geopotential_alt, 4));
+        pressure = std::exp(a0 + a1 * alt + a2 * std::pow(alt, 2) + a3 * std::pow(alt, 3) + a4 * std::pow(alt, 4));
     }
     return pressure;
 }
@@ -269,7 +273,7 @@ double AtmosphericGasesITU::alpha(size_t n, double rn, double delta, double prev
 
 double AtmosphericGasesITU::beta(size_t n, double rn, double delta, double prev_alpha)
 {
-    double delta_next = 0.0001 * std::exp(((n + 1) - 1) / 100);
+    double delta_next = 0.0001 * std::exp(((n + 1) - 1) / 100.0);
     double aangle;
     double bangle;
     if (n == 1)
