@@ -186,7 +186,30 @@ TEST_CASE("fazzt::FazztProcessor drops files older than MAX_TIME", "[common][mpe
     fazzt::FazztProcessor proc(PAYLOAD);
     proc.MAX_TIME = -1; // Everything counts as expired
 
-    proc.work(headFrame(1, "stale.bin", 1, 10));
-    proc.work(bodyFrame(1, 0, partData(0))); // Expiry check runs after this frame
+    proc.work(headFrame(1, "stale.bin", 1, 10)); // Expiry check runs after the first frame
+    proc.work(bodyFrame(1, 0, partData(0)));
     CHECK(proc.work(tailFrame(1)).empty());
+}
+
+TEST_CASE("fazzt::FazztProcessor checks for expired files once every 1000 frames", "[common][mpeg_ts][fazzt]")
+{
+    fazzt::FazztProcessor proc(PAYLOAD);
+    proc.MAX_TIME = -1; // Everything counts as expired
+
+    // Frame 0 runs the expiry check, frames 1 to 999 do not
+    proc.work(std::vector<uint8_t>(8, 0));
+    proc.work(headFrame(1, "fresh.bin", 1, 10));
+    proc.work(bodyFrame(1, 0, partData(0)));
+    auto files = proc.work(tailFrame(1));
+    REQUIRE(files.size() == 1);
+    CHECK(files[0].name == "fresh.bin");
+
+    // Frame 4 to 998, then a head at frame 999
+    for (int i = 4; i < 999; i++)
+        proc.work(std::vector<uint8_t>(8, 0));
+    proc.work(headFrame(2, "stale.bin", 1, 10));
+
+    // Frame 1000 runs the expiry check again and drops the file
+    proc.work(bodyFrame(2, 0, partData(0)));
+    CHECK(proc.work(tailFrame(2)).empty());
 }

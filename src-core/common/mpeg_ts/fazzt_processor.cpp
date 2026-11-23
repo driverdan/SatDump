@@ -54,6 +54,7 @@ namespace fazzt
                         files_in_progress[id].size = length;
                         files_in_progress[id].parts = parts;
                         files_in_progress[id].name = filename;
+                        files_in_progress[id].last_pkt_time = file.last_pkt_time;
                     }
                     else
                         files_in_progress.insert({id, file});
@@ -66,6 +67,7 @@ namespace fazzt
                 {
                     memcpy(&files_in_progress[id].data[part * PAYLOAD_SIZE], &fazzt_frame[16], std::min<int>(PAYLOAD_SIZE, fazzt_frame.size() - 16));
                     files_in_progress[id].has_parts[part] = true;
+                    files_in_progress[id].last_pkt_time = time(0);
                 }
             }
             else if (pkt_type == 0xFF && file_exists) // Tail
@@ -80,17 +82,16 @@ namespace fazzt
             }
         }
 
-        if (frame_cnt++ % 1000)
+        // Drop files that stopped receiving packets, checked once every 1000 frames
+        if (frame_cnt++ % 1000 == 0)
         {
             time_t ctime = time(0);
-        recheck:
-            for (auto &v : files_in_progress)
+            for (auto it = files_in_progress.begin(); it != files_in_progress.end();)
             {
-                if (ctime - v.second.last_pkt_time > MAX_TIME)
-                {
-                    files_in_progress.erase(v.first);
-                    goto recheck;
-                }
+                if (ctime - it->second.last_pkt_time > MAX_TIME)
+                    it = files_in_progress.erase(it);
+                else
+                    it++;
             }
         }
 
