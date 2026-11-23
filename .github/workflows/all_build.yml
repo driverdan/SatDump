@@ -1,6 +1,11 @@
 name: Build All
 
-on: [push]
+# Only master is built automatically (it updates the nightly release). Other
+# branches can be built from the Actions tab.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
