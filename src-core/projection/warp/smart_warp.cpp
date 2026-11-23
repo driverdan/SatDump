@@ -4,6 +4,8 @@
 #include "core/exception.h"
 #include "logger.h"
 #include "projection/utils/equirectangular.h"
+#include <utility>
+#include <vector>
 
 #define MAX_IMAGE_RAM_USAGE 4e9 // 4GB of RAM max
 #define SEGMENT_SIZE_KM 3000    // Average segment size to try and keep as max
@@ -149,6 +151,23 @@ namespace satdump
             return gcps;
         }
 
+        /*
+        Split [y_start, y_end] into consecutive ranges at each cut position:
+        [y_start, cut0], [cut0, cut1], ..., [cutN, y_end].
+        */
+        std::vector<std::pair<int, int>> splitRangeAtCuts(int y_start, int y_end, const std::vector<int> &cutPositions)
+        {
+            std::vector<std::pair<int, int>> ranges;
+            int start = y_start;
+            for (int cut : cutPositions)
+            {
+                ranges.push_back({start, cut});
+                start = cut;
+            }
+            ranges.push_back({start, y_end});
+            return ranges;
+        }
+
         std::vector<SegmentConfig> prepareSegmentsAndSplitCuts(double nsegs, WarpOperation &operation_t, double median_dist)
         {
             std::vector<SegmentConfig> segmentConfigs;
@@ -248,18 +267,10 @@ namespace satdump
                             .distance > (8 * median_dist))
                         cutPositions.push_back(gcps_curr[y + 1].y);
 
-                // Generate, handling cuts
-                if (cutPositions.size() > 0)
-                {
-                    generateSeg(y_start, cutPositions[0], true, false);
-                    for (size_t i = 1; i < cutPositions.size() - 1; i++)
-                        generateSeg(cutPositions[i], y_end, false, false);
-                    generateSeg(cutPositions[cutPositions.size() - 1], y_end, false, true);
-                }
-                else
-                {
-                    generateSeg(y_start, y_end, true, true);
-                }
+                // Generate, handling cuts. Only the outer edges of the segment overlap its neighbours
+                std::vector<std::pair<int, int>> ranges = splitRangeAtCuts(y_start, y_end, cutPositions);
+                for (size_t i = 0; i < ranges.size(); i++)
+                    generateSeg(ranges[i].first, ranges[i].second, i == 0, i == ranges.size() - 1);
             }
 
             return segmentConfigs;

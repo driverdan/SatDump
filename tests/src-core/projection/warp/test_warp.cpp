@@ -19,6 +19,7 @@ namespace satdump
         double lon_shift(double lon, double shift);
         void shift_latlon_by_lat(double *lat, double *lon, double shift);
         void computeGCPCenter(std::vector<satdump::projection::GCP> &gcps, double &lon, double &lat);
+        std::vector<std::pair<int, int>> splitRangeAtCuts(int y_start, int y_end, const std::vector<int> &cutPositions);
     } // namespace warp
 } // namespace satdump
 
@@ -252,6 +253,19 @@ TEST_CASE("ImageWarper output_rgba expands grayscale and sets alpha on covered p
     warper.update();
     auto res = warper.warp();
     checkWarpedGradient(res, 1, true);
+}
+
+TEST_CASE("smart_warp splitRangeAtCuts covers the range without gaps or overlaps", "[projection][warp][smart_warp]")
+{
+    using Ranges = std::vector<std::pair<int, int>>;
+    using satdump::warp::splitRangeAtCuts;
+
+    REQUIRE(splitRangeAtCuts(0, 100, {}) == Ranges{{0, 100}});
+    REQUIRE(splitRangeAtCuts(0, 100, {40}) == Ranges{{0, 40}, {40, 100}});
+    // Issue #216: the range between the first two cuts was missing,
+    // and middle ranges ran to y_end instead of the next cut
+    REQUIRE(splitRangeAtCuts(0, 100, {30, 60}) == Ranges{{0, 30}, {30, 60}, {60, 100}});
+    REQUIRE(splitRangeAtCuts(10, 100, {20, 50, 70}) == Ranges{{10, 20}, {20, 50}, {50, 70}, {70, 100}});
 }
 
 TEST_CASE("performSmartWarp matches the single-segment ImageWarper result", "[projection][warp][smart_warp]")
