@@ -2,9 +2,9 @@
 #include "common/dsp/io/baseband_interface.h"
 #include "common/dsp/io/file_sink.h"
 #include "common/dsp/io/io_test_helpers.h"
+#include <atomic>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <atomic>
 #include <cstring>
 #include <thread>
 
@@ -164,24 +164,25 @@ TEST_CASE("FileSinkBlock finishes the WAV header while samples are being written
             }
         });
 
-    int bad = 0;
-    for (int i = 0; i < 200 && bad == 0; i++)
+    // The first bad recording, checked once the feeder is stopped
+    std::string bad;
+    for (int i = 0; i < 200 && bad.empty(); i++)
     {
         std::string path = sink.start_recording(tmp.path(), 12000);
         sink.stop_recording();
 
         auto b = dsp_test_io::readBytes(path);
-        INFO("recording " << i << ", " << b.size() << " bytes");
-        if (b.size() < 44 || memcmp(&b[0], "RIFF", 4) != 0 || readLE<uint32_t>(b, 24) != 12000 || readLE<uint32_t>(b, 40) != b.size() - 44 ||
-            readLE<uint32_t>(b, 4) != b.size() - 8)
-            bad++;
-        CHECK(bad == 0);
+        if (b.size() < 44 || memcmp(&b[0], "RIFF", 4) != 0 || readLE<uint32_t>(b, 24) != 12000 || readLE<uint32_t>(b, 40) != b.size() - 44 || readLE<uint32_t>(b, 4) != b.size() - 8)
+            bad = "recording " + std::to_string(i) + ", " + std::to_string(b.size()) + " bytes, samplerate " + (b.size() >= 44 ? std::to_string(readLE<uint32_t>(b, 24)) : "missing");
     }
 
     feeding = false;
     input->stopWriter();
     feeder.join();
     sink.stop();
+
+    INFO(bad);
+    CHECK(bad.empty());
 }
 
 TEST_CASE("FileSinkBlock ignores samples when not recording", "[common][dsp][file_sink]")
