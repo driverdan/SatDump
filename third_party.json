@@ -1479,6 +1479,73 @@
       "notes": "Found in the sweep."
     },
     {
+      "id": "soho-recon",
+      "name": "NRL SOHO LASCO/EIT reconstruction software (RECON.C)",
+      "paths": [
+        "plugins/stereo_support/stereo/instruments/secchi/rice_decomp.cpp",
+        "plugins/stereo_support/stereo/instruments/secchi/rice_decomp.h"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded. Header: MODULE NAME RECON.C, \"Reconstruction (De-Compression) Software for SOHO LASCO/EIT\", Mitchell R Grunes (ATSC/NRL) and Karl Hoppel (NRL), dated 07/11/96. rice_decomp.h says it is a port of SOHO's ricerecon64 that works from memory and does not leak on errors.",
+      "license": "unknown",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Ported by SatDump to decode from memory and to clean up on errors (see rice_decomp.h)."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Used for STEREO SECCHI image decompression. No license notice in the files and no public upstream location found; the original was NRL ground software for SOHO (1996). Found in the third PR #330 review."
+    },
+    {
+      "id": "libsathelper-differential",
+      "name": "SatHelper differential decoders (NRZ-M, NRZ-S)",
+      "paths": [
+        "src-core/common/codings/differential/nrzm.cpp",
+        "src-core/common/codings/differential/nrzm.h",
+        "src-core/common/codings/differential/nrzs.cpp",
+        "src-core/common/codings/differential/nrzs.h"
+      ],
+      "upstream_url": "https://github.com/opensatelliteproject/libsathelper",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. The headers say \"DifferentialDecoder ... Created on: 25/01/2017, Author: Lucas Teske, Modified by Aang23\"; upstream's file is src/differentialencoding.cpp.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "adapted",
+        "details": "\"Modified by Aang23\" (per the headers); not itemized."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Upstream inactive since 2020. src-core/common/codings/randomization.h (\"CCSDS Derandomizer, adapted from SatHelper\") and src-core/common/codings/reedsolomon/reedsolomon.h (\"based on SatHelper's implementation\") are smaller adaptations and are not listed. Found in the third PR #330 review."
+    },
+    {
+      "id": "labrador-ldpc",
+      "name": "labrador-ldpc (C++ port)",
+      "paths": [
+        "src-core/common/codings/ldpc/labrador"
+      ],
+      "upstream_url": "https://github.com/adamgreig/labrador-ldpc",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "Not recorded. The code is a C++ translation of upstream's Rust src/decoder.rs, src/encoder.rs and src/codes/{compact_generators,compact_parity_checks}.rs (same structure and names, e.g. decode_ms, decode_ms_working_u8_len, and upstream's comments such as \"Rename working_u8 to ui_sgns.\" and the commented-out assert_eq! lines). Added to SatDump in 06f20e557 (2025-09-13); upstream's last commit is 61be8c07 (2024-02-22, latest tag v1.2.1), so it was probably ported from that, but this is not confirmed.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Rust translated to C++ (decoder templated on the LLR type); merge upstream fixes by hand."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Found in the third PR #330 review."
+    },
+    {
       "id": "gnuradio-viterbi-k7",
       "name": "GNU Radio volk_k7_r2 generic Viterbi kernel",
       "paths": [
