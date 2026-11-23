@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <string.h>
+#include <string>
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -13,6 +15,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <errno.h>
+#endif
+
+// The commands are sent with send() and MSG_NOSIGNAL, so that writing to a connection the
+// server closed returns an error instead of raising SIGPIPE, which would end the program.
+// macOS has no MSG_NOSIGNAL, SO_NOSIGPIPE is set on the socket there instead.
+#if !defined(_WIN32) && !defined(MSG_NOSIGNAL)
+#define MSG_NOSIGNAL 0
 #endif
 
 #ifdef _WIN32
@@ -97,6 +107,10 @@ public:
             // TODO: log error
             return false;
         }
+#ifdef SO_NOSIGPIPE
+        int no_sigpipe = 1;
+        setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
+#endif
 #endif
 
         connected = true;
@@ -131,11 +145,13 @@ public:
 #ifdef _WIN32
         send(sock, (char*)&cmd, sizeof(command_t), 0);
 #else
-        (void)write(sockfd, &cmd, sizeof(command_t));
+        (void)send(sockfd, &cmd, sizeof(command_t), MSG_NOSIGNAL);
 #endif
     }
 
-    void receiveData(uint8_t* buf, size_t count) {
+    // Fills buf with count bytes. Returns false if the server closed the connection or on a
+    // read error, receiveError() then says which. The bytes received before are lost.
+    bool receiveData(uint8_t* buf, size_t count) {
         int received = 0;
         int ret = 0;
         while (received < (int)count) {
@@ -143,10 +159,28 @@ public:
             ret = recv(sock, (char*)&buf[received], count - received, 0);
 #else
             ret = read(sockfd, &buf[received], count - received);
+            if (ret < 0 && errno == EINTR) { continue; }
 #endif
-            if (ret <= 0) { return; }
+            if (ret == 0) {
+                receive_error = "the server closed the connection";
+                return false;
+            }
+            if (ret < 0) {
+#ifdef _WIN32
+                receive_error = "receive error " + std::to_string(WSAGetLastError());
+#else
+                receive_error = std::string("receive error: ") + strerror(errno);
+#endif
+                return false;
+            }
             received += ret;
         }
+        return true;
+    }
+
+    // Why the last call to receiveData() failed
+    std::string receiveError() {
+        return receive_error;
     }
 
     void setFrequency(double freq) {
@@ -197,4 +231,5 @@ private:
 #endif
 
     bool connected = false;
+    std::string receive_error;
 };

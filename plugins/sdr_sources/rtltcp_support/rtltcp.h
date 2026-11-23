@@ -37,7 +37,15 @@ protected:
         uint8_t in_buf[8192];
         while (thread_should_run)
         {
-            client.receiveData(in_buf, 8192);
+            // Once the connection is lost, nothing more is output: the stream stays idle until
+            // the source is stopped (and started again, which connects again)
+            if (!client.receiveData(in_buf, 8192))
+            {
+                if (thread_should_run)
+                    logger->error("RTL-TCP connection lost (%s), no more samples will be received. Stop and start the source to connect again.", client.receiveError().c_str());
+                break;
+            }
+
             for (int i = 0; i < (int)8192 / 2; i++)
                 output_stream->writeBuf[i] = complex_t((in_buf[i * 2 + 0] - 127.4f) / 128.0f, (in_buf[i * 2 + 1] - 127.4f) / 128.0f);
             output_stream->swap(8192 / 2);
