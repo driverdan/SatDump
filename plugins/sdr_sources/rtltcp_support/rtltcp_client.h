@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <string>
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <mutex>
@@ -117,18 +118,53 @@ public:
             return false;
         }
 
-        // timeout_ms covers all the attempts, not each one
+        bool ok = connectToAddresses(result, keep_going, timeout_ms);
+        freeaddrinfo(result);
+        return ok;
+#endif
+
+#ifdef _WIN32
+        {
+            std::lock_guard<std::mutex> lock(send_mtx);
+            connected = true;
+        }
+
+        return true;
+#endif
+    }
+
+#ifndef _WIN32
+    // Tries each address of the list in turn, as connectToRTL() does with those of the host.
+    // timeout_ms covers all the attempts: each one is given an equal share of the time left, so
+    // that an address that does not answer leaves time for the next ones. Public for the tests.
+    bool connectToAddresses(const struct addrinfo* list, std::function<bool()> keep_going = nullptr, int timeout_ms = 0) {
+        if (connected) {
+            return true;
+        }
+        connect_error.clear();
+
+        int addresses_left = 0;
+        for (const struct addrinfo* ai = list; ai != NULL; ai = ai->ai_next) {
+            addresses_left++;
+        }
+        if (addresses_left == 0) {
+            connect_error = "no address to connect to";
+            return false;
+        }
+
         auto start = std::chrono::steady_clock::now();
         bool ok = false;
-        for (struct addrinfo* ai = result; ai != NULL; ai = ai->ai_next) {
+        for (const struct addrinfo* ai = list; ai != NULL; ai = ai->ai_next, addresses_left--) {
             int attempt_timeout_ms = timeout_ms;
             if (timeout_ms > 0) {
                 int elapsed_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
                 if (elapsed_ms >= timeout_ms) {
-                    connect_error = "timed out";
+                    // Keeps why the previous address failed
+                    connect_error = connect_error.empty() ? "timed out" : connect_error + ", then timed out";
                     break;
                 }
-                attempt_timeout_ms = timeout_ms - elapsed_ms;
+                // At least 1 ms, as 0 means no timeout
+                attempt_timeout_ms = (std::max)(1, (timeout_ms - elapsed_ms) / addresses_left);
             }
 
             sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
@@ -145,14 +181,13 @@ public:
                 break; // Cancelled, the other addresses are not tried
             }
         }
-        freeaddrinfo(result);
         if (!ok) {
             return false;
         }
+        connect_error.clear(); // Not the error of an address tried before
 #ifdef SO_NOSIGPIPE
         int no_sigpipe = 1;
         setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-#endif
 #endif
 
         {
@@ -162,6 +197,7 @@ public:
 
         return true;
     }
+#endif
 
     void disconnect() {
         std::lock_guard<std::mutex> lock(send_mtx);

@@ -69,6 +69,7 @@ namespace
     {
     private:
         int listen_fd = -1, filler = -1;
+        int listen_port;
         bool is_ready = false;
         bool does_hang = false;
 
@@ -91,7 +92,7 @@ namespace
         }
 
     public:
-        explicit Blackhole(int port)
+        explicit Blackhole(int port) : listen_port(port)
         {
             sockaddr_in addr = loopback(port);
             listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -125,6 +126,7 @@ namespace
 
         bool ready() const { return is_ready; }
         bool hangs() const { return does_hang; }
+        int port() const { return listen_port; }
     };
 
     // Whether host resolves to at least one address of family (AF_INET or AF_INET6)
@@ -139,6 +141,34 @@ namespace
         freeaddrinfo(result);
         return true;
     }
+
+    // A list of 127.0.0.1 addresses with these ports, as getaddrinfo() gives them, to try
+    // several addresses one after the other without depending on the resolver
+    struct AddressList
+    {
+        std::vector<sockaddr_in> addrs;
+        std::vector<addrinfo> infos;
+
+        explicit AddressList(const std::vector<int> &ports) : addrs(ports.size()), infos(ports.size())
+        {
+            for (size_t i = 0; i < ports.size(); i++)
+            {
+                addrs[i] = {};
+                addrs[i].sin_family = AF_INET;
+                addrs[i].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+                addrs[i].sin_port = htons(ports[i]);
+                infos[i] = {};
+                infos[i].ai_family = AF_INET;
+                infos[i].ai_socktype = SOCK_STREAM;
+                infos[i].ai_protocol = IPPROTO_TCP;
+                infos[i].ai_addr = (sockaddr *)&addrs[i];
+                infos[i].ai_addrlen = sizeof(sockaddr_in);
+                infos[i].ai_next = i + 1 < ports.size() ? &infos[i + 1] : nullptr;
+            }
+        }
+
+        const addrinfo *get() const { return infos.data(); }
+    };
 
     double secondsSince(std::chrono::steady_clock::time_point t) { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); }
 
@@ -436,6 +466,56 @@ TEST_CASE("RTLTCPSource tries every address of a host name", "[plugins][sdr_sour
     REQUIRE(client.connectToRTL((char *)"localhost", server2.port(), []() { return true; }, 2000));
     CHECK(client.setFrequency(137100000));
     CHECK(server2.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+    client.disconnect();
+}
+
+// With a timeout, each address gets a share of the time left: one that does not answer (an
+// AAAA record behind a firewall that drops packets) used to take all of it, so the next ones
+// were never tried when reconnecting
+TEST_CASE("RTLTCPClient tries the next addresses when one does not answer", "[plugins][sdr_sources][rtltcp]")
+{
+    Blackhole hole1(test_helpers::closedPort());
+    Blackhole hole2(test_helpers::closedPort());
+    if (!hole1.hangs() || !hole2.hangs())
+        SKIP("connecting to a full listening queue does not hang here");
+
+    SECTION("two addresses that do not answer, then one that does")
+    {
+        FakeRtlTcp server;
+        AddressList list({hole1.port(), hole2.port(), server.port()});
+        RTLTCPClient client;
+        auto t = std::chrono::steady_clock::now();
+        REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 1500));
+        double elapsed = secondsSince(t);
+        CHECK(elapsed < 1.5);
+        CHECK(elapsed > 0.6); // The two first attempts did time out
+        CHECK(client.connectError().empty());
+        CHECK(client.setFrequency(137100000));
+        CHECK(server.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+        client.disconnect();
+    }
+
+    SECTION("the timeout covers all the attempts")
+    {
+        AddressList list({hole1.port(), hole2.port(), hole1.port()});
+        RTLTCPClient client;
+        auto t = std::chrono::steady_clock::now();
+        CHECK_FALSE(client.connectToAddresses(list.get(), []() { return true; }, 600));
+        CHECK(secondsSince(t) < 1.0);
+        CHECK(client.connectError().find("timed out") != std::string::npos);
+    }
+}
+
+TEST_CASE("RTLTCPClient connectError is cleared once an address connects", "[plugins][sdr_sources][rtltcp]")
+{
+    FakeRtlTcp server;
+    AddressList list({test_helpers::closedPort(), server.port()});
+    RTLTCPClient client;
+
+    SECTION("blocking") { REQUIRE(client.connectToAddresses(list.get())); }
+    SECTION("with a timeout") { REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 2000)); }
+
+    CHECK(client.connectError().empty());
     client.disconnect();
 }
 

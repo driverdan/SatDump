@@ -221,6 +221,8 @@ namespace rtltcp_test
             if (len == 0)
                 throw std::runtime_error("FakeRtlTcp: not a numeric address: " + address);
             listen_fd = socket(addr.ss_family, SOCK_STREAM, 0);
+            if (listen_fd < 0)
+                throw std::runtime_error("FakeRtlTcp: cannot create a socket for " + address + ": " + strerror(errno));
             int reuse = 1;
             setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
             if (addr.ss_family == AF_INET6)
@@ -229,11 +231,10 @@ namespace rtltcp_test
                 int v6only = 1;
                 setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only));
             }
-            if (listen_fd < 0 || bind(listen_fd, (sockaddr *)&addr, len) < 0)
+            if (bind(listen_fd, (sockaddr *)&addr, len) < 0)
             {
                 std::string err = strerror(errno);
-                if (listen_fd >= 0)
-                    close(listen_fd);
+                close(listen_fd);
                 throw std::runtime_error("FakeRtlTcp: cannot bind " + address + " port " + std::to_string(port) + ": " + err);
             }
             listen(listen_fd, 1);
