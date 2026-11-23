@@ -1,8 +1,3 @@
-// general_utils.h is not self-contained (uses std::setw/std::stringstream without including them),
-// so these have to come first. They are in their own block to keep clang-format from moving them.
-#include <iomanip>
-#include <sstream>
-
 #include "common/codings/ldpc/matrix/general_utils.h"
 #include <catch2/catch_test_macros.hpp>
 #include <stdexcept>
