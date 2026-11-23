@@ -173,10 +173,29 @@ public:
 
     // Fills buf with count bytes. Returns false if the server closed the connection or on a
     // read error, receiveError() then says which. The bytes received before are lost.
-    bool receiveData(uint8_t* buf, size_t count) {
+    // With keep_going, the data is waited for RECEIVE_POLL_MS at a time, and the wait given
+    // up once keep_going() returns false: a server that stops sending without closing the
+    // connection does not block the caller forever.
+    bool receiveData(uint8_t* buf, size_t count, std::function<bool()> keep_going = nullptr) {
         int received = 0;
         int ret = 0;
         while (received < (int)count) {
+            if (keep_going) {
+                if (!keep_going()) {
+                    receive_error = "cancelled";
+                    return false;
+                }
+#ifdef _WIN32
+                WSAPOLLFD p{sock, POLLRDNORM, 0};
+                int n = WSAPoll(&p, 1, RECEIVE_POLL_MS);
+#else
+                pollfd p{sockfd, POLLIN, 0};
+                int n = poll(&p, 1, RECEIVE_POLL_MS);
+                if (n < 0 && errno == EINTR) { continue; }
+#endif
+                if (n == 0) { continue; }
+                // On an error, the read below reports it
+            }
 #ifdef _WIN32
             ret = recv(sock, (char*)&buf[received], count - received, 0);
 #else
@@ -304,6 +323,8 @@ private:
         return true;
     }
 #endif
+
+    static const int RECEIVE_POLL_MS = 50;
 
 #ifdef _WIN32
     SOCKET sock;

@@ -57,6 +57,7 @@ namespace rtltcp_test
         Silence, // Sends silence for as long as the client stays connected, as a dongle does
         Close,   // Closes the connection, as rtl_tcp does when it exits
         Reset,   // Resets the connection, the client gets a read error
+        Stall,   // Sends nothing more but keeps the connection open, as when the network drops
     };
 
     // A rtl_tcp server on a free 127.0.0.1 port, for one client. It sends the dongle
@@ -113,7 +114,7 @@ namespace rtltcp_test
                 // Once `iq` was sent, the commands the client sends at start are read before the
                 // connection is ended: unread data would turn the close into a reset
                 bool iq_done = after_iq != AfterIQ::Silence && pos >= data.size();
-                if (iq_done && std::chrono::steady_clock::now() - last_input >= std::chrono::milliseconds(100))
+                if (iq_done && after_iq != AfterIQ::Stall && std::chrono::steady_clock::now() - last_input >= std::chrono::milliseconds(100))
                 {
                     if (after_iq == AfterIQ::Reset)
                     {
@@ -174,7 +175,7 @@ namespace rtltcp_test
             close(fd);
 
             // As rtl_tcp exiting, the port is closed too: connecting again is refused
-            if (after_iq != AfterIQ::Silence)
+            if (after_iq == AfterIQ::Close || after_iq == AfterIQ::Reset)
             {
                 close(listen_fd);
                 listen_fd = -1;

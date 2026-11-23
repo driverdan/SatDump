@@ -11,6 +11,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <ctime>
 #include <fcntl.h>
+#include <future>
 #include <memory>
 
 // The RTL-TCP source is run against a rtl_tcp server made by the test, which records the
@@ -525,6 +526,39 @@ TEST_CASE("RTLTCPSource stop turns the bias tee off and disconnects", "[plugins]
     CHECK_NOTHROW(source->stop());
     source.reset();
     CHECK(server.commands().size() == 8);
+}
+
+// stop() used to wait for the worker thread while it was blocked reading samples that never
+// came, as when the network drops without the connection being closed: satdump could not be
+// stopped, CTRL+C hung
+TEST_CASE("RTLTCPSource stop does not hang when the server stops sending", "[plugins][sdr_sources][rtltcp]")
+{
+    std::vector<uint8_t> iq(8192 * 2, 100); // Two whole buffers of the source
+    auto server = std::make_unique<FakeRtlTcp>(iq, false, 0, AfterIQ::Stall);
+    auto source = makeSource(*server, {{"bias", true}});
+    source->start();
+    {
+        Counter counter(source);
+        REQUIRE(server->waitForCommands(7).size() == 7);
+        // Every sample was output: the worker thread is now waiting for more
+        REQUIRE(test_helpers::waitUntil([&]() { return counter.samples == iq.size() / 2; }, std::chrono::seconds(10)));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        auto t = std::chrono::steady_clock::now();
+        auto done = std::async(std::launch::async, [&]() { source->stop(); });
+        bool stopped = done.wait_for(std::chrono::seconds(5)) == std::future_status::ready;
+        if (!stopped)
+            server.reset(); // Closes the connection, which ends the read and lets stop() return
+        done.wait();
+        REQUIRE(stopped);
+        CHECK(secondsSince(t) < 1.0);
+    }
+
+    // The bias tee is still turned off, and the connection closed
+    CHECK(server->waitForDisconnect());
+    auto commands = server->commands();
+    REQUIRE(commands.size() == 8);
+    CHECK(commands.back() == Command{CMD_BIAS_TEE, 0});
 }
 
 // When rtl_tcp exits, the source used to output its last buffer again and again, forever,
