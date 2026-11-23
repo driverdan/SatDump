@@ -453,6 +453,56 @@ TEST_CASE("main_live reports a live module that throws", "[cli][legacy][live]")
     CHECK(env->log.contains("Module unit_cli_live_bad failed! unit_cli_live_bad broke", slog::LOG_ERROR));
 }
 
+// A source can stop delivering samples for good, as RTL-TCP does when its connection is lost
+// and cannot be recovered. The command used to keep waiting, idle, for the timeout or a
+// signal. It now stops, keeps what was received, and returns an error.
+TEST_CASE("main_live stops when the source stops delivering samples", "[cli][legacy][live]")
+{
+    auto env = std::make_shared<LiveEnv>();
+    registerEndingSource(5);
+    std::vector<std::string> flags = {"--source", "unit_cli_ending_sdr", "--samplerate", std::to_string(SAMPLERATE), "--frequency", "137.1e6", "--timeout", "600"};
+    auto ret = std::make_shared<int>(-1);
+    auto runIt = [env, ret](std::string pipeline, std::vector<std::string> flags)
+    {
+        bool finished = runBounded([env, ret, pipeline, flags]() { *ret = env->run(pipeline, flags); });
+        if (!finished)
+            live_should_exit = true; // Lets the command left running end
+        return finished;
+    };
+
+    SECTION("one pipeline")
+    {
+        REQUIRE(runIt("unit_cli_live", flags));
+        // The last buffer can be dropped by the stop
+        CHECK(live_samples >= 4 * 1024);
+        CHECK(live_samples <= 5 * 1024);
+    }
+
+    SECTION("one pipeline, and what was received is processed")
+    {
+        REQUIRE(runIt("unit_cli_live", plus(flags, {"--unit_write_output", "--finish_processing"})));
+        auto proc = callsOf("process");
+        REQUIRE(proc.size() == 1);
+        CHECK(proc[0].id == "unit_cli_frames");
+        CHECK(proc[0].input == env->out + "/unit_cli_live.soft");
+    }
+
+    SECTION("multi VFO mode")
+    {
+        std::string vfos = env->dir.file("vfos.json");
+        writeFile(vfos, R"({"vfo_a": {"frequency": 137100000, "pipeline": "unit_cli_live", "parameters": {}}})");
+        REQUIRE(runIt("unit_cli_live", plus(flags, {"--multi_vfo", vfos})));
+        INFO(env->log.dump());
+        CHECK(env->log.contains("Stopped VFO vfo_a", slog::LOG_INFO));
+    }
+
+    INFO(env->log.dump());
+    CHECK(*ret == 1);
+    CHECK(env->log.contains("The source stopped delivering samples. Stopping.", slog::LOG_ERROR));
+    CHECK_FALSE(env->log.contains("Timeout is over!"));
+    CHECK_FALSE(env->log.contains("Signal Received. Stopping."));
+}
+
 #ifndef _WIN32
 namespace
 {

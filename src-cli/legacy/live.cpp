@@ -116,6 +116,7 @@ int main_live(int argc, char *argv[])
         uint64_t timeout;
         std::string handler_id;
         std::string hdl_dev_id;
+        bool source_ended = false; // The run ended because the source stopped delivering samples
 
         try
         {
@@ -285,6 +286,13 @@ int main_live(int argc, char *argv[])
                     break;
                 }
 
+                if (source_ptr->has_ended())
+                {
+                    logger->error("The source stopped delivering samples. Stopping.");
+                    source_ended = true;
+                    break;
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
 
@@ -420,6 +428,13 @@ int main_live(int argc, char *argv[])
                     break;
                 }
 
+                if (source_ptr->has_ended())
+                {
+                    logger->error("The source stopped delivering samples. Stopping.");
+                    source_ended = true;
+                    break;
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
 
@@ -457,6 +472,9 @@ int main_live(int argc, char *argv[])
             if (parameters.contains("http_server"))
                 webserver::stop();
         }
+
+        if (source_ended)
+            return 1;
     }
 
     return 0;

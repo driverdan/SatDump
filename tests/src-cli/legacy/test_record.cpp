@@ -2,6 +2,7 @@
 #include "helpers/wait.h"
 #include "legacy/record.h"
 #include "nlohmann/json.hpp"
+#include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <thread>
 
@@ -205,6 +206,33 @@ TEST_CASE("main_record writes the output samplerate in the WAV header", "[cli][l
         CHECK(wavSamplerate(env.out + ".wav") == SAMPLERATE);
         CHECK_FALSE(env.log.contains("Setting up resampler..."));
     }
+}
+
+// A source can stop delivering samples for good, as RTL-TCP does when its connection is lost
+// and cannot be recovered. The command used to keep waiting, idle, for the timeout or a
+// signal. It now stops, keeps what was recorded, and returns an error.
+TEST_CASE("main_record stops when the source stops delivering samples", "[cli][legacy][record]")
+{
+    auto env = std::make_shared<RecordEnv>();
+    registerEndingSource(20);
+    auto ret = std::make_shared<int>(-1);
+    std::vector<std::string> flags = {"--source", "unit_cli_ending_sdr", "--samplerate", std::to_string(SAMPLERATE), "--frequency", "100e6", "--baseband_format", "cf32", "--timeout", "600"};
+
+    bool finished = pipeline_test::runBounded([env, ret, flags]() { *ret = env->run(flags); });
+    if (!finished)
+        rec_should_exit = true; // Lets the command left running end
+    REQUIRE(finished);
+
+    INFO(env->log.dump());
+    CHECK(*ret == 1);
+    CHECK(env->log.contains("The source stopped delivering samples. Stopping.", slog::LOG_ERROR));
+    CHECK_FALSE(env->log.contains("Timeout is over!"));
+    CHECK_FALSE(env->log.contains("Signal Received. Stopping."));
+
+    // What was received once recording started is in the file
+    auto size = std::filesystem::file_size(env->out + ".cf32");
+    CHECK(size > 0);
+    CHECK(size <= 20 * 1024 * sizeof(complex_t));
 }
 
 #ifndef _WIN32

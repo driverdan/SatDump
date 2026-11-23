@@ -212,6 +212,7 @@ int main_record(int argc, char *argv[])
     signal(SIGTERM, sig_handler_rec);
 
     // Now, we wait
+    bool source_ended = false; // The recording ended because the source stopped delivering samples
     uint64_t start_time = time(0);
     while (1)
     {
@@ -229,6 +230,13 @@ int main_record(int argc, char *argv[])
         if (rec_should_exit)
         {
             logger->warn("Signal Received. Stopping.");
+            break;
+        }
+
+        if (source_ptr->has_ended())
+        {
+            logger->error("The source stopped delivering samples. Stopping.");
+            source_ended = true;
             break;
         }
 
@@ -258,5 +266,5 @@ int main_record(int argc, char *argv[])
     if (parameters.contains("http_server"))
         webserver::stop();
 
-    return 0;
+    return source_ended ? 1 : 0;
 }
