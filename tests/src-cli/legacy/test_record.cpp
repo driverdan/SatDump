@@ -88,7 +88,7 @@ TEST_CASE("main_record fails for a source that does not exist", "[cli][legacy][r
 
     SECTION("unknown source type")
     {
-        CHECK(env.run({"--source", "unit_cli_no_such_sdr", "--samplerate", "48000", "--frequency", "100e6"}) == 1);
+        CHECK(env.run({"--source", "unit_cli_no_such_sdr", "--samplerate", "48000", "--frequency", "100e6", "--baseband_format", "cf32"}) == 1);
         INFO(env.log.dump());
         CHECK(env.log.contains("Could not find a handler for source type : unit_cli_no_such_sdr!", slog::LOG_ERROR));
         // Only the sources of the requested type are listed, and there are none
@@ -105,7 +105,7 @@ TEST_CASE("main_record fails for a source that does not exist", "[cli][legacy][r
         CHECK(env.log.contains("Device File Source", slog::LOG_DEBUG));
     }
 
-    CHECK_FALSE(std::filesystem::exists(env.out + ".cf32"));
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
 }
 
 TEST_CASE("main_record fails when the source cannot start", "[cli][legacy][record]")
@@ -116,17 +116,23 @@ TEST_CASE("main_record fails when the source cannot start", "[cli][legacy][recor
 
     INFO(env.log.dump());
     CHECK(env.log.contains("Fatal error starting device : Invalid file path", slog::LOG_ERROR));
-    CHECK_FALSE(std::filesystem::exists(env.out + ".cf32"));
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
 }
 
 TEST_CASE("main_record needs a baseband format", "[cli][legacy][record]")
 {
     RecordEnv env;
 
-    CHECK(env.run({"--source", "file", "--file_path", env.input, "--samplerate", "48000", "--frequency", "100e6"}) == 1);
+    CHECK(env.run({"--source", "file", "--file_path", env.input, "--samplerate", "48000", "--frequency", "100e6", "--decimation", "4", "--fft_enable"}) == 1);
 
     INFO(env.log.dump());
     CHECK(env.log.contains("baseband_format flag is required!", slog::LOG_ERROR));
+
+    // Checked before anything is created or started: no source is listed, no resampler is set
+    // up, and the output directory is not created
+    CHECK_FALSE(env.log.contains("Device File Source"));
+    CHECK_FALSE(env.log.contains("Setting up resampler..."));
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
 }
 
 TEST_CASE("main_record stops as soon as its signal flag is set", "[cli][legacy][record]")
