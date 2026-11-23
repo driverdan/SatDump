@@ -16,6 +16,8 @@
 #include <netinet/in.h>
 #include <ostream>
 #include <poll.h>
+#include <stdexcept>
+#include <string>
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
@@ -49,9 +51,17 @@ namespace rtltcp_test
     // What rtl_tcp sends first: "RTL0", the tuner type (5 is a R820T) and its number of gains
     inline std::vector<uint8_t> dongleInfo() { return {'R', 'T', 'L', '0', 0, 0, 0, 5, 0, 0, 0, 29}; }
 
+    // What the server does once it has sent `iq`
+    enum class AfterIQ
+    {
+        Silence, // Sends silence for as long as the client stays connected, as a dongle does
+        Close,   // Closes the connection, as rtl_tcp does when it exits
+        Reset,   // Resets the connection, the client gets a read error
+    };
+
     // A rtl_tcp server on a free 127.0.0.1 port, for one client. It sends the dongle
-    // information, then `iq` (unsigned 8-bit I/Q), then silence for as long as the client
-    // stays connected, as a dongle never stops sending. The commands of the client are
+    // information, then `iq` (unsigned 8-bit I/Q), then by default silence for as long as the
+    // client stays connected, as a dongle never stops sending. The commands of the client are
     // recorded. Every blocking step is bounded, and the destructor stops everything.
     //
     // With a samplerate the samples are sent at that rate, as a dongle does. Without one they
@@ -64,6 +74,7 @@ namespace rtltcp_test
         std::vector<uint8_t> data;
         size_t iq_start = 0;
         double bytes_per_second = 0;
+        AfterIQ after_iq = AfterIQ::Silence;
 
         std::thread th;
         std::atomic<bool> should_stop{false};
@@ -96,11 +107,26 @@ namespace rtltcp_test
             size_t pos = 0, silence_pos = 0;
             uint64_t total = 0;
             auto start = std::chrono::steady_clock::now();
+            auto last_input = start;
             while (!should_stop)
             {
+                // Once `iq` was sent, the commands the client sends at start are read before the
+                // connection is ended: unread data would turn the close into a reset
+                bool iq_done = after_iq != AfterIQ::Silence && pos >= data.size();
+                if (iq_done && std::chrono::steady_clock::now() - last_input >= std::chrono::milliseconds(100))
+                {
+                    if (after_iq == AfterIQ::Reset)
+                    {
+                        // Closing with a zero linger time sends a RST instead of a FIN
+                        linger l{1, 0};
+                        setsockopt(fd, SOL_SOCKET, SO_LINGER, &l, sizeof(l));
+                    }
+                    break;
+                }
+
                 // Not ahead of the samplerate
-                bool may_send = true;
-                if (bytes_per_second > 0)
+                bool may_send = !iq_done;
+                if (may_send && bytes_per_second > 0)
                     may_send = total < std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() * bytes_per_second;
 
                 pollfd p{fd, (short)(may_send ? POLLIN | POLLOUT : POLLIN), 0};
@@ -115,6 +141,7 @@ namespace rtltcp_test
                         break; // The client left
                     if (n > 0)
                     {
+                        last_input = std::chrono::steady_clock::now();
                         pending.insert(pending.end(), buf, buf + n);
                         std::lock_guard<std::mutex> l(mtx);
                         while (pending.size() >= 5)
@@ -145,11 +172,21 @@ namespace rtltcp_test
             }
 
             close(fd);
+
+            // As rtl_tcp exiting, the port is closed too: connecting again is refused
+            if (after_iq != AfterIQ::Silence)
+            {
+                close(listen_fd);
+                listen_fd = -1;
+            }
             client_left = true;
         }
 
     public:
-        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0) : bytes_per_second(samplerate * 2)
+        // With a port, that port is used instead of a free one, e.g. to bring a server back on
+        // the port of one that left
+        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0, AfterIQ after = AfterIQ::Silence, int port = 0)
+            : bytes_per_second(samplerate * 2), after_iq(after)
         {
             if (send_dongle_info)
                 data = dongleInfo();
@@ -160,8 +197,15 @@ namespace rtltcp_test
             sockaddr_in addr{};
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            addr.sin_port = htons(port);
+            int reuse = 1;
+            setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
             socklen_t len = sizeof(addr);
-            bind(listen_fd, (sockaddr *)&addr, sizeof(addr));
+            if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) < 0)
+            {
+                close(listen_fd);
+                throw std::runtime_error("FakeRtlTcp: cannot bind port " + std::to_string(port) + ": " + strerror(errno));
+            }
             listen(listen_fd, 1);
             getsockname(listen_fd, (sockaddr *)&addr, &len);
             listen_port = ntohs(addr.sin_port);
@@ -174,7 +218,8 @@ namespace rtltcp_test
             should_stop = true;
             if (th.joinable())
                 th.join();
-            close(listen_fd);
+            if (listen_fd >= 0)
+                close(listen_fd);
         }
 
         FakeRtlTcp(const FakeRtlTcp &) = delete;
@@ -185,7 +230,7 @@ namespace rtltcp_test
         // A client connected (it may have left since)
         bool connected() const { return client_connected; }
 
-        // The client closed the connection
+        // The connection was closed, by the client or by the server (see AfterIQ)
         bool disconnected() const { return client_left; }
 
         // Bytes of `iq` sent so far
@@ -205,7 +250,7 @@ namespace rtltcp_test
             return commands();
         }
 
-        // Waits (bounded) for the client to close the connection
+        // Waits (bounded) for the connection to be closed
         bool waitForDisconnect()
         {
             return test_helpers::waitUntil([&]() { return disconnected(); }, std::chrono::seconds(10), std::chrono::milliseconds(1));
