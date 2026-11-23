@@ -16,8 +16,12 @@ namespace satdump
     {
         std::string url_req = url_host + url_path;
         std::string result;
-        while (satdump::perform_http_request(url_req, result) != 1)
+        while (true)
         {
+            // perform_http_request() logs the reason. An S3 error document is not a listing.
+            if (satdump::perform_http_request(url_req, result) == 1)
+                throw satdump_exception("Could not get the S3 listing!");
+
             // logger->trace("\nURL WAS : %s\n", url_req.c_str());
 
             rapidxml::xml_document<> doc;

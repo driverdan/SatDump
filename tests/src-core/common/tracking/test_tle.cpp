@@ -1,5 +1,9 @@
 #include "common/tracking/tle.h"
+#include "core/config.h"
+#include "helpers/http_server.h"
+#include "helpers/satdump_guards.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -177,3 +181,42 @@ TEST_CASE("TLE JSON serialisation round-trips the element set", "[common][tracki
     CHECK(back.line1 == t.line1);
     CHECK(back.line2 == t.line2);
 }
+
+#ifndef _WIN32
+// The downloads only ever go to a loopback server started by the test (helpers/http_server.h)
+TEST_CASE("tryFetchTLEsFromFileURL does not retry a refused request", "[common][tracking][tle]")
+{
+    // #232: a 403 / 404 used to be requested 10 times. The second response is only there to record a retry.
+    test_helpers::NoProxy np;
+    std::string status = GENERATE(as<std::string>{}, "403 Forbidden", "404 Not Found");
+    test_helpers::LoopbackHttpServer server({{status, ISS_NAME + "\n" + ISS_L1 + "\n" + ISS_L2 + "\n"}, {status, ""}});
+    CHECK(satdump::tryFetchTLEsFromFileURL(server.url("/tles.txt")).empty());
+    server.stop();
+    CHECK(server.requests.size() == 1);
+}
+
+TEST_CASE("tryFetchTLEsFromFileURL retries a server error and only parses the last response", "[common][tracking][tle]")
+{
+    // The body of the failed attempt must not be parsed along with the next one
+    test_helpers::NoProxy np;
+    test_helpers::LoopbackHttpServer server({{"503 Service Unavailable", ISS_NAME + "\n" + ISS_L1 + "\n" + ISS_L2 + "\n"}, {"200 OK", VAN_NAME + "\n" + VAN_L1 + "\n" + VAN_L2 + "\n"}});
+    auto tles = satdump::tryFetchTLEsFromFileURL(server.url("/tles.txt"));
+    server.finish();
+    CHECK(server.requests.size() == 2);
+    REQUIRE(tles.size() == 1);
+    CHECK(tles[0].norad == 5);
+    CHECK(tles[0].name == VAN_NAME);
+}
+
+TEST_CASE("tryFetchSingleTLEwithNorad does not retry a refused request", "[common][tracking][tle]")
+{
+    test_helpers::ConfigGuard cfg;
+    test_helpers::NoProxy np;
+    test_helpers::LoopbackHttpServer server({{"404 Not Found", "No GP data found"}, {"404 Not Found", ""}});
+    satdump::satdump_cfg.main_cfg["tle_settings"]["url_template"] = server.url("/gp.php?CATNR=%NORAD%");
+    CHECK(satdump::tryFetchSingleTLEwithNorad(25544).empty());
+    server.stop();
+    REQUIRE(server.requests.size() == 1);
+    CHECK(server.requests[0].rfind("GET /gp.php?CATNR=25544 HTTP/1.1\r\n", 0) == 0);
+}
+#endif

@@ -237,9 +237,12 @@ namespace satdump
         logger->info("%s", url_str.c_str());
         std::string result;
         int http_res = 1, trials = 0;
+        long http_status = 0;
         while (http_res == 1 && trials < 10)
         {
-            if ((http_res = perform_http_request(url_str, result)) != 1)
+            // Only keep the body of the last attempt
+            result.clear();
+            if ((http_res = perform_http_request(url_str, result, "", nullptr, &http_status)) != 1)
             {
                 new_registry = parseCcsdsOmmFile(result);
                 success = new_registry.size() > 0;
@@ -247,6 +250,9 @@ namespace satdump
             else
                 success = false;
             trials++;
+            // A 403 or 404 would only be refused again
+            if (http_res == 1 && !http_request_should_retry(http_status))
+                break;
             if (!success)
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -272,9 +278,12 @@ namespace satdump
         logger->info("%s", url_str.c_str());
         std::string result;
         int http_res = 1, trials = 0;
+        long http_status = 0;
         while (http_res == 1 && trials < 10)
         {
-            if ((http_res = perform_http_request(url_str, result)) != 1)
+            // Only keep the body of the last attempt
+            result.clear();
+            if ((http_res = perform_http_request(url_str, result, "", nullptr, &http_status)) != 1)
             {
                 new_registry = parseCcsdsOmmFile(result);
                 success = new_registry.size() > 0;
@@ -282,6 +291,9 @@ namespace satdump
             else
                 success = false;
             trials++;
+            // A 403 or 404 would only be refused again
+            if (http_res == 1 && !http_request_should_retry(http_status))
+                break;
             if (!success)
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));

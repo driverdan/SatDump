@@ -1,3 +1,4 @@
+#include "helpers/http_server.h"
 #include "helpers/sockets.h"
 #include "helpers/temp_files.h"
 #include "satdump_vars.h"
@@ -5,20 +6,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-#include <cstdlib>
-#include <cstring>
 #include <curl/curl.h>
-#include <optional>
 #include <string>
-#include <thread>
-
-#ifndef _WIN32
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
 
 // Not declared in http.h, but exported by satdump_core
 namespace satdump
@@ -26,142 +15,16 @@ namespace satdump
     int curl_float_progress_func(void *ptr, curl_off_t TotalToDownload, curl_off_t NowDownloaded, curl_off_t TotalToUpload, curl_off_t NowUploaded);
 }
 
-// Requests only ever go to a one-shot HTTP server on 127.0.0.1 started by the test itself.
-// That server uses POSIX sockets (and EnvGuard setenv/unsetenv), so the tests needing it are
-// POSIX only.
+// Requests only ever go to a loopback HTTP server started by the test itself (helpers/http_server.h).
+// That server uses POSIX sockets, so the tests needing it are POSIX only.
 
 #ifndef _WIN32
 namespace
 {
     using test_helpers::closedPort;
-
-    // Sets or unsets an environment variable, restoring the previous value afterwards
-    struct EnvGuard
-    {
-        std::string name;
-        std::optional<std::string> old;
-        EnvGuard(const std::string &n, const char *value) : name(n)
-        {
-            const char *o = getenv(n.c_str());
-            if (o)
-                old = o;
-            if (value)
-                setenv(n.c_str(), value, 1);
-            else
-                unsetenv(n.c_str());
-        }
-        ~EnvGuard()
-        {
-            if (old)
-                setenv(name.c_str(), old->c_str(), 1);
-            else
-                unsetenv(name.c_str());
-        }
-    };
-
-    // Make sure no proxy configured in the environment intercepts loopback requests
-    struct NoProxy
-    {
-        EnvGuard a{"http_proxy", nullptr}, b{"HTTP_PROXY", nullptr}, c{"all_proxy", nullptr}, d{"ALL_PROXY", nullptr};
-        EnvGuard e{"no_proxy", "*"}, f{"NO_PROXY", "*"};
-    };
-
-    // Accepts one connection on 127.0.0.1, records the request and answers with a fixed response.
-    // Every blocking step is bounded by poll() so a failed request cannot hang the test.
-    class OneShotHttpServer
-    {
-    private:
-        int listen_fd = -1;
-        std::thread th;
-        std::string response;
-
-        static bool waitReadable(int fd)
-        {
-            pollfd p{fd, POLLIN, 0};
-            return poll(&p, 1, 15000) > 0;
-        }
-
-        void serve()
-        {
-            if (!waitReadable(listen_fd))
-                return;
-            int c = accept(listen_fd, nullptr, nullptr);
-            if (c < 0)
-                return;
-
-            size_t header_end = std::string::npos;
-            size_t content_length = 0;
-            char buf[4096];
-            while (true)
-            {
-                if (header_end != std::string::npos && request.size() >= header_end + 4 + content_length)
-                    break;
-                if (!waitReadable(c))
-                    break;
-                ssize_t n = recv(c, buf, sizeof(buf), 0);
-                if (n <= 0)
-                    break;
-                request.append(buf, n);
-                if (header_end == std::string::npos && (header_end = request.find("\r\n\r\n")) != std::string::npos)
-                {
-                    size_t cl = request.find("Content-Length: ");
-                    if (cl != std::string::npos && cl < header_end)
-                        content_length = std::stoul(request.substr(cl + 16));
-                }
-            }
-
-            size_t sent = 0;
-            while (sent < response.size())
-            {
-                ssize_t n = send(c, response.data() + sent, response.size() - sent, MSG_NOSIGNAL);
-                if (n <= 0)
-                    break;
-                sent += n;
-            }
-            close(c);
-        }
-
-    public:
-        int port = 0;
-        std::string request;
-
-        // headers are extra response header lines, each ending with \r\n
-        OneShotHttpServer(const std::string &status, const std::string &body, const std::string &headers = "")
-        {
-            response = "HTTP/1.1 " + status + "\r\nContent-Type: text/plain\r\nContent-Length: " + std::to_string(body.size()) + "\r\n" + headers + "Connection: close\r\n\r\n" + body;
-
-            listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-            if (listen_fd < 0)
-                throw std::runtime_error("socket() failed");
-            sockaddr_in addr{};
-            addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-            addr.sin_port = 0;
-            socklen_t len = sizeof(addr);
-            if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) != 0 || listen(listen_fd, 1) != 0 || getsockname(listen_fd, (sockaddr *)&addr, &len) != 0)
-            {
-                close(listen_fd);
-                throw std::runtime_error("Could not set up loopback server");
-            }
-            port = ntohs(addr.sin_port);
-            th = std::thread(&OneShotHttpServer::serve, this);
-        }
-
-        // Waits for the exchange to finish, so request is complete and safe to read
-        void finish()
-        {
-            if (th.joinable())
-                th.join();
-        }
-
-        ~OneShotHttpServer()
-        {
-            finish();
-            close(listen_fd);
-        }
-
-        std::string url(const std::string &path) { return "http://127.0.0.1:" + std::to_string(port) + path; }
-    };
+    using test_helpers::LoopbackHttpServer;
+    using test_helpers::NoProxy;
+    using test_helpers::OneShotHttpServer;
 
     bool contains(const std::string &haystack, const std::string &needle) { return haystack.find(needle) != std::string::npos; }
 } // namespace
@@ -236,6 +99,77 @@ TEST_CASE("perform_http_request fails on HTTP error statuses", "[utils][http]")
     CHECK(satdump::perform_http_request(server.url("/missing"), result) == 1);
     CHECK(result == "nothing here");
 }
+
+TEST_CASE("perform_http_request reports the final HTTP status", "[utils][http]")
+{
+    NoProxy np;
+    long status = -1;
+    std::string result;
+
+    SECTION("on success")
+    {
+        OneShotHttpServer server("200 OK", "body");
+        CHECK(satdump::perform_http_request(server.url("/"), result, "", nullptr, &status) == 0);
+        CHECK(status == 200);
+    }
+
+    SECTION("on an HTTP error")
+    {
+        OneShotHttpServer server("403 Forbidden", "go away");
+        CHECK(satdump::perform_http_request(server.url("/"), result, "", nullptr, &status) == 1);
+        CHECK(status == 403);
+    }
+
+    SECTION("after following a redirect")
+    {
+        OneShotHttpServer target("503 Service Unavailable", "later");
+        OneShotHttpServer redirect("301 Moved Permanently", "", "Location: " + target.url("/") + "\r\n");
+        CHECK(satdump::perform_http_request(redirect.url("/"), result, "", nullptr, &status) == 1);
+        CHECK(status == 503);
+    }
+
+    SECTION("as 0 when no response was received")
+    {
+        CHECK(satdump::perform_http_request("http://127.0.0.1:" + std::to_string(closedPort()) + "/", result, "", nullptr, &status) == 1);
+        CHECK(status == 0);
+    }
+}
+
+TEST_CASE("perform_http_request answers several requests from the same loopback server", "[utils][http]")
+{
+    // Checks the helper the retry tests of the TLE / Kepler downloads rely on
+    NoProxy np;
+    LoopbackHttpServer server({{"500 Internal Server Error", "first"}, {"200 OK", "second"}});
+    std::string a, b, c;
+    CHECK(satdump::perform_http_request(server.url("/1"), a) == 1);
+    CHECK(satdump::perform_http_request(server.url("/2"), b) == 0);
+    server.finish();
+    CHECK(a == "first");
+    CHECK(b == "second");
+    REQUIRE(server.requests.size() == 2);
+    CHECK(server.requests[1].rfind("GET /2 HTTP/1.1\r\n", 0) == 0);
+
+    // Once every response is used, further requests are refused rather than left hanging
+    CHECK(satdump::perform_http_request(server.url("/3"), c) == 1);
+}
+#endif
+
+TEST_CASE("http_request_should_retry only retries transient failures", "[utils][http]")
+{
+    // No response at all (transport error), rate limiting and server errors
+    CHECK(satdump::http_request_should_retry(0));
+    CHECK(satdump::http_request_should_retry(429));
+    CHECK(satdump::http_request_should_retry(500));
+    CHECK(satdump::http_request_should_retry(503));
+
+    // A refusal or a missing document would only be answered the same way again
+    CHECK_FALSE(satdump::http_request_should_retry(301));
+    CHECK_FALSE(satdump::http_request_should_retry(400));
+    CHECK_FALSE(satdump::http_request_should_retry(403));
+    CHECK_FALSE(satdump::http_request_should_retry(404));
+}
+
+#ifndef _WIN32
 
 TEST_CASE("perform_http_request follows redirects", "[utils][http]")
 {

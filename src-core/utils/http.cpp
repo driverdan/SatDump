@@ -32,12 +32,15 @@ namespace satdump
         return 0;
     }
 
-    int perform_http_request(std::string url_str, std::string &result, std::string added_header, float *progress)
+    int perform_http_request(std::string url_str, std::string &result, std::string added_header, float *progress, long *http_status)
     {
         CURL *curl;
         CURLcode res;
         bool ret = 1;
         char error_buffer[CURL_ERROR_SIZE] = {0};
+
+        if (http_status != nullptr)
+            *http_status = 0;
 
         curl_global_init(CURL_GLOBAL_ALL);
 
@@ -87,6 +90,8 @@ namespace satdump
                 // Protocols without a status (e.g. file://) report 0.
                 long response_code = 0;
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+                if (http_status != nullptr)
+                    *http_status = response_code;
                 if (response_code >= 300)
                     logger->error("HTTP request to %s failed with status %ld", url_str.c_str(), response_code);
                 else
@@ -101,6 +106,8 @@ namespace satdump
         curl_global_cleanup();
         return ret;
     }
+
+    bool http_request_should_retry(long http_status) { return http_status == 0 || http_status == 429 || http_status >= 500; }
 
     int perform_http_request_post(std::string url_str, std::string &result, std::string post_req, std::string added_header)
     {
