@@ -141,7 +141,7 @@ TEST_CASE("CommandHandler parses the CLI-only subcommands", "[core][cli]")
     {
         satdump::cli::CommandHandler h(false);
         // -v / --verbose is not passed through CommandHandler::parse: the flag is bound to a local of the
-        // constructor (see tests/UNTESTED_ISSUES.md)
+        // constructor (see #182)
         CHECK(parse(h, {"probe", "--rx", "--params"}) == 0);
     }
     {

@@ -56,7 +56,7 @@ TEST_CASE("ziq::ziq_writer writes a header getCfgFromFile can read", "[common][z
     {
         std::ofstream stream(f.path, std::ios::binary);
         ziq::ziq_cfg cfg;
-        cfg.is_compressed = true; // The uncompressed writer path is not safe to construct, see UNTESTED_ISSUES.md
+        cfg.is_compressed = true; // The uncompressed writer path is not safe to construct, see #120
         cfg.bits_per_sample = 8;
         cfg.samplerate = 2400000;
         cfg.annotation = "hello";

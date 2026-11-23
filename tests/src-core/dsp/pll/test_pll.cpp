@@ -216,7 +216,7 @@ TEST_CASE("ndsp FLLBandEdgeBlock configuration round-trip", "[dsp][pll]")
 TEST_CASE("ndsp PLLCarrierTrackingBlock default configuration", "[dsp][pll]")
 {
     // Only the getters are exercised : the loop state itself is never initialized
-    // from the parameters (see UNTESTED_ISSUES.md), so running it is undefined behaviour
+    // from the parameters (see #166), so running it is undefined behaviour
     PLLCarrierTrackingBlock pll;
     CHECK(pll.d_id == "pll_carrier_tracking_cc");
     CHECK(pll.get_cfg("loop_bw").get<float>() == Approx(0.01));

@@ -31,7 +31,7 @@ namespace
     }
 
     // The lock search decodes past the end of the depunctured test data, into the never written tail of a
-    // member buffer (see UNTESTED_ISSUES.md), so which branch locks depends on leftover memory. Build the
+    // member buffer (see #143), so which branch locks depends on leftover memory. Build the
     // decoder over memory filled with erasures (128) to make that tail neutral and deterministic.
     test_helpers::Prefilled<viterbi::Viterbi_Depunc> makeViterbi(const std::string &rate, int max_outsync, uint8_t fill = 128)
     {

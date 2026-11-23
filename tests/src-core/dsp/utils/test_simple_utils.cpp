@@ -163,7 +163,7 @@ TEST_CASE("ndsp DelayOneImagBlock delays the imaginary part by one sample", "[ds
     REQUIRE(r.completed);
     REQUIRE(r.out().size() == in.size());
     CHECK(r.out()[0].real == in[0].real);
-    // out[0].imag comes from the uninitialized history value (see UNTESTED_ISSUES.md), not asserted
+    // out[0].imag comes from the uninitialized history value (see #160), not asserted
     size_t mismatches = 0, first = 0;
     for (size_t i = 1; i < in.size(); i++)
         if ((!(r.out()[i].real == in[i].real) || !(r.out()[i].imag == in[i - 1].imag)) && mismatches++ == 0)

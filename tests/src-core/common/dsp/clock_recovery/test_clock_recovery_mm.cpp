@@ -15,7 +15,7 @@ namespace
     const float kOmegaGain = kMuGain * kMuGain / 4.0f;
     const float kOmegaLimit = 0.005f;
 
-    // The float version never initialises last_sample (see UNTESTED_ISSUES.md), so build it over zeroed
+    // The float version never initialises last_sample (see #139), so build it over zeroed
     // memory: leftover bytes that read as a NaN stall the loop and give one output per input sample
     test_helpers::Prefilled<dsp::MMClockRecoveryBlock<float>> makeMM(std::shared_ptr<dsp::stream<float>> input, float omega, uint8_t fill = 0)
     {

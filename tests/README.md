@@ -100,7 +100,7 @@ Code is formatted with the repository's `.clang-format` (clang-format 19 or newe
 
 - A test that documents a bug in `src-core`, `src-cli` or a plugin is tagged `[!shouldfail]` and is preceded by a comment starting with `// Bug: <file>:<line>` that explains it. It starts failing (as "passed unexpectedly") once the bug is fixed; remove the tag then.
 - If the bug only shows on some compilers, standard libraries or optimization levels, tag the test `[!mayfail]` instead and say so in the comment.
-- Never exercise undefined behaviour or a crash from a test. Those problems are listed in [UNTESTED_ISSUES.md](UNTESTED_ISSUES.md) instead.
+- Never exercise undefined behaviour or a crash from a test. Open a GitHub issue for such a problem instead, and refer to it by number in a comment where a test has to work around it.
 
 **Portability**
 
