@@ -41,8 +41,7 @@ namespace satdump
 
             // Set size ratio for output buffer
             double v = double(d_interpolation) / double(d_decimation);
-            if (v > 0.75)
-                BlockSimple<T, T>::output_buffer_size_ratio = v * 2;
+            BlockSimple<T, T>::output_buffer_size_ratio = v > 0.75 ? v * 2 : 1;
         }
 
         template <typename T>
@@ -53,6 +52,27 @@ namespace satdump
         template <typename T>
         uint32_t RationalResamplerBlock<T>::process(T *input, uint32_t nsamples, T *output)
         {
+            if (needs_reinit)
+            {
+                needs_reinit = false;
+                float alloc_ratio = BlockSimple<T, T>::output_buffer_size_ratio;
+                init();
+
+                // The output buffer of this call was sized for the old ratio. If the new
+                // ratio needs a bigger one, only keep the input, to process it next call
+                if (BlockSimple<T, T>::output_buffer_size_ratio > alloc_ratio)
+                {
+                    if (buffer_size < nsamples)
+                    {
+                        buffer.resize(nsamples * 2);
+                        buffer_size = buffer.size();
+                    }
+                    memcpy(&buffer[0], input, nsamples * sizeof(T));
+                    in_buffer = nsamples;
+                    return 0;
+                }
+            }
+
             if (in_buffer + nsamples >= 1e6)
             {
                 printf("TODOREWORK Error! Was about to overflow internal buffer!\n");

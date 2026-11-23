@@ -1,4 +1,5 @@
 #include "dsp/ndsp_sig_test_helpers.h"
+#include "dsp/ndsp_test_helpers.h"
 #include "dsp/resampling/rational_resampler.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -105,6 +106,87 @@ TEST_CASE("ndsp RationalResamplerBlock custom taps implement an interpolator", "
     REQUIRE(r.completed);
     std::vector<float> expected = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
     CHECK(r.output() == expected);
+}
+
+namespace
+{
+    std::vector<float> ramp(float start, size_t n)
+    {
+        std::vector<float> v(n);
+        for (size_t i = 0; i < n; i++)
+            v[i] = start + (float)i;
+        return v;
+    }
+
+    // Each value of [start, start + n) repeated twice
+    std::vector<float> rampHeld(float start, size_t n)
+    {
+        std::vector<float> v;
+        for (size_t i = 0; i < n; i++)
+            v.insert(v.end(), 2, start + (float)i);
+        return v;
+    }
+} // namespace
+
+TEST_CASE("ndsp RationalResamplerBlock applies a higher rate set while running", "[dsp][resampling]")
+{
+    auto res = std::make_shared<RationalResamplerBlock<float>>();
+    REQUIRE(ndsp_sig_test::setAll(*res, {{"interpolation", 1}, {"decimation", 1}, {"taps", std::vector<float>{1.0f}}}) == Block::RES_OK);
+    auto in = std::make_shared<DSPStream>(4);
+    res->set_input({"in", DSP_SAMPLE_TYPE_F32, in}, 0);
+    ndsp_test::Collector<float> col(res->get_output(0, 4).fifo);
+    res->start();
+
+    // Pass-through, one sample held back
+    ndsp_test::pushSamples(*in, ramp(0, 100));
+    REQUIRE(col.waitFor(99));
+
+    // Interpolation by 2 with a zero-order hold. Its output does not fit the buffer of the
+    // next input, sized for the old ratio, so that input is kept and processed with the one after
+    REQUIRE(ndsp_sig_test::setAll(*res, {{"interpolation", 2}, {"taps", std::vector<float>{1.0f, 1.0f}}}) == Block::RES_OK);
+    ndsp_test::pushSamples(*in, ramp(100, 100));
+    ndsp_test::pushSamples(*in, ramp(200, 100));
+    REQUIRE(col.waitFor(99 + 398));
+    ndsp_test::pushTerminator(*in);
+    REQUIRE(ndsp_test::stopBlock(res));
+    col.finish();
+
+    // The sample held back at the change is dropped by the reinit
+    auto expected = ramp(0, 99);
+    auto held = rampHeld(100, 199);
+    expected.insert(expected.end(), held.begin(), held.end());
+    CHECK(col.data() == expected);
+
+    auto sizes = col.sizes();
+    auto max_sizes = col.maxSizes();
+    for (size_t i = 0; i < sizes.size(); i++)
+        CHECK(sizes[i] <= max_sizes[i]);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies a lower rate set while running", "[dsp][resampling]")
+{
+    auto res = std::make_shared<RationalResamplerBlock<float>>();
+    REQUIRE(ndsp_sig_test::setAll(*res, {{"interpolation", 2}, {"decimation", 1}, {"taps", std::vector<float>{1.0f, 1.0f}}}) == Block::RES_OK);
+    auto in = std::make_shared<DSPStream>(4);
+    res->set_input({"in", DSP_SAMPLE_TYPE_F32, in}, 0);
+    ndsp_test::Collector<float> col(res->get_output(0, 4).fifo);
+    res->start();
+
+    ndsp_test::pushSamples(*in, ramp(0, 100));
+    REQUIRE(col.waitFor(198));
+
+    // Back to pass-through, applied from the next input on
+    REQUIRE(ndsp_sig_test::setAll(*res, {{"interpolation", 1}, {"taps", std::vector<float>{1.0f}}}) == Block::RES_OK);
+    ndsp_test::pushSamples(*in, ramp(100, 100));
+    REQUIRE(col.waitFor(198 + 99));
+    ndsp_test::pushTerminator(*in);
+    REQUIRE(ndsp_test::stopBlock(res));
+    col.finish();
+
+    auto expected = rampHeld(0, 99);
+    auto pass = ramp(100, 99);
+    expected.insert(expected.end(), pass.begin(), pass.end());
+    CHECK(col.data() == expected);
 }
 
 TEST_CASE("ndsp RationalResamplerBlock configuration round-trip", "[dsp][resampling]")
