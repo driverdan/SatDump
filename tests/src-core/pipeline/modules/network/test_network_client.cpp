@@ -148,6 +148,8 @@ TEST_CASE("NetworkClientModule stops promptly when a TCP server sends nothing", 
 
     // Let it connect and block in the receive
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    // Still blocked in the receive loop, not returned or thrown early
+    CHECK_FALSE(run.done->load());
     CHECK(run.stop());
     CHECK(m->output_fifo->getReadable() == 0);
 }
@@ -158,6 +160,8 @@ TEST_CASE("NetworkClientModule stops promptly when no TCP server is listening", 
     ProcessThread run(m);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    // Still blocked in the receive loop, not returned or thrown early
+    CHECK_FALSE(run.done->load());
     CHECK(run.stop());
 }
 
@@ -194,6 +198,8 @@ TEST_CASE("NetworkClientModule stops promptly when no UDP datagram arrives", "[p
     ProcessThread run(m);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    // Still blocked in the receive loop, not returned or thrown early
+    CHECK_FALSE(run.done->load());
     CHECK(run.stop());
     CHECK(m->output_fifo->getReadable() == 0);
 }

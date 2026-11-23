@@ -62,7 +62,12 @@ namespace satdump
                     if (rv != 0)
                         throw satdump_exception("Couldn't open nng socket : " + std::string(nng_strerror(rv)));
 
-                    nng_socket_set_ms(sock, NNG_OPT_RECVTIMEO, RECV_TIMEOUT_MS);
+                    // Without the timeout the receive would block forever and stopping would hang
+                    if ((rv = nng_socket_set_ms(sock, NNG_OPT_RECVTIMEO, RECV_TIMEOUT_MS)) != 0)
+                    {
+                        nng_close(sock);
+                        throw satdump_exception("Couldn't set nng receive timeout : " + std::string(nng_strerror(rv)));
+                    }
 
                     // Non-blocking, so the dialer keeps retrying in the background if the server is not up yet
                     if ((rv = nng_dialer_create(&dialer, sock, url.c_str())) != 0 || (rv = nng_dialer_start(dialer, NNG_FLAG_NONBLOCK)) != 0)
