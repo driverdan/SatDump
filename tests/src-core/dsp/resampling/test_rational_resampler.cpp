@@ -1,4 +1,5 @@
 #include "dsp/ndsp_sig_test_helpers.h"
+#include "dsp/ndsp_test_helpers.h"
 #include "dsp/resampling/rational_resampler.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -105,6 +106,163 @@ TEST_CASE("ndsp RationalResamplerBlock custom taps implement an interpolator", "
     REQUIRE(r.completed);
     std::vector<float> expected = {1, 1, 2, 2, 3, 3, 4, 4, 5, 5};
     CHECK(r.output() == expected);
+}
+
+namespace
+{
+    std::vector<float> ramp(float start, size_t n)
+    {
+        std::vector<float> v(n);
+        for (size_t i = 0; i < n; i++)
+            v[i] = start + (float)i;
+        return v;
+    }
+
+    // Each value of [start, start + n) repeated `times` times
+    std::vector<float> rampHeld(float start, size_t n, int times = 2)
+    {
+        std::vector<float> v;
+        for (size_t i = 0; i < n; i++)
+            v.insert(v.end(), times, start + (float)i);
+        return v;
+    }
+
+    void append(std::vector<float> &v, const std::vector<float> &o) { v.insert(v.end(), o.begin(), o.end()); }
+
+    // A running float resampler, fed by hand. Checks never stop the test while the block
+    // runs : finish() always stops it, so a failure stays local to its test case
+    struct LiveResampler
+    {
+        std::shared_ptr<RationalResamplerBlock<float>> blk = std::make_shared<RationalResamplerBlock<float>>();
+        std::shared_ptr<DSPStream> in = std::make_shared<DSPStream>(4);
+        std::unique_ptr<ndsp_test::Collector<float>> col;
+
+        LiveResampler(int interp, const std::vector<float> &taps)
+        {
+            set(interp, taps);
+            blk->set_input({"in", DSP_SAMPLE_TYPE_F32, in}, 0);
+            col = std::make_unique<ndsp_test::Collector<float>>(blk->get_output(0, 4).fifo);
+            blk->start();
+        }
+
+        void set(int interp, const std::vector<float> &taps) { CHECK(ndsp_sig_test::setAll(*blk, {{"interpolation", interp}, {"decimation", 1}, {"taps", taps}}) == Block::RES_OK); }
+        void push(const std::vector<float> &v) { ndsp_test::pushSamples(*in, v); }
+        // Waiting for the output of an input also means it was processed, so a set() after applies to the next inputs
+        void waitFor(size_t n) { CHECK(col->waitFor(n)); }
+
+        // Stops the block and checks the output, and that no output buffer was written past its max_size
+        void finish(const std::vector<float> &expected)
+        {
+            ndsp_test::pushTerminator(*in);
+            CHECK(ndsp_test::stopBlock(blk));
+            col->finish();
+            CHECK(col->data().size() == expected.size());
+            CHECK(col->data() == expected);
+            auto sizes = col->sizes();
+            auto max_sizes = col->maxSizes();
+            for (size_t i = 0; i < sizes.size(); i++)
+                CHECK(sizes[i] <= max_sizes[i]);
+        }
+    };
+
+    const std::vector<float> taps1 = {1.0f}, taps2 = {1.0f, 1.0f}, taps3 = {1.0f, 1.0f, 1.0f};
+} // namespace
+
+// Pass-through holds one sample back. Interpolation by N with N taps of 1 repeats each input N
+// times, holding none back. A rate change drops what is in the internal buffer, and on a
+// rise the whole first input after it, as its output buffer was sized for the old ratio
+
+TEST_CASE("ndsp RationalResamplerBlock applies a higher rate set while running", "[dsp][resampling]")
+{
+    LiveResampler r(1, taps1);
+    r.push(ramp(0, 100));
+    r.waitFor(99);
+
+    r.set(2, taps2);
+    r.push(ramp(100, 100)); // Dropped
+    r.push(ramp(200, 100));
+    r.waitFor(99 + 198);
+
+    auto expected = ramp(0, 99);
+    append(expected, rampHeld(200, 99));
+    r.finish(expected);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies a higher rate set while running, then gets a smaller input", "[dsp][resampling]")
+{
+    LiveResampler r(1, taps1);
+    r.push(ramp(0, 100));
+    r.waitFor(99);
+
+    r.set(2, taps2);
+    r.push(ramp(100, 100)); // Dropped
+    r.push(ramp(200, 10));  // Output buffer of 40 samples
+    r.push(ramp(210, 100));
+    r.waitFor(99 + 18 + 200);
+
+    auto expected = ramp(0, 99);
+    append(expected, rampHeld(200, 109));
+    r.finish(expected);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies a lower rate set while running", "[dsp][resampling]")
+{
+    LiveResampler r(2, taps2);
+    r.push(ramp(0, 100));
+    r.waitFor(198);
+
+    r.set(1, taps1);
+    r.push(ramp(100, 100));
+    r.waitFor(198 + 99);
+
+    auto expected = rampHeld(0, 99);
+    append(expected, ramp(100, 99));
+    r.finish(expected);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies consecutive rate changes while running", "[dsp][resampling]")
+{
+    LiveResampler r(1, taps1);
+    r.push(ramp(0, 100));
+    r.waitFor(99);
+
+    r.set(2, taps2);
+    r.push(ramp(100, 100)); // Dropped
+    r.push(ramp(200, 100));
+    r.waitFor(99 + 198);
+
+    r.set(3, taps3);
+    r.push(ramp(300, 100)); // Dropped
+    r.push(ramp(400, 100));
+    r.waitFor(99 + 198 + 297);
+
+    r.set(1, taps1);
+    r.push(ramp(500, 100));
+    r.waitFor(99 + 198 + 297 + 99);
+
+    auto expected = ramp(0, 99);
+    append(expected, rampHeld(200, 99));
+    append(expected, rampHeld(400, 99, 3));
+    append(expected, ramp(500, 99));
+    r.finish(expected);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies a higher rate set while running with big buffers", "[dsp][resampling]")
+{
+    const size_t n = 500000;
+    LiveResampler r(1, taps1);
+    r.push(ramp(0, n));
+    r.waitFor(n - 1);
+
+    r.set(2, taps2);
+    r.push(ramp(n, n)); // Dropped
+    r.push(ramp(2 * n, n));
+    r.push(ramp(3 * n, n));
+    r.waitFor((n - 1) + 2 * (n - 1) + 2 * n);
+
+    auto expected = ramp(0, n - 1);
+    append(expected, rampHeld(2 * n, 2 * n - 1));
+    r.finish(expected);
 }
 
 TEST_CASE("ndsp RationalResamplerBlock configuration round-trip", "[dsp][resampling]")
