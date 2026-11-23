@@ -24,7 +24,7 @@ The executable can also be run directly, which allows filtering by name or tag:
 
 Catch2 runs the test cases in a random order when the executable is run directly, so tests must not depend on each other. A failure that only shows up in a full run can be replayed with the `--rng-seed` printed at the top of that run.
 
-The tests are not built by default and are not part of any CI workflow.
+The tests are not built by default. The `Unit Tests` workflow (`.github/workflows/unit_tests.yml`) builds and runs them on Ubuntu 24.04, in Release and without the GUI, for every pull request and every push to `master`.
 
 ## Coverage
 

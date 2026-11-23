@@ -1,0 +1,64 @@
+name: Unit Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a PR cancels the run still going for the previous one
+concurrency:
+  group: unit-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The tests are run against the optimized code that is shipped
+  BUILD_TYPE: Release
+
+jobs:
+  unit_tests_ubuntu_2404:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        # The packages of the Ubuntu 24.04 build in all_build.yml, without the
+        # GUI-only ones, plus Catch2 (3.4.0 on 24.04), Ninja and ccache
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build ccache pkgconf catch2 \
+            libdbus-1-dev libcurl4-openssl-dev libfftw3-dev libvolk-dev libjpeg-dev libpng-dev libtiff-dev \
+            libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev \
+            libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev \
+            libjemalloc-dev portaudio19-dev libhdf5-dev libsqlite3-dev
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-unit-tests-ubuntu-2404-${{ github.sha }}
+          restore-keys: ccache-unit-tests-ubuntu-2404-
+
+      - name: Configure CMake
+        run: >
+          cmake -S "$GITHUB_WORKSPACE" -B "${{ runner.temp }}/build" -G Ninja
+          -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+          -DBUILD_UNIT_TESTS=ON
+          -DBUILD_GUI=OFF
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build tests
+        run: |
+          ccache --zero-stats
+          cmake --build "${{ runner.temp }}/build" --target satdump_tests
+          ccache --show-stats
+
+      - name: Run tests
+        # --no-tests=error: an empty test list (e.g. test discovery broke) fails the job
+        run: ctest --test-dir "${{ runner.temp }}/build" --output-on-failure --no-tests=error -j $(nproc)
