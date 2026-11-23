@@ -1,6 +1,8 @@
+#include "image/geotiff/geotiff.h"
 #include "image/image_test_helpers.h"
 #include "image/io.h"
 #include "image/meta.h"
+#include "projection/standard/proj_json.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -42,6 +44,22 @@ namespace
             signal(SIGXFSZ, saved_handler);
         }
     };
+
+    // Whether this process still has a file descriptor open on path
+    bool isFileOpen(const std::string &path)
+    {
+        std::error_code ec;
+        auto target = std::filesystem::canonical(path, ec);
+        if (ec)
+            return false;
+        for (auto &fd : std::filesystem::directory_iterator("/proc/self/fd", ec))
+        {
+            std::error_code ec2;
+            if (std::filesystem::read_symlink(fd.path(), ec2) == target)
+                return true;
+        }
+        return false;
+    }
 } // namespace
 #endif
 
@@ -116,6 +134,9 @@ TEST_CASE("image::load_tiff rejects unsupported bit depths", "[image][io][tiff]"
         TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);
         TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
         TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+        proj::projection_t eq;
+        eq.type = proj::ProjType_Equirectangular;
+        REQUIRE_FALSE(satdump::geotiff::try_write_geotiff(tif, &eq)); // false is success
         float row[2] = {0.5f, 1.0f};
         TIFFWriteScanline(tif, row, 0, 0);
         TIFFClose(tif);
@@ -125,6 +146,12 @@ TEST_CASE("image::load_tiff rejects unsupported bit depths", "[image][io][tiff]"
     img::load_tiff(out, path);
     CHECK(out.width() == 3);
     CHECK(out.get(0) == 4);
+    // Nor is the projection of the rejected file attached to it
+    CHECK_FALSE(img::has_metadata_proj_cfg(out));
+#ifdef __linux__
+    // The file is closed again (issue #211)
+    CHECK_FALSE(isFileOpen(path));
+#endif
 }
 
 TEST_CASE("image::load_tiff leaves the image untouched on missing or corrupt files", "[image][io][tiff]")
