@@ -3,25 +3,27 @@
 #include "common/widgets/stepped_slider.h"
 #include <algorithm>
 
+// set_gains(), set_bias(), set_ppm() and send_frequency() are called with settings_mtx held.
+// Nothing is logged for a command dropped while the connection is lost.
 void RTLTCPSource::set_gains()
 {
     if (!is_started)
         return;
 
-    client.setAGCMode(lna_agc_enabled);
-    logger->debug("Set RTL-TCP LNA AGC to %d", (int)lna_agc_enabled);
+    if (client.setAGCMode(lna_agc_enabled))
+        logger->debug("Set RTL-TCP LNA AGC to %d", (int)lna_agc_enabled);
 
     if (tuner_agc_enabled)
     {
-        client.setGainMode(0);
-        logger->debug("Set RTL-TCP Tuner AGC to %d", 1);
+        if (client.setGainMode(0))
+            logger->debug("Set RTL-TCP Tuner AGC to %d", 1);
     }
     else
     {
-        client.setGainMode(1);
-        logger->debug("Set RTL-TCP Tuner AGC to %d", 0);
-        client.setGain(gain * 10);
-        logger->debug("Set RTL-TCP Gain to %d", gain * 10);
+        if (client.setGainMode(1))
+            logger->debug("Set RTL-TCP Tuner AGC to %d", 0);
+        if (client.setGain(gain * 10))
+            logger->debug("Set RTL-TCP Gain to %d", gain * 10);
     }
 }
 
@@ -29,8 +31,8 @@ void RTLTCPSource::set_bias()
 {
     if (!is_started)
         return;
-    client.setBiasTee(bias);
-    logger->debug("Set RTL-TCP Bias to %d", (int)bias);
+    if (client.setBiasTee(bias))
+        logger->debug("Set RTL-TCP Bias to %d", (int)bias);
 }
 
 void RTLTCPSource::set_ppm()
@@ -38,12 +40,19 @@ void RTLTCPSource::set_ppm()
     if (!is_started)
         return;
     int ppm = ppm_widget.get();
-    client.setPPM(ppm);
-    logger->debug("Set RTL-TCP PPM Correction to %d", ppm);
+    if (client.setPPM(ppm))
+        logger->debug("Set RTL-TCP PPM Correction to %d", ppm);
+}
+
+void RTLTCPSource::send_frequency(uint64_t frequency)
+{
+    if (is_open && is_started && client.setFrequency(frequency))
+        logger->debug("Set RTL-TCP frequency to %llu", (unsigned long long)frequency);
 }
 
 void RTLTCPSource::set_settings(nlohmann::json settings)
 {
+    std::lock_guard<std::mutex> lock(settings_mtx);
     d_settings = settings;
 
     // Convert legacy AGC setting to new (was not used for RTL-TCP before, but it was for USB)
@@ -108,6 +117,7 @@ void RTLTCPSource::start()
 {
     if (client.connectToRTL((char *)ip_address.c_str(), port) != 1)
         throw satdump_exception("Could not connect to RTL-TCP");
+    logger->info("RTL-TCP connected");
 
     DSPSampleSource::start(); // Do NOT reset the stream
 
@@ -119,14 +129,17 @@ void RTLTCPSource::start()
     work_thread = std::thread(&RTLTCPSource::mainThread, this);
 }
 
-// Sends every setting to the dongle, on start and after connecting again
+// Sends every setting to the dongle, on start and after connecting again (from the worker
+// thread then: the settings are locked against the setters)
 void RTLTCPSource::configure()
 {
+    std::lock_guard<std::mutex> lock(settings_mtx);
+
     uint64_t current_samplerate = samplerate_widget.get_value();
 
     client.setSampleRate(current_samplerate);
 
-    set_frequency(d_frequency);
+    send_frequency(d_frequency);
 
     set_gains();
     set_bias();
@@ -139,6 +152,14 @@ bool RTLTCPSource::reconnect()
 {
     client.disconnect();
 
+    std::string address;
+    int address_port;
+    {
+        std::lock_guard<std::mutex> lock(settings_mtx);
+        address = ip_address;
+        address_port = port;
+    }
+
     int delay_ms = reconnect_first_delay_ms;
     for (int attempt = 1; attempt <= reconnect_attempts; attempt++)
     {
@@ -149,7 +170,7 @@ bool RTLTCPSource::reconnect()
                 return false;
         }
 
-        if (client.connectToRTL((char *)ip_address.c_str(), port, [this]() { return thread_should_run.load(); }))
+        if (client.connectToRTL((char *)address.c_str(), address_port, [this]() { return thread_should_run.load(); }, reconnect_connect_timeout_ms))
         {
             logger->info("RTL-TCP reconnected (attempt %d/%d)", attempt, reconnect_attempts);
             configure();
@@ -159,7 +180,7 @@ bool RTLTCPSource::reconnect()
         if (!thread_should_run)
             return false;
         logger->warn("RTL-TCP reconnection attempt %d/%d failed (%s)", attempt, reconnect_attempts, client.connectError().c_str());
-        delay_ms = std::min(delay_ms * 2, reconnect_max_delay_ms);
+        delay_ms = (std::min)(delay_ms * 2, reconnect_max_delay_ms); // (std::min): min may be a macro of windows.h
     }
 
     logger->error("RTL-TCP could not reconnect after %d attempts, no more samples will be received. Stop and start the source to try again.", reconnect_attempts);
@@ -195,16 +216,15 @@ void RTLTCPSource::close()
 
 void RTLTCPSource::set_frequency(uint64_t frequency)
 {
-    if (is_open && is_started)
-    {
-        client.setFrequency(frequency);
-        logger->debug("Set RTL-TCP frequency to %llu", (unsigned long long)frequency);
-    }
+    std::lock_guard<std::mutex> lock(settings_mtx);
+    send_frequency(frequency);
     DSPSampleSource::set_frequency(frequency);
 }
 
 void RTLTCPSource::drawControlUI()
 {
+    std::lock_guard<std::mutex> lock(settings_mtx); // The widgets write the settings
+
     if (is_started)
         style::beginDisabled();
 
@@ -242,6 +262,7 @@ void RTLTCPSource::drawControlUI()
 
 void RTLTCPSource::set_samplerate(uint64_t samplerate)
 {
+    std::lock_guard<std::mutex> lock(settings_mtx);
     if (!samplerate_widget.set_value(samplerate, 3.2e6))
         throw satdump_exception("Unsupported samplerate : " + std::to_string(samplerate) + "!");
 }

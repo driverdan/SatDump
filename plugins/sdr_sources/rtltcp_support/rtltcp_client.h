@@ -47,12 +47,14 @@ public:
     }
 
     // With keep_going, the connection is attempted without blocking for more than
-    // CONNECT_POLL_MS at a time, and given up once keep_going() returns false (on Windows,
-    // connect() still blocks).
-    bool connectToRTL(char* host, uint16_t port, std::function<bool()> keep_going = nullptr) {
+    // CONNECT_POLL_MS at a time, and given up once keep_going() returns false or after
+    // timeout_ms if it is positive (on Windows, connect() still blocks). connectError() says
+    // why it failed.
+    bool connectToRTL(char* host, uint16_t port, std::function<bool()> keep_going = nullptr, int timeout_ms = 0) {
         if (connected) {
             return true;
         }
+        connect_error.clear();
 
 #ifdef _WIN32
         struct addrinfo* result = NULL;
@@ -72,8 +74,7 @@ public:
 
         int iResult = getaddrinfo(host, buf, &hints, &result);
         if (iResult != 0) {
-            // TODO: log error
-            printf("\n%s\n", gai_strerror(iResult));
+            connect_error = gai_strerror(iResult);
             WSACleanup();
             return false;
         }
@@ -82,8 +83,7 @@ public:
         sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 
         if (sock == INVALID_SOCKET) {
-            // TODO: log error
-            printf("B");
+            connect_error = "socket error " + std::to_string(WSAGetLastError());
             freeaddrinfo(result);
             WSACleanup();
             return false;
@@ -91,7 +91,7 @@ public:
 
         iResult = connect(sock, ptr->ai_addr, (int)ptr->ai_addrlen);
         if (iResult == SOCKET_ERROR) {
-            printf("C");
+            connect_error = "connect error " + std::to_string(WSAGetLastError());
             closesocket(sock);
             freeaddrinfo(result);
             WSACleanup();
@@ -101,7 +101,7 @@ public:
 #else
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockfd < 0) {
-            // TODO: Log error
+            connect_error = strerror(errno);
             return false;
         }
         struct hostent* server = gethostbyname(host);
@@ -115,7 +115,7 @@ public:
         serv_addr.sin_family = AF_INET;
         bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
         serv_addr.sin_port = htons(port);
-        if (!connectSocket((struct sockaddr*)&serv_addr, sizeof(serv_addr), keep_going)) {
+        if (!connectSocket((struct sockaddr*)&serv_addr, sizeof(serv_addr), keep_going, timeout_ms)) {
             close(sockfd);
             return false;
         }
@@ -129,8 +129,6 @@ public:
             std::lock_guard<std::mutex> lock(send_mtx);
             connected = true;
         }
-
-        printf("Connected");
 
         return true;
     }
@@ -154,7 +152,8 @@ public:
     //     uint32_t arg;
     // };
 
-    void sendCommand(uint8_t command, uint32_t param) {
+    // Returns false if the command was dropped as there is no connection
+    bool sendCommand(uint8_t command, uint32_t param) {
         command_t cmd;
         cmd.cmd = command;
         cmd.param = htonl(param);
@@ -162,13 +161,14 @@ public:
         // already be reused by something else
         std::lock_guard<std::mutex> lock(send_mtx);
         if (!connected) {
-            return;
+            return false;
         }
 #ifdef _WIN32
         send(sock, (char*)&cmd, sizeof(command_t), 0);
 #else
         (void)send(sockfd, &cmd, sizeof(command_t), MSG_NOSIGNAL);
 #endif
+        return true;
     }
 
     // Fills buf with count bytes. Returns false if the server closed the connection or on a
@@ -210,52 +210,51 @@ public:
         return connect_error;
     }
 
-    void setFrequency(double freq) {
-        sendCommand(1, freq);
+    bool setFrequency(double freq) {
+        return sendCommand(1, freq);
     }
 
-    void setSampleRate(double sr) {
-        sendCommand(2, sr);
+    bool setSampleRate(double sr) {
+        return sendCommand(2, sr);
     }
 
-    void setGainMode(int mode) {
-        sendCommand(3, mode);
+    bool setGainMode(int mode) {
+        return sendCommand(3, mode);
     }
 
-    void setGain(double gain) {
-        sendCommand(4, gain);
+    bool setGain(double gain) {
+        return sendCommand(4, gain);
     }
 
-    void setPPM(int ppm) {
-        sendCommand(5, (uint32_t)ppm);
+    bool setPPM(int ppm) {
+        return sendCommand(5, (uint32_t)ppm);
     }
 
-    void setAGCMode(int mode) {
-        sendCommand(8, mode);
+    bool setAGCMode(int mode) {
+        return sendCommand(8, mode);
     }
 
-    void setDirectSampling(int mode) {
-        sendCommand(9, mode);
+    bool setDirectSampling(int mode) {
+        return sendCommand(9, mode);
     }
 
-    void setOffsetTuning(bool enabled) {
-        sendCommand(10, enabled);
+    bool setOffsetTuning(bool enabled) {
+        return sendCommand(10, enabled);
     }
 
-    void setGainIndex(int index) {
-        sendCommand(13, index);
+    bool setGainIndex(int index) {
+        return sendCommand(13, index);
     }
 
-    void setBiasTee(bool enabled) {
-        sendCommand(14, enabled);
+    bool setBiasTee(bool enabled) {
+        return sendCommand(14, enabled);
     }
 
 private:
 #ifndef _WIN32
     static const int CONNECT_POLL_MS = 50;
 
-    bool connectSocket(struct sockaddr* addr, socklen_t len, std::function<bool()>& keep_going) {
-        connect_error.clear();
+    bool connectSocket(struct sockaddr* addr, socklen_t len, std::function<bool()>& keep_going, int timeout_ms) {
         if (!keep_going) {
             if (connect(sockfd, addr, len) < 0) {
                 connect_error = strerror(errno);
@@ -271,11 +270,17 @@ private:
             connect_error = strerror(errno);
             return false;
         }
+        int waited_ms = 0;
         while (ret < 0) {
             if (!keep_going()) {
                 connect_error = "cancelled";
                 return false;
             }
+            if (timeout_ms > 0 && waited_ms >= timeout_ms) {
+                connect_error = "timed out";
+                return false;
+            }
+            waited_ms += CONNECT_POLL_MS;
             pollfd p{sockfd, POLLOUT, 0};
             int n = poll(&p, 1, CONNECT_POLL_MS);
             if (n < 0 && errno != EINTR) {
@@ -285,7 +290,9 @@ private:
             if (n > 0) {
                 int err = 0;
                 socklen_t err_len = sizeof(err);
-                getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &err, &err_len);
+                if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &err, &err_len) < 0) {
+                    err = errno;
+                }
                 if (err != 0) {
                     connect_error = strerror(err);
                     return false;

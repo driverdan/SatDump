@@ -10,6 +10,7 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <ctime>
+#include <fcntl.h>
 #include <memory>
 
 // The RTL-TCP source is run against a rtl_tcp server made by the test, which records the
@@ -48,12 +49,75 @@ namespace
     class QuickRetrySource : public RTLTCPSource
     {
     public:
-        QuickRetrySource(int attempts, int first_delay_ms, int max_delay_ms) : RTLTCPSource(RTLTCPSource::getAvailableSources()[0])
+        QuickRetrySource(int attempts, int first_delay_ms, int max_delay_ms, int connect_timeout_ms = 2000) : RTLTCPSource(RTLTCPSource::getAvailableSources()[0])
         {
             reconnect_attempts = attempts;
             reconnect_first_delay_ms = first_delay_ms;
             reconnect_max_delay_ms = max_delay_ms;
+            reconnect_connect_timeout_ms = connect_timeout_ms;
         }
+    };
+
+    // A port on which connecting hangs, as with a host that does not answer: the listening
+    // socket never accepts and its queue is full, so the kernel drops the SYNs. hangs() says
+    // whether a connection attempt did hang (if not, the blackhole is closed again).
+    class Blackhole
+    {
+    private:
+        int listen_fd = -1, filler = -1;
+        bool does_hang = false;
+
+        static sockaddr_in loopback(int port)
+        {
+            sockaddr_in addr{};
+            addr.sin_family = AF_INET;
+            addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+            addr.sin_port = htons(port);
+            return addr;
+        }
+
+        void closeAll()
+        {
+            if (filler >= 0)
+                close(filler);
+            if (listen_fd >= 0)
+                close(listen_fd);
+            filler = listen_fd = -1;
+        }
+
+    public:
+        explicit Blackhole(int port)
+        {
+            sockaddr_in addr = loopback(port);
+            listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+            int reuse = 1;
+            setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+            if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) < 0 || listen(listen_fd, 0) < 0)
+            {
+                closeAll();
+                return;
+            }
+
+            // Fills the queue
+            filler = socket(AF_INET, SOCK_STREAM, 0);
+            connect(filler, (sockaddr *)&addr, sizeof(addr));
+
+            // Then a connection must not complete
+            int probe = socket(AF_INET, SOCK_STREAM, 0);
+            fcntl(probe, F_SETFL, fcntl(probe, F_GETFL, 0) | O_NONBLOCK);
+            if (connect(probe, (sockaddr *)&addr, sizeof(addr)) < 0 && errno == EINPROGRESS)
+            {
+                pollfd p{probe, POLLOUT, 0};
+                does_hang = poll(&p, 1, 200) == 0;
+            }
+            close(probe);
+            if (!does_hang)
+                closeAll();
+        }
+
+        ~Blackhole() { closeAll(); }
+
+        bool hangs() const { return does_hang; }
     };
 
     double secondsSince(std::chrono::steady_clock::time_point t) { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); }
@@ -647,6 +711,61 @@ TEST_CASE("RTLTCPSource stop interrupts the wait before a reconnection attempt",
 
         INFO(log.dump());
         CHECK_FALSE(log.contains("reconnection attempt"));
+    }
+}
+
+// Without a deadline, an attempt on a host that does not answer lasted as long as the system
+// tries to connect (about 2 minutes on Linux)
+TEST_CASE("RTLTCPSource gives a reconnection attempt up when the host does not answer", "[plugins][sdr_sources][rtltcp]")
+{
+    cli_test::LogCapture log;
+    FakeRtlTcp server(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
+    int port = server.port();
+    // The first attempt is late enough for the blackhole to be up
+    auto source = setUp(std::make_shared<QuickRetrySource>(2, 1000, 1000, 300), port);
+    source->start();
+    {
+        Drain drain(source);
+        REQUIRE(server.waitForDisconnect());
+        auto t = std::chrono::steady_clock::now();
+        Blackhole hole(port);
+        if (!hole.hangs())
+            SKIP("connecting to a full listening queue does not hang here");
+
+        REQUIRE(test_helpers::waitUntil([&]() { return log.contains("RTL-TCP could not reconnect after 2 attempts", slog::LOG_ERROR); }, std::chrono::seconds(10)));
+        CHECK(secondsSince(t) < 4.0);
+
+        INFO(log.dump());
+        CHECK(log.contains("RTL-TCP reconnection attempt 1/2 failed (timed out)", slog::LOG_WARN));
+        CHECK(log.contains("RTL-TCP reconnection attempt 2/2 failed (timed out)", slog::LOG_WARN));
+
+        source->stop();
+    }
+}
+
+TEST_CASE("RTLTCPSource stop interrupts a reconnection attempt", "[plugins][sdr_sources][rtltcp]")
+{
+    cli_test::LogCapture log;
+    FakeRtlTcp server(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
+    int port = server.port();
+    auto source = setUp(std::make_shared<QuickRetrySource>(1, 1000, 1000, 60000), port);
+    source->start();
+    {
+        Drain drain(source);
+        REQUIRE(server.waitForDisconnect());
+        Blackhole hole(port);
+        if (!hole.hangs())
+            SKIP("connecting to a full listening queue does not hang here");
+
+        // Well into the attempt, which starts 1 second after the connection was lost
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        auto t = std::chrono::steady_clock::now();
+        source->stop();
+        CHECK(secondsSince(t) < 1.0);
+
+        INFO(log.dump());
+        CHECK_FALSE(log.contains("reconnection attempt 1/1 failed"));
+        CHECK_FALSE(log.contains("could not reconnect"));
     }
 }
 #endif

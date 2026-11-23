@@ -16,6 +16,8 @@
 #include <netinet/in.h>
 #include <ostream>
 #include <poll.h>
+#include <stdexcept>
+#include <string>
 #include <sys/socket.h>
 #include <thread>
 #include <unistd.h>
@@ -199,7 +201,11 @@ namespace rtltcp_test
             int reuse = 1;
             setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
             socklen_t len = sizeof(addr);
-            bind(listen_fd, (sockaddr *)&addr, sizeof(addr));
+            if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) < 0)
+            {
+                close(listen_fd);
+                throw std::runtime_error("FakeRtlTcp: cannot bind port " + std::to_string(port) + ": " + strerror(errno));
+            }
             listen(listen_fd, 1);
             getsockname(listen_fd, (sockaddr *)&addr, &len);
             listen_port = ntohs(addr.sin_port);

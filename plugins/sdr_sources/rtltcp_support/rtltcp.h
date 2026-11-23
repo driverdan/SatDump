@@ -30,17 +30,25 @@ protected:
     void set_gains();
     void set_bias();
     void set_ppm();
+    void send_frequency(uint64_t frequency);
     void configure();
+
+    // The settings, against configure() sending them again from the worker thread
+    std::mutex settings_mtx;
 
     // When the connection is lost, connecting again is tried RECONNECT_ATTEMPTS times, waiting
     // RECONNECT_FIRST_DELAY_MS before the first attempt and twice as long before each of the
-    // next ones, up to RECONNECT_MAX_DELAY_MS (about 20 seconds in all)
+    // next ones, up to RECONNECT_MAX_DELAY_MS (about 20 seconds of waits in all). An attempt
+    // is given up after RECONNECT_CONNECT_TIMEOUT_MS, for a host that does not answer at all
+    // (16 seconds more at worst).
     static constexpr int RECONNECT_ATTEMPTS = 8;
     static constexpr int RECONNECT_FIRST_DELAY_MS = 250;
     static constexpr int RECONNECT_MAX_DELAY_MS = 4000;
+    static constexpr int RECONNECT_CONNECT_TIMEOUT_MS = 2000;
     int reconnect_attempts = RECONNECT_ATTEMPTS;
     int reconnect_first_delay_ms = RECONNECT_FIRST_DELAY_MS;
     int reconnect_max_delay_ms = RECONNECT_MAX_DELAY_MS;
+    int reconnect_connect_timeout_ms = RECONNECT_CONNECT_TIMEOUT_MS;
 
     std::thread work_thread;
 
