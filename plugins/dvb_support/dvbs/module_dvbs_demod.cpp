@@ -138,7 +138,7 @@ namespace satdump
                     [&]()
                     {
                         int dat_size = 0;
-                        while (demod_should_run())
+                        while (demod_should_run(def->output_stream))
                         {
                             // Handle outputs
                             // Get rate
@@ -221,7 +221,7 @@ namespace satdump
                         }
                     });
 
-                while (demod_should_run())
+                while (demod_should_run(def->output_stream))
                 {
                     if (input_data_type == DATA_FILE)
                         progress = file_source->getPosition();

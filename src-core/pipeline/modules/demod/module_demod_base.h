@@ -122,6 +122,21 @@ namespace satdump
                 // Stopping, etc
                 bool demod_should_stop = false;
                 bool demod_should_run() { return (input_data_type == DATA_FILE ? !file_source->eof() : input_active.load()) && !demod_should_stop; }
+
+                /** @brief Same as demod_should_run(), but from a file, it keeps running until the
+                * end of the file has gone through all the blocks to the given output stream.
+                *
+                * Without this, the samples still in the blocks when the file source reaches the end
+                * of the file are never demodulated. Every block between the file source and the
+                * stream must pass the end of the stream on (dsp::Block does).
+                *
+                * @param output the stream the demodulator's output loop reads
+                */
+                template <typename T>
+                bool demod_should_run(std::shared_ptr<dsp::stream<T>> &output)
+                {
+                    return (input_data_type == DATA_FILE ? !output->isEOS() : input_active.load()) && !demod_should_stop;
+                }
                 void drawStopButton();
 
             public:

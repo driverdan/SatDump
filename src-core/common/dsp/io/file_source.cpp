@@ -38,7 +38,11 @@ namespace dsp
         }
         else
         {
+            // Nothing more to read, so the thread can end instead of spinning until stop().
+            // eof() is true before the next block can see the end of the stream.
             d_eof = true;
+            output_stream->setEOS();
+            should_run = false;
         }
     }
 

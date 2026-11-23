@@ -173,7 +173,7 @@ namespace satdump
                 rec->start();
 
                 int dat_size = 0;
-                while (demod_should_run())
+                while (demod_should_run(rec->output_stream))
                 {
                     dat_size = rec->output_stream->read();
 

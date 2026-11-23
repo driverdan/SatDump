@@ -73,7 +73,7 @@ namespace orbcomm
         uint8_t *frames = new uint8_t[d_buffer_size * 2];
 
         int dat_size = 0;
-        while (demod_should_run())
+        while (demod_should_run(rec->output_stream))
         {
             dat_size = rec->output_stream->read();
 

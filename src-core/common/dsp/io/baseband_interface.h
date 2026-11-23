@@ -149,6 +149,7 @@ namespace dsp
             main_mtx.unlock();
         }
 
+        // Returns the number of samples read, fewer than buffer_size at the end of a raw file
         inline int read_samples(complex_t *output_buffer, int buffer_size)
         {
             main_mtx.lock();
@@ -172,25 +173,30 @@ namespace dsp
             {
             case CF_32:
                 input_file.read((char *)output_buffer, buffer_size * sizeof(complex_t));
+                buffer_size = input_file.gcount() / sizeof(complex_t);
                 break;
 
             case CS_32:
                 input_file.read((char*)buffer_s32, buffer_size * sizeof(int32_t) * 2);
+                buffer_size = input_file.gcount() / (sizeof(int32_t) * 2);
                 volk_32i_s32f_convert_32f_u((float *)output_buffer, (const int32_t*)buffer_s32, 2147483647, buffer_size * 2);
                 break;
 
             case WAV_16: case CS_16:
                 input_file.read((char*)buffer_s16, buffer_size * sizeof(int16_t) * 2);
+                buffer_size = input_file.gcount() / (sizeof(int16_t) * 2);
                 volk_16i_s32f_convert_32f_u((float *)output_buffer, (const int16_t*)buffer_s16, 32767, buffer_size * 2);
                 break;
 
             case CS_8:
                 input_file.read((char *)buffer_s8, buffer_size * sizeof(int8_t) * 2);
+                buffer_size = input_file.gcount() / (sizeof(int8_t) * 2);
                 volk_8i_s32f_convert_32f_u((float *)output_buffer, (const int8_t *)buffer_s8, 127, buffer_size * 2);
                 break;
 
             case CU_8:
                 input_file.read((char *)buffer_u8, buffer_size * sizeof(uint8_t) * 2);
+                buffer_size = input_file.gcount() / (sizeof(uint8_t) * 2);
                 for (int i = 0; i < buffer_size; i++)
                 {
                     float imag = (buffer_u8[i * 2 + 1] - 127) * (1.0 / 127.0);

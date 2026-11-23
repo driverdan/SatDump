@@ -44,11 +44,25 @@ nlohmann::json FileSource::get_settings()
 
 void FileSource::run_thread()
 {
+    bool last_read_empty = false;
+
     while (should_run)
     {
         if (is_started)
         {
             int read = baseband_reader.read_samples(output_stream->writeBuf, buffer_size);
+
+            if (read <= 0)
+            {
+                // Nothing read: the end of the file, before the next read loops back to its
+                // start. Twice in a row, the file has no samples at all, so wait instead of
+                // spinning on it
+                if (last_read_empty)
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                last_read_empty = true;
+                continue;
+            }
+            last_read_empty = false;
 
             output_stream->getDataSize();
 

@@ -178,8 +178,7 @@ TEST_CASE("ndsp IQSourceBlock reads cf32 files", "[dsp][io][iq_source]")
     auto data = ndsp_test::randomComplex(1000, 64);
     ndsp_test::writeBytes(tf.str(), data);
     auto out = runIQSource(tf.str(), "cf32", 250);
-    // As in FileSourceBlock, extra stale samples follow (see the bug test below)
-    REQUIRE(out.size() >= data.size());
+    REQUIRE(out.size() == data.size());
     size_t mismatches = 0, first = 0;
     for (size_t i = 0; i < data.size(); i++)
         if (!ndsp_test::sameBits(out[i], data[i]) && mismatches++ == 0)
@@ -228,10 +227,8 @@ TEST_CASE("ndsp IQSourceBlock with a missing file only sends a terminator", "[ds
     CHECK(out.empty());
 }
 
-// Bug: iq_source.cpp:24 uses the count returned by
-// BasebandReader::read_samples (common/dsp/io/baseband_interface.h:233), which
-// is always the requested size, so short reads at EOF output stale samples.
-TEST_CASE("ndsp IQSourceBlock outputs exactly the samples in the file", "[dsp][io][iq_source][!shouldfail]")
+// A short read at the end of the file gives fewer samples, not a whole buffer
+TEST_CASE("ndsp IQSourceBlock outputs exactly the samples in the file", "[dsp][io][iq_source]")
 {
     ndsp_test::TempFile tf;
     ndsp_test::writeBytes(tf.str(), ndsp_test::randomComplex(10, 65));

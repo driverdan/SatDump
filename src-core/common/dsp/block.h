@@ -26,7 +26,17 @@ namespace dsp
         void run()
         {
             while (should_run)
+            {
                 work();
+
+                // Once all of the input was processed, tell the next block there is no more
+                if (d_got_input && input_stream && input_stream->isEOS())
+                {
+                    if (output_stream)
+                        output_stream->setEOS();
+                    break;
+                }
+            }
         }
 
     public:
@@ -41,7 +51,9 @@ namespace dsp
         }
         ~Block()
         {
-            if (should_run)
+            // The thread is still joinable when the block was started and not stopped, even if
+            // it already ended by itself (at the end of its input, or of the file it reads)
+            if (d_thread.joinable())
             {
                 logger->critical("CRITICAL! BLOCK SHOULD BE STOPPED BEFORE CALLING DESTRUCTOR!");
                 stop();
