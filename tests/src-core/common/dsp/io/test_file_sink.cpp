@@ -4,6 +4,9 @@
 #include "common/dsp/io/io_test_helpers.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <atomic>
+#include <cstring>
+#include <thread>
 
 using Catch::Approx;
 using dsp_test_io::readLE;
@@ -133,6 +136,52 @@ TEST_CASE("FileSinkBlock writes a valid WAV file", "[common][dsp][file_sink]")
             first = i;
     INFO("first mismatch at sample " << first);
     REQUIRE(mismatches == 0);
+}
+
+// stop_recording() used to finish the WAV header outside of the lock, while the block's thread
+// could be writing samples to the same file: the header ended up shifted, overwritten by
+// samples, or the process crashed. Samples are fed continuously while recordings are started
+// and stopped, so that a stop happens during a write.
+TEST_CASE("FileSinkBlock finishes the WAV header while samples are being written", "[common][dsp][file_sink]")
+{
+    dsp_test_io::TempPath tmp("sink_wav_race");
+    tmp.with(".wav");
+    auto input = std::make_shared<dsp::stream<complex_t>>();
+    dsp::FileSinkBlock sink(input);
+    sink.set_output_sample_type(dsp::WAV_16);
+    sink.start();
+
+    std::atomic<bool> feeding{true};
+    std::thread feeder(
+        [&]()
+        {
+            while (feeding)
+            {
+                for (int i = 0; i < 1000; i++)
+                    input->writeBuf[i] = complex_t(0.5f, -0.5f);
+                if (!input->swap(1000))
+                    break;
+            }
+        });
+
+    int bad = 0;
+    for (int i = 0; i < 200 && bad == 0; i++)
+    {
+        std::string path = sink.start_recording(tmp.path(), 12000);
+        sink.stop_recording();
+
+        auto b = dsp_test_io::readBytes(path);
+        INFO("recording " << i << ", " << b.size() << " bytes");
+        if (b.size() < 44 || memcmp(&b[0], "RIFF", 4) != 0 || readLE<uint32_t>(b, 24) != 12000 || readLE<uint32_t>(b, 40) != b.size() - 44 ||
+            readLE<uint32_t>(b, 4) != b.size() - 8)
+            bad++;
+        CHECK(bad == 0);
+    }
+
+    feeding = false;
+    input->stopWriter();
+    feeder.join();
+    sink.stop();
 }
 
 TEST_CASE("FileSinkBlock ignores samples when not recording", "[common][dsp][file_sink]")
