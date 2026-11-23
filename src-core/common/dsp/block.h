@@ -51,7 +51,9 @@ namespace dsp
         }
         ~Block()
         {
-            if (should_run)
+            // The thread is still joinable when the block was started and not stopped, even if
+            // it already ended by itself (at the end of its input, or of the file it reads)
+            if (d_thread.joinable())
             {
                 logger->critical("CRITICAL! BLOCK SHOULD BE STOPPED BEFORE CALLING DESTRUCTOR!");
                 stop();

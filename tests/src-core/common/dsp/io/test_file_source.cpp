@@ -133,6 +133,24 @@ TEST_CASE("FileSourceBlock ends its output stream after the last buffer", "[comm
     CHECK(got >= data.size());
 }
 
+TEST_CASE("FileSourceBlock can be destroyed after the end of the file without stop()", "[common][dsp][file_source]")
+{
+    dsp_test_io::TempPath tmp("src_destroy");
+    dsp_test_io::writeBytes(tmp.path(), ramp(1000));
+
+    // Its thread ends by itself at the end of the file, and must still be joined
+    {
+        dsp::FileSourceBlock src(tmp.path(), dsp::CF_32, 256);
+        src.start();
+
+        int n;
+        while ((n = src.output_stream->read()) >= 0)
+            src.output_stream->flush();
+        CHECK(src.eof());
+    }
+    SUCCEED("not terminated");
+}
+
 // A short read at the end of the file gives fewer samples, not a whole buffer of stale ones
 TEST_CASE("FileSourceBlock outputs exactly the samples in the file", "[common][dsp][file_source]")
 {
