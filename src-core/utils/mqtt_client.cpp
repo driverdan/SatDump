@@ -53,8 +53,16 @@ namespace satdump
             throw satdump_exception("error: " + error);
         }
 
-        // Start refresh thread
-        run_refresh_th = std::thread(client_refresher, &client);
+        // Start refresh thread (std::thread throws std::system_error if it cannot)
+        try
+        {
+            run_refresh_th = std::thread(client_refresher, &client);
+        }
+        catch (...)
+        {
+            release();
+            throw;
+        }
     }
 
     MQTTClient::~MQTTClient()
