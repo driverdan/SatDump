@@ -127,19 +127,13 @@ namespace
     };
 
     // Stand-in for network_client: produces bytes without any input.
-    // It provides its own input FIFO so that LivePipeline::stop() can stop it (see note below).
+    // Like the real module, it is given no input FIFO by start_client().
     class LiveFakeClient : public LiveModuleBase
     {
     public:
         using LiveModuleBase::LiveModuleBase;
-        std::vector<pl::ModuleDataType> getInputTypes() { return {pl::DATA_STREAM}; }
-        std::vector<pl::ModuleDataType> getOutputTypes() { return {pl::DATA_STREAM}; }
-
-        void init()
-        {
-            if (!input_fifo)
-                input_fifo = std::make_shared<dsp::RingBuffer<uint8_t>>(1000);
-        }
+        std::vector<pl::ModuleDataType> getInputTypes() { return {pl::DATA_FILE, pl::DATA_STREAM}; }
+        std::vector<pl::ModuleDataType> getOutputTypes() { return {pl::DATA_FILE, pl::DATA_STREAM}; }
 
         void process()
         {
@@ -394,9 +388,8 @@ TEST_CASE("LivePipeline::start in server mode appends network_server with the pa
     CHECK(liveLog().hints["network_server"] == env.dir.str() + "/unit_live");
 }
 
-// Note: LivePipeline::stop() (live_pipeline.cpp:179) dereferences input_fifo of the first module.
-// In client mode the first module is network_client, which is never given an input FIFO, so the
-// real module would crash on stop. The fake client creates its own FIFO to keep the test safe.
+// In client mode the first module is network_client, which has no input FIFO.
+// LivePipeline::stop() used to dereference it anyway (#176).
 TEST_CASE("LivePipeline::start_client prepends network_client", "[pipeline][live_pipeline]")
 {
     LiveEnv env;
@@ -417,6 +410,8 @@ TEST_CASE("LivePipeline::start_client prepends network_client", "[pipeline][live
     CHECK(live.modules[0]->getIDM() == "network_client");
     CHECK(live.modules[0]->getOutputType() == pl::DATA_STREAM);
     CHECK(live.modules[1]->getIDM() == "unit_live_sink");
+    CHECK(live.modules[0]->getInputType() == pl::DATA_STREAM);
+    CHECK(live.modules[0]->input_fifo == nullptr);
     CHECK(live.modules[1]->input_fifo == live.modules[0]->output_fifo);
 
     REQUIRE(test_helpers::waitUntil([&]() { return sink->count.load() >= 4; }, std::chrono::seconds(30)));

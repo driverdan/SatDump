@@ -169,12 +169,13 @@ namespace satdump
 
                 mod->input_active = false;
 
-                if (mod->getInputType() == DATA_DSP_STREAM)
+                // In client mode, the first module (network_client) has no input to stop
+                if (mod->getInputType() == DATA_DSP_STREAM && mod->input_stream)
                 {
                     mod->input_stream->stopReader();
                     mod->input_stream->stopWriter();
                 }
-                else if (mod->getInputType() == DATA_STREAM)
+                else if (mod->getInputType() == DATA_STREAM && mod->input_fifo)
                 {
                     mod->input_fifo->stopReader();
                     mod->input_fifo->stopWriter();
