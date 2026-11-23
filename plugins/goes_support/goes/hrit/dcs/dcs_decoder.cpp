@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <fstream>
 #include <cerrno>
@@ -37,6 +39,40 @@ namespace goes
             return std::string(return_buffer) + "." + std::to_string(ms);
         }
 
+        // The first line of a file, without its line ending
+        static std::string firstLine(const std::string &data)
+        {
+            std::string line = data.substr(0, data.find('\n'));
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
+            return line;
+        }
+
+        static bool isHexAddress(const std::string &address)
+        {
+            if (address.size() != 8)
+                return false;
+            for (char c : address)
+                if (!std::isxdigit((unsigned char)c))
+                    return false;
+            return true;
+        }
+
+        bool isPdtFile(const std::string &data)
+        {
+            // Fixed width lines, with the DCP address at 6 and the data format at 42 (see loadDCPs())
+            std::string line = firstLine(data);
+            return line.size() > 42 && isHexAddress(line.substr(6, 8));
+        }
+
+        bool isHadsFile(const std::string &data)
+        {
+            // '|' separated lines, starting with the DCP address, of at least 10 fields (see loadDCPs())
+            std::string line = firstLine(data);
+            size_t fields = std::count(line.begin(), line.end(), '|') + 1;
+            return fields >= 10 && isHexAddress(line.substr(0, line.find('|')));
+        }
+
         void GOESLRITDataDecoderModule::updateDCPs(DCPUpdateEvent)
         {
             bool update_success = true;
@@ -47,8 +83,15 @@ namespace goes
             std::vector<std::string> pdt_urls = satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"];
             for (std::string& pdt_url : pdt_urls)
             {
+                file_data = "";
                 if (satdump::perform_http_request(pdt_url, file_data) == 0)
                 {
+                    if (!isPdtFile(file_data))
+                    {
+                        logger->warn("%s is not a PDT file, ignoring it", pdt_url.c_str());
+                        continue;
+                    }
+
                     std::ofstream save_pdts(satdump::user_path + "/PDTS_COMPRESSED.txt");
                     save_pdts << file_data;
                     save_pdts.close();
@@ -64,12 +107,18 @@ namespace goes
             }
 
             this_success = false;
-            file_data = "";
             std::vector<std::string> hads_urls = satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["hads_urls"];
             for (std::string& hads_url : hads_urls)
             {
+                file_data = "";
                 if (satdump::perform_http_request(hads_url, file_data) == 0)
                 {
+                    if (!isHadsFile(file_data))
+                    {
+                        logger->warn("%s is not a HADS file, ignoring it", hads_url.c_str());
+                        continue;
+                    }
+
                     std::ofstream save_hads(satdump::user_path + "/all_dcp_defs.txt");
                     save_hads << file_data;
                     save_hads.close();

@@ -119,6 +119,11 @@ namespace goes
             std::vector<std::variant<std::shared_ptr<DCSMessage>, std::shared_ptr<MissedMessage>>> blocks;
         };
 
+        // Whether a downloaded file looks like a PDT list (PDTS_COMPRESSED.txt) or a HADS list
+        // (all_dcp_defs.txt), and not e.g. an HTML page. Only the first line is checked.
+        bool isPdtFile(const std::string &data);
+        bool isHadsFile(const std::string &data);
+
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PEInfo, name, record_interval, read_to_transmit_offset, base_elevation, correction);
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DCP, pe_info, agency, state, manufacturer, model, nmc_descriptor, description, transmit_interval,
             transmit_window, lat, lon, data_format);

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "imgui/imgui.h"
 #include "imgui/imgui_stdlib.h"
 #include "core/config.h"
@@ -13,13 +14,34 @@ namespace goes
         static int update_interval_selection = 0;
         static bool *advanced_mode;
 
+        // DADDS redirects this to the file
+        static const std::string dadds_pdt_url = "https://dadds-dcs-api.data.nesdis.noaa.gov/pdts/PDTS_COMPRESSED.txt";
+
         static std::vector<std::string> pdt_urls =
+        {
+            dadds_pdt_url
+        };
+
+        // The former defaults, which now redirect to the DADDS home page
+        static const std::vector<std::string> old_pdt_urls =
         {
             "https://dcs1.noaa.gov/PDTS_COMPRESSED.txt",
             "https://dcs2.noaa.gov/PDTS_COMPRESSED.txt",
             "https://dcs3.noaa.gov/PDTS_COMPRESSED.txt",
             "https://dcs4.noaa.gov/PDTS_COMPRESSED.txt"
         };
+
+        std::vector<std::string> migratePdtUrls(const std::vector<std::string> &urls)
+        {
+            std::vector<std::string> migrated;
+            for (const std::string &url : urls)
+            {
+                const std::string &new_url = std::find(old_pdt_urls.begin(), old_pdt_urls.end(), url) != old_pdt_urls.end() ? dadds_pdt_url : url;
+                if (std::find(migrated.begin(), migrated.end(), new_url) == migrated.end())
+                    migrated.push_back(new_url);
+            }
+            return migrated;
+        }
 
         static std::vector<std::string> hads_urls =
         {
@@ -59,9 +81,8 @@ namespace goes
             // Initialize PDT URLs
             if (satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"].contains("pdt_urls") &&
                 satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"].is_array())
-                pdt_urls = satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"];
-            else
-                satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"] = pdt_urls;
+                pdt_urls = migratePdtUrls(satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"].get<std::vector<std::string>>());
+            satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"]["pdt_urls"] = pdt_urls;
 
             // Initialize HADS URLs
             if (satdump::satdump_cfg.main_cfg["plugin_settings"]["goes_support"].contains("hads_urls") &&
