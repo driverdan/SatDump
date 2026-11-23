@@ -13,8 +13,8 @@ namespace satdump
 {
     namespace opencl
     {
-        // Defined in core/opencl.cpp but not exposed in its header. It is zero-initialised,
-        // which useCL() treats as "use OpenCL platform 0" when initOpenCL() was never called.
+        // Defined in core/opencl.cpp but not exposed in its header. It is -1 (CPU) until
+        // initOpenCL() reads the configured device; the guard pins it to -1 regardless.
         extern int platform_id;
     } // namespace opencl
 } // namespace satdump
