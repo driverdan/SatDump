@@ -59,18 +59,10 @@ namespace satdump
                 init();
 
                 // The output buffer of this call was sized for the old ratio. If the new
-                // ratio needs a bigger one, only keep the input, to process it next call
+                // ratio needs a bigger one, drop this input : the next call gets an output
+                // buffer sized for the new ratio, and starts with an empty internal buffer
                 if (BlockSimple<T, T>::output_buffer_size_ratio > alloc_ratio)
-                {
-                    if (buffer_size < nsamples)
-                    {
-                        buffer.resize(nsamples * 2);
-                        buffer_size = buffer.size();
-                    }
-                    memcpy(&buffer[0], input, nsamples * sizeof(T));
-                    in_buffer = nsamples;
                     return 0;
-                }
             }
 
             if (in_buffer + nsamples >= 1e6)
