@@ -84,6 +84,24 @@ TEST_CASE("XRITFile headers carry the fields of the LRIT standard", "[plugins][x
     CHECK(f.filename == ""); // No annotation
 }
 
+TEST_CASE("XRITFile time stamp record reads the CCSDS time after its P-field", "[plugins][xrit_support][xrit_file]")
+{
+    // 20780 days after 1970-01-01 is 2026-11-23, 45296789 ms is 12:34:56.789
+    auto f = fileOf(lritFile(0, {timeStampRecord(4383 + 20780, 45296789)}, {}));
+    f.parseHeaders();
+
+    auto stamp = f.getHeader<xr::TimeStampRecord>();
+    CHECK(stamp.record_length == 10);
+    CHECK(stamp.days == 4383 + 20780);
+    CHECK(stamp.milliseconds_of_day == 45296789);
+    CHECK(stamp.timestamp == time_t(1795437296)); // The milliseconds are dropped
+
+    // A day after 2038, when the seconds no longer fit in 32 bits
+    f = fileOf(lritFile(0, {timeStampRecord(30000, 0)}, {}));
+    f.parseHeaders();
+    CHECK(f.getHeader<xr::TimeStampRecord>().timestamp == time_t(30000 - 4383) * 86400);
+}
+
 TEST_CASE("XRITFile::parseHeaders makes a safe file name of the annotation", "[plugins][xrit_support][xrit_file]")
 {
     auto f = fileOf(lritFile(2, {annotationRecord("../a\\b c\td.lrit")}, {}));
