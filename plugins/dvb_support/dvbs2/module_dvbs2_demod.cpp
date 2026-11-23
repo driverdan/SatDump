@@ -216,7 +216,7 @@ namespace satdump
                     if (time(NULL) % 10 == 0 && lastTime != time(NULL))
                     {
                         lastTime = time(NULL);
-                        logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%, SNR : " + std::to_string(snr) + "dB," +
+                        logger->info(getProgressLogPrefix() + "SNR : " + std::to_string(snr) + "dB," +
                                      " Peak SNR: " + std::to_string(peak_snr) + "dB");
                     }
                 }
@@ -230,7 +230,8 @@ namespace satdump
             nlohmann::json DVBS2DemodModule::getModuleStats()
             {
                 nlohmann::json v; // auto v = satdump::pipeline::base::FileStreamToFileStreamModule::getModuleStats();
-                v["progress"] = ((double)progress / (double)filesize);
+                if (!d_is_streaming_input)
+                    v["progress"] = ((double)progress / (double)filesize);
                 v["snr"] = snr;
                 v["peak_snr"] = peak_snr;
                 v["freq"] = display_freq;

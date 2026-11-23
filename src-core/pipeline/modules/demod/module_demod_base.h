@@ -102,6 +102,13 @@ namespace satdump
                 time_t start_time;
                 double averaged_eta = -1;
 
+                /** @brief Prefix for the periodic status log line, such as "Progress 42.0%%, "
+                *
+                * Empty for streaming input, where there is no file size to report progress against.
+                * The result is meant for logger format strings, so the percent sign is escaped.
+                */
+                std::string getProgressLogPrefix();
+
                 // Util
                 int8_t clamp(float x)
                 {

@@ -159,7 +159,7 @@ namespace satdump
                                 lastTime = time(NULL);
 
                                 std::string viterbi_l = std::string(viterbi.getState() == 0 ? "NOSYNC" : "SYNC") + " " + rate;
-                                logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%, SNR : " + std::to_string(snr) +
+                                logger->info(getProgressLogPrefix() + "SNR : " + std::to_string(snr) +
                                              "dB, Viterbi : " + viterbi_l + ", Deframer Sync : " + std::to_string(def->isSynced()) + ", Peak SNR: " + std::to_string(peak_snr) + "dB");
                             }
 
@@ -241,7 +241,8 @@ namespace satdump
             nlohmann::json DVBSDemodModule::getModuleStats()
             {
                 nlohmann::json v; // auto v = satdump::pipeline::base::FileStreamToFileStreamModule::getModuleStats();
-                v["progress"] = ((double)progress / (double)filesize);
+                if (!d_is_streaming_input)
+                    v["progress"] = ((double)progress / (double)filesize);
                 v["snr"] = snr;
                 v["peak_snr"] = peak_snr;
                 v["freq"] = display_freq;
