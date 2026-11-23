@@ -91,7 +91,7 @@ namespace satdump
             tryApplyDefaultPreset();
         }
 
-        ImageProductHandler::~ImageProductHandler() { ProcessingHandler::~ProcessingHandler(); }
+        ImageProductHandler::~ImageProductHandler() { waitForProcessing(); }
 
         void ImageProductHandler::drawMenu()
         {

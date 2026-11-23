@@ -24,7 +24,7 @@ namespace satdump
             tryApplyDefaultPreset();
         }
 
-        PunctiformProductHandler::~PunctiformProductHandler() { ProcessingHandler::~ProcessingHandler(); }
+        PunctiformProductHandler::~PunctiformProductHandler() { waitForProcessing(); }
 
         void PunctiformProductHandler::drawMenu()
         {

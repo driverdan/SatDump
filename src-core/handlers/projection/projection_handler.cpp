@@ -39,7 +39,7 @@ namespace satdump
 
         ProjectionHandler::~ProjectionHandler()
         {
-            ProcessingHandler::~ProcessingHandler();
+            waitForProcessing();
             satdump::db->set_user_json("projection_defaults", getConfig());
         }
 
