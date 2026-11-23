@@ -42,7 +42,8 @@ namespace reedsolomon
             d_parity_bits = 16;
         }
 
-        this->fill_bytes = fill_bytes;
+        // The CCSDS decoders pass -1 when rs_fill_bytes is not set: that means no fill bytes
+        this->fill_bytes = fill_bytes > 0 ? fill_bytes : 0;
     }
 
     ReedSolomon::~ReedSolomon()
@@ -62,7 +63,7 @@ namespace reedsolomon
 
     int ReedSolomon::decode(uint8_t *data, bool ccsds)
     {
-        if (fill_bytes != -1) // Depuncture
+        if (fill_bytes > 0) // Depuncture
         {
             memmove(&data[fill_bytes], &data[0], 255 - fill_bytes); // Move RS to the end
             memset(&data[0], 0, fill_bytes);                        // Set fill to 0
@@ -84,7 +85,7 @@ namespace reedsolomon
                     data[i] = ToDualBasis[data[i]];
             }
 
-            if (fill_bytes != -1)                                       // Repuncture
+            if (fill_bytes > 0)                                         // Repuncture
                 memmove(&data[0], &data[fill_bytes], 255 - fill_bytes); // Move back parity
 
             return -1;
@@ -101,7 +102,7 @@ namespace reedsolomon
             }
         }
 
-        std::memcpy(data, odata, fill_bytes == -1 ? d_coded_bits : (d_coded_bits - fill_bytes));
+        std::memcpy(data, odata, d_coded_bits); // The fill bytes come first, so the data ends at d_coded_bits
 
         if (ccsds)
         {
@@ -109,7 +110,7 @@ namespace reedsolomon
                 data[i] = ToDualBasis[data[i]];
         }
 
-        if (fill_bytes != -1)                                       // Repuncture
+        if (fill_bytes > 0)                                         // Repuncture
             memmove(&data[0], &data[fill_bytes], 255 - fill_bytes); // Move back parity
 
         return err;
@@ -127,6 +128,12 @@ namespace reedsolomon
 
     void ReedSolomon::encode(uint8_t *data, bool ccsds)
     {
+        if (fill_bytes > 0) // Depuncture
+        {
+            memmove(&data[fill_bytes], &data[0], 255 - fill_bytes); // Move data to the end
+            memset(&data[0], 0, fill_bytes);                        // Set fill to 0
+        }
+
         if (ccsds)
         {
             for (int ii = 0; ii < 255; ii++)
@@ -140,6 +147,9 @@ namespace reedsolomon
             for (int ii = 0; ii < 255; ii++)
                 data[ii] = ToDualBasis[data[ii]];
         }
+
+        if (fill_bytes > 0)                                         // Repuncture
+            memmove(&data[0], &data[fill_bytes], 255 - fill_bytes); // Move back parity
     }
 
     void ReedSolomon::deinterleave(uint8_t *data, uint8_t *output, uint8_t pos, uint8_t i)

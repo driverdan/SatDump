@@ -346,11 +346,9 @@ TEST_CASE("ReedSolomon shortened (fill bytes) decode corrects errors at the star
     CHECK(std::equal(tx.begin(), tx.begin() + (k - fill), rx.begin()));
 }
 
-// Bug: reedsolomon.cpp copies back only (d_coded_bits - fill_bytes) corrected bytes starting at offset 0
-// of the depunctured buffer (which begins with fill_bytes virtual zeros), so the last fill_bytes data
-// symbols of a shortened codeword are returned uncorrected even though the error count includes them
-// (reedsolomon.cpp:104).
-TEST_CASE("ReedSolomon shortened decode corrects errors in the last data symbols", "[common][codings][reedsolomon][!shouldfail]")
+// The corrected data must be copied back up to d_coded_bits of the depunctured buffer (which begins
+// with fill_bytes virtual zeros), not only d_coded_bits - fill_bytes bytes
+TEST_CASE("ReedSolomon shortened decode corrects errors in the last data symbols", "[common][codings][reedsolomon]")
 {
     const int fill = 33;
     const int k = 223;
@@ -370,11 +368,9 @@ TEST_CASE("ReedSolomon shortened decode corrects errors in the last data symbols
     CHECK(rx[lastData] == tx[lastData]);
 }
 
-// Bug: encode()/encode_interlaved() ignore fill_bytes: the de-interleaved 255 - fill symbols are
-// encoded as if they were an unshortened codeword (data in the first 223 positions) and only the first
-// 255 - fill symbols are interleaved back, so the parity is truncated and the result cannot be decoded
-// by decode_interlaved() with the same fill (reedsolomon.cpp:118-142).
-TEST_CASE("ReedSolomon shortened interleaved encode/decode round-trip", "[common][codings][reedsolomon][!shouldfail]")
+// encode() must depuncture like decode(): the de-interleaved 255 - fill symbols hold k - fill data
+// symbols followed by the parity
+TEST_CASE("ReedSolomon shortened interleaved encode/decode round-trip", "[common][codings][reedsolomon]")
 {
     const int fill = 20, depth = 2, k = 223;
     reedsolomon::ReedSolomon rs(reedsolomon::RS223, fill);
@@ -417,4 +413,44 @@ TEST_CASE("ReedSolomon decode_interlaved with fill bytes corrects shortened code
     CHECK(errors == std::vector<int>({4, 5, 6}));
     for (int i = 0; i < (k - fill) * depth; i++)
         REQUIRE(rx[i] == frame[i]);
+}
+
+// The CCSDS decoders pass -1 when rs_fill_bytes is not set. decode() treated it as no fill bytes,
+// but deinterleave()/interleave() looped 255 - (-1) = 256 times, one symbol past each codeword.
+TEST_CASE("ReedSolomon fill_bytes = -1 is the same as no fill bytes", "[common][codings][reedsolomon]")
+{
+    const int depth = 4;
+    reedsolomon::ReedSolomon rs(reedsolomon::RS223, -1);
+    reedsolomon::ReedSolomon ref(reedsolomon::RS223, 0);
+
+    // Exactly sized buffers, so that ASan reports any access past the interleaved frame
+    std::vector<uint8_t> frame = randomBytes(255 * depth, 11);
+    std::vector<uint8_t> rebuilt(255 * depth, 0);
+    for (int pos = 0; pos < depth; pos++)
+    {
+        uint8_t cw[256];
+        cw[255] = 0xA5; // Must not be written
+        rs.deinterleave(frame.data(), cw, pos, depth);
+        REQUIRE(cw[255] == 0xA5);
+        rs.interleave(cw, rebuilt.data(), pos, depth);
+    }
+    CHECK(rebuilt == frame);
+
+    // Interleaved encode/decode matches the unshortened code
+    bool ccsds = GENERATE(false, true);
+    std::vector<uint8_t> a = randomBytes(255 * depth, 12);
+    std::vector<uint8_t> b = a;
+    rs.encode_interlaved(a.data(), ccsds, depth);
+    ref.encode_interlaved(b.data(), ccsds, depth);
+    REQUIRE(a == b);
+
+    std::vector<uint8_t> rx = a;
+    corrupt(rx.data(), 20, 13, 0, 223 * depth);
+    std::vector<uint8_t> rxRef = rx;
+    std::vector<int> errors(depth, 1234), errorsRef(depth, 1234);
+    rs.decode_interlaved(rx.data(), ccsds, depth, errors.data());
+    ref.decode_interlaved(rxRef.data(), ccsds, depth, errorsRef.data());
+    CHECK(errors == errorsRef);
+    CHECK(rx == rxRef);
+    CHECK(std::equal(a.begin(), a.begin() + 223 * depth, rx.begin()));
 }
