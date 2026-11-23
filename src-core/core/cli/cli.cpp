@@ -31,7 +31,7 @@ namespace satdump
         {
             // Command basics
             app.set_help_all_flag("--help-all", "Expand all help");
-            bool verbose = false;
+            // CLI11 keeps a reference to the variable, so it must outlive the constructor (#182)
             app.add_flag("-v,--verbose", verbose, "Make the logger more verbose");
             app.require_subcommand();
 
@@ -75,6 +75,8 @@ namespace satdump
             }
             return 0;
         }
+
+        bool CommandHandler::is_verbose() { return verbose; }
 
         bool CommandHandler::has_command() { return app.get_subcommands().size(); }
 

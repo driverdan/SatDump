@@ -151,9 +151,8 @@ TEST_CASE("CommandHandler parses the CLI-only subcommands", "[core][cli]")
     }
     {
         satdump::cli::CommandHandler h(false);
-        // -v / --verbose is not passed through CommandHandler::parse: the flag is bound to a local of the
-        // constructor (see #182)
         CHECK(parse(h, {"probe", "--rx", "--params"}) == 0);
+        CHECK_FALSE(h.is_verbose());
     }
     {
         satdump::cli::CommandHandler h(false);
@@ -167,6 +166,24 @@ TEST_CASE("CommandHandler parses the CLI-only subcommands", "[core][cli]")
         satdump::cli::CommandHandler h(false);
         CHECK(parse(h, {"dsp_bench", "--agc", "--rrc"}) == 0);
     }
+}
+
+TEST_CASE("CommandHandler parses -v / --verbose into a member (#182)", "[core][cli]")
+{
+    ConfigGuard cg;
+    // The flag used to be bound to a local of the constructor, so parsing it wrote to a dead stack slot.
+    // It is an option of the top-level app, so it comes before the subcommand
+    for (std::vector<std::string> args : std::vector<std::vector<std::string>>{
+             {"-v", "probe", "--rx"}, {"--verbose", "probe", "--rx"}, {"-v", "dsp_bench", "--agc"}})
+    {
+        satdump::cli::CommandHandler h(false);
+        CHECK(parse(h, args) == 0);
+        CHECK(h.has_command());
+        CHECK(h.is_verbose());
+    }
+    satdump::cli::CommandHandler h(false);
+    CHECK(parse(h, {"probe", "--rx"}) == 0);
+    CHECK_FALSE(h.is_verbose());
 }
 
 TEST_CASE("CommandHandler rejects invalid subcommand arguments", "[core][cli]")
