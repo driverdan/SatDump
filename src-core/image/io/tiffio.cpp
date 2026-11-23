@@ -127,6 +127,14 @@ namespace satdump
                 TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &channels_number);
                 TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bit_depth);
 
+                // Checked before anything is set on img, which is left untouched
+                if (bit_depth != 8 && bit_depth != 16)
+                {
+                    logger->error("Unsupported TIFF bit depth %d", bit_depth);
+                    TIFFClose(tif);
+                    return;
+                }
+
                 proj::projection_t pro;
                 if (geotiff::try_read_geotiff(&pro, tif))
                 {
@@ -135,12 +143,6 @@ namespace satdump
                     meta["proj_cfg"]["width"] = w;
                     meta["proj_cfg"]["height"] = h;
                     set_metadata(img, meta);
-                }
-
-                if (bit_depth != 8 && bit_depth != 16)
-                {
-                    logger->error("Unsupported TIFF bit depth %d", bit_depth);
-                    return;
                 }
 
                 img.init(bit_depth, w, h, channels_number);
