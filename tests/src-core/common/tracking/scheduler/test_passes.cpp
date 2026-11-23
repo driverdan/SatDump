@@ -3,6 +3,7 @@
 #include "helpers/kepler_db.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <cmath>
 
 using Catch::Matchers::WithinAbs;
 
@@ -135,6 +136,35 @@ TEST_CASE_METHOD(KeplerDbFixture, "getPassesForSatellite ISS AOS/LOS match indep
         CHECK(p.max_elevation <= best + 0.01);
         CHECK(p.max_elevation >= best - 1.0);
     }
+}
+
+TEST_CASE_METHOD(KeplerDbFixture, "getPassesForSatellite takes the observer altitude in metres", "[common][tracking][passes]")
+{
+    // Synthetic 50 km high observer, so the altitude visibly moves AOS/LOS: raising the
+    // observer by h lowers a near-horizon satellite at range d by about h/d (~1.4 deg here),
+    // well above the 0.3 deg horizon threshold libpredict refines AOS/LOS to
+    const double alt = 50000;
+    add(issKepler());
+    auto passes = satdump::getPassesForSatellite(25544, ISS_START, DAY, QTH_LON, QTH_LAT, alt);
+    REQUIRE_FALSE(passes.empty());
+
+    satdump::SatelliteTracker tracker(stored(25544));
+    auto elevation = [&](double t) { return tracker.get_observed_position(t, QTH_LAT, QTH_LON, alt).elevation * RAD_TO_DEG; };
+    for (auto &p : passes)
+    {
+        INFO("pass AOS " << p.aos_time << " LOS " << p.los_time);
+        // Seen from that same altitude, the satellite is on the horizon at AOS and LOS
+        CHECK(std::fabs(elevation(p.aos_time)) < 0.35);
+        CHECK(std::fabs(elevation(p.los_time)) < 0.35);
+        CHECK(elevation(p.aos_time + 60) > 0);
+        CHECK(elevation(p.los_time - 60) > 0);
+    }
+
+    // And the passes differ from those seen from sea level
+    auto sea_level = satdump::getPassesForSatellite(25544, ISS_START, DAY, QTH_LON, QTH_LAT, 0);
+    REQUIRE(sea_level.size() == passes.size());
+    for (size_t i = 0; i < passes.size(); i++)
+        CHECK(std::fabs(passes[i].aos_time - sea_level[i].aos_time) > 5);
 }
 
 TEST_CASE_METHOD(KeplerDbFixture, "getPassesForSatellite fills in elevation for premade passes", "[common][tracking][passes]")

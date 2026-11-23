@@ -9,7 +9,7 @@ namespace satdump
     std::vector<SatellitePass> getPassesForSatellite(int norad, double initial_time, double timespan, double qth_lon, double qth_lat, double qth_alt, std::vector<SatellitePass> premade_passes)
     {
         std::vector<SatellitePass> passes;
-        predict_observer_t *observer_station = predict_create_observer("Main", qth_lat * DEG_TO_RAD, qth_lon * DEG_TO_RAD, qth_alt * DEG_TO_RAD);
+        predict_observer_t *observer_station = predict_create_observer("Main", qth_lat * DEG_TO_RAD, qth_lon * DEG_TO_RAD, qth_alt);
         auto tle = db_keplers->get_from_norad(norad);
         if (!tle.has_value())
         {
