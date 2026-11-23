@@ -190,6 +190,40 @@ TEST_CASE("ndsp AtmosphericGasesITU gives a sane zenith attenuation", "[dsp][cha
     CHECK(zenith < 1.0);
 }
 
+// Reference values: U.S. Standard Atmosphere 1976 at geometric altitudes, which the ITU-R P.835
+// mean annual global reference atmosphere reproduces
+TEST_CASE("ndsp AtmosphericGasesITU follows the ITU-R P.835 reference atmosphere", "[dsp][channel_model]")
+{
+    AtmosphericGasesITU a(7.5);
+    CHECK(a.get_temperature(0) == Approx(288.15));
+    CHECK(a.get_pressure(0) == Approx(1013.25));
+    CHECK(a.get_pressure(25) == Approx(25.492).epsilon(1e-3));
+    CHECK(a.get_pressure(40) == Approx(2.8714).epsilon(1e-3));
+    CHECK(a.get_pressure(60) == Approx(0.21958).epsilon(1e-3));
+    // 71 to 84.852 km geopotential : T = 214.65 - 2.0 * (h - 71)
+    CHECK(a.get_temperature(80) == Approx(198.639).epsilon(1e-4));
+    CHECK(a.get_pressure(80) == Approx(1.0524e-2).epsilon(1e-3));
+    // Above 86 km geometric, no gap at the 84.852 km geopotential boundary
+    CHECK(a.get_temperature(86.5) == Approx(186.8673));
+    CHECK(a.get_pressure(86.5) > 0);
+    CHECK(a.get_pressure(90) == Approx(1.8359e-3).epsilon(1e-3));
+    CHECK(a.get_pressure(100) == Approx(3.2011e-4).epsilon(1e-3));
+
+    // Pressure decreases and temperature stays positive and continuous up to 100 km
+    double prev_p = a.get_pressure(0);
+    double prev_t = a.get_temperature(0);
+    for (double z = 0.05; z <= 100; z += 0.05)
+    {
+        double p = a.get_pressure(z);
+        double t = a.get_temperature(z);
+        CHECK(p < prev_p);
+        CHECK(t > 150);
+        CHECK(std::fabs(t - prev_t) < 0.5);
+        prev_p = p;
+        prev_t = t;
+    }
+}
+
 // Bug: the ray-tracing of AtmosphericGasesITU (atmospheric_gases_itu.cpp:248-288, a() / alpha() /
 // beta()) loses the elevation : the slant path attenuation at 10 degrees comes out about
 // the same as at zenith, while a stratified atmosphere gives roughly zenith / sin(10 deg).

@@ -20,6 +20,22 @@ public:
 
     double get_attenuation();
 
+    /*!
+     * \brief Get the temperature at a specific altitude in the atmosphere
+     * (ITU-R P.835 mean annual global reference atmosphere)
+     * \param alt Geometric altitude in km
+     * \return The temperature in Kelvin
+     */
+    double get_temperature(double alt);
+
+    /*!
+     * \brief Get the dry air pressure at a specific altitude in the atmosphere
+     * (ITU-R P.835 mean annual global reference atmosphere)
+     * \param alt Geometric altitude in km
+     * \return The pressure in hPa
+     */
+    double get_pressure(double alt);
+
 private:
     double d_temperature;
     double d_oxygen_pressure;
@@ -96,18 +112,6 @@ private:
                                               {902.611085, 0.0386, 8.429, 28.65, 0.7, 5.1, 0.95},    {906.205957, 0.1836, 5.11, 24.08, 0.7, 4.7, 0.53},
                                               {916.171582, 8.4, 1.441, 26.73, 0.7, 5.15, 0.78},      {923.112692, 0.0079, 10.293, 29, 0.7, 5, 0.8},
                                               {970.315022, 9.009, 1.919, 25.5, 0.64, 4.94, 0.67},    {987.926764, 134.6, 0.257, 29.85, 0.68, 4.55, 0.9}};
-
-    /*!
-     * \brief Get the temperature at a specific altitude in the atmosphere
-     * \return The temperature in Kelvin
-     */
-    double get_temperature(double alt);
-
-    /*!
-     * \brief Get the dry air pressure at a specific altitude in the atmosphere
-     * \return The pressure in hPa
-     */
-    double get_pressure(double alt);
 
     /*!
      * \brief Get the water-vapour pressure at a specific altitude in the atmosphere
