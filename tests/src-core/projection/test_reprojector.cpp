@@ -165,20 +165,27 @@ TEST_CASE("reprojectImage takes size from the target projection", "[projection][
     CHECK(satdump::image::get_metadata_proj_cfg(img)["width"] == 36);
 }
 
-TEST_CASE("reproject on a source projection without size throws", "[projection][reprojector]")
+TEST_CASE("reproject takes the source size from the image", "[projection][reprojector]")
 {
-    // Projection::init() requires width/height, and reproject() does not add them for
-    // standard sources either; reprojectImage() is the entry point that does
+    // Projection::init() requires width/height. reproject() fills them in from the source
+    // image itself, so metadata without them (or with stale ones) works too (#224)
     auto img = globeImage();
     auto cfg = globeCfg(10);
     cfg.erase("width");
+    cfg.erase("height");
     satdump::image::set_metadata_proj_cfg(img, cfg);
     ReprojectionOperation op;
     op.img = &img;
-    op.output_width = 36;
-    op.output_height = 18;
-    op.target_prj_info = globeCfg(10);
-    CHECK_THROWS(satdump::projection::reproject(op));
+    op.output_width = 72;
+    op.output_height = 36;
+    op.target_prj_info = globeCfg(5);
+    satdump::image::Image out;
+    REQUIRE_NOTHROW(out = satdump::projection::reproject(op));
+    REQUIRE(out.width() == 72);
+    CHECK(out.get(3, 20, 10) == 65535);
+    CHECK(std::abs(out.get(0, 20, 10) - (1000 * 10 + 100 * 5)) <= 1);
+    // The input image metadata is left alone
+    CHECK(satdump::image::get_metadata_proj_cfg(img) == cfg);
 }
 
 // Needs CpuOnlyWarpGuard, which uses a data symbol of satdump_core that is not
@@ -204,9 +211,13 @@ TEST_CASE("reproject warps a raytraced (GCP) source through the smart warper", "
     cfg["f_width"] = 1440; // 0.25 degree intermediate grid
     satdump::image::set_metadata_proj_cfg(img, cfg);
 
-    // reprojectImage() fills in the source width/height the raytracer config needs. Calling
-    // reproject() directly on this metadata throws instead (see #224).
-    auto out = satdump::projection::reprojectImage(img, globeCfg(0.5));
+    // The metadata has no width/height: reproject() takes them from the image (#224)
+    ReprojectionOperation op;
+    op.img = &img;
+    op.output_width = 720;
+    op.output_height = 360;
+    op.target_prj_info = globeCfg(0.5);
+    auto out = satdump::projection::reproject(op);
     REQUIRE(out.width() == 720);
     REQUIRE(out.channels() == 4);
 
