@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <string>
+#include <chrono>
 #include <functional>
 #include <mutex>
 
@@ -99,24 +100,53 @@ public:
         }
         freeaddrinfo(result);
 #else
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            connect_error = strerror(errno);
+        // getaddrinfo() is reentrant (this runs on the reconnection thread too) and gives the
+        // IPv6 addresses as well as the IPv4 ones. Each one is tried in turn, e.g. "localhost"
+        // may give ::1 first while the server listens on 127.0.0.1 only.
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        std::string port_str = std::to_string(port);
+        struct addrinfo* result = NULL;
+        int gai = getaddrinfo(host, port_str.c_str(), &hints, &result);
+        if (gai != 0) {
+            connect_error = std::string("could not resolve ") + host + ": " + gai_strerror(gai);
             return false;
         }
-        struct hostent* server = gethostbyname(host);
-        if (server == NULL) {
-            connect_error = std::string("could not resolve ") + host;
+
+        // timeout_ms covers all the attempts, not each one
+        auto start = std::chrono::steady_clock::now();
+        bool ok = false;
+        for (struct addrinfo* ai = result; ai != NULL; ai = ai->ai_next) {
+            int attempt_timeout_ms = timeout_ms;
+            if (timeout_ms > 0) {
+                int elapsed_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+                if (elapsed_ms >= timeout_ms) {
+                    connect_error = "timed out";
+                    break;
+                }
+                attempt_timeout_ms = timeout_ms - elapsed_ms;
+            }
+
+            sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+            if (sockfd < 0) {
+                connect_error = strerror(errno);
+                continue;
+            }
+            if (connectSocket(ai->ai_addr, ai->ai_addrlen, keep_going, attempt_timeout_ms)) {
+                ok = true;
+                break;
+            }
             close(sockfd);
-            return false;
+            if (keep_going && !keep_going()) {
+                break; // Cancelled, the other addresses are not tried
+            }
         }
-        struct sockaddr_in serv_addr;
-        bzero(&serv_addr, sizeof(struct sockaddr_in));
-        serv_addr.sin_family = AF_INET;
-        bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
-        serv_addr.sin_port = htons(port);
-        if (!connectSocket((struct sockaddr*)&serv_addr, sizeof(serv_addr), keep_going, timeout_ms)) {
-            close(sockfd);
+        freeaddrinfo(result);
+        if (!ok) {
             return false;
         }
 #ifdef SO_NOSIGPIPE
