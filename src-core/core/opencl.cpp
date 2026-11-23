@@ -13,7 +13,8 @@ namespace satdump
         cl_device_id ocl_device;
 
         bool context_is_init = false;
-        int platform_id, device_id;
+        // -1 (CPU processing) until resetOCLContext() reads the configured device
+        int platform_id = -1, device_id = -1;
         std::map<std::string, cl_program> cached_kernels;
 
         std::vector<OCLDevice> getAllDevices()
@@ -66,7 +67,7 @@ namespace satdump
                 return;
             }
 
-            if (platform_id == -1)
+            if (!useCL())
                 throw satdump_exception("User specified CPU processing");
 
             cl_platform_id platforms_ids[100];
@@ -86,6 +87,9 @@ namespace satdump
             if (platforms_cnt == 0)
                 throw satdump_exception("No platforms found. Check OpenCL installation!");
 
+            if (platform_id >= (int)platforms_cnt)
+                throw satdump_exception("OpenCL platform " + std::to_string(platform_id) + " does not exist!");
+
             cl_platform_id platform = platforms_ids[platform_id];
             err = clGetPlatformInfo(platform, CL_PLATFORM_NAME, 200, device_platform_name, &device_platform_name_len);
             if (err == CL_SUCCESS)
@@ -99,6 +103,9 @@ namespace satdump
 
             if (devices_cnt == 0)
                 throw satdump_exception("No devices found. Check OpenCL installation!");
+
+            if (device_id < 0 || device_id >= (int)devices_cnt)
+                throw satdump_exception("OpenCL device " + std::to_string(device_id) + " does not exist!");
 
             ocl_device = devices_ids[device_id];
             if (clGetDeviceInfo(ocl_device, CL_DEVICE_NAME, 200, device_platform_name, &device_platform_name_len) == CL_SUCCESS)
