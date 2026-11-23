@@ -63,8 +63,9 @@ protected:
         uint8_t in_buf[8192];
         while (thread_should_run)
         {
-            // The buffer is only output once it was filled: never the stale one
-            if (!client.receiveData(in_buf, 8192))
+            // The buffer is only output once it was filled: never the stale one. Gives up when
+            // stopping, as the server may have stopped sending without closing the connection
+            if (!client.receiveData(in_buf, 8192, [this]() { return thread_should_run.load(); }))
             {
                 if (!thread_should_run)
                     break;

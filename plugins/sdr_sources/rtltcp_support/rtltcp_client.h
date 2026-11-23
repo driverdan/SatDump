@@ -173,15 +173,43 @@ public:
 
     // Fills buf with count bytes. Returns false if the server closed the connection or on a
     // read error, receiveError() then says which. The bytes received before are lost.
-    bool receiveData(uint8_t* buf, size_t count) {
+    // With keep_going, the data is waited for RECEIVE_POLL_MS at a time, and the wait given
+    // up once keep_going() returns false: a server that stops sending without closing the
+    // connection does not block the caller forever.
+    bool receiveData(uint8_t* buf, size_t count, std::function<bool()> keep_going = nullptr) {
         int received = 0;
         int ret = 0;
         while (received < (int)count) {
+            if (keep_going) {
+                if (!keep_going()) {
+                    receive_error = "cancelled";
+                    return false;
+                }
+#ifdef _WIN32
+                WSAPOLLFD p{sock, POLLRDNORM, 0};
+                int n = WSAPoll(&p, 1, RECEIVE_POLL_MS);
+                if (n == SOCKET_ERROR) {
+                    receive_error = "receive error " + std::to_string(WSAGetLastError());
+                    return false;
+                }
+#else
+                pollfd p{sockfd, POLLIN, 0};
+                int n = poll(&p, 1, RECEIVE_POLL_MS);
+                if (n < 0) {
+                    if (errno == EINTR) { continue; }
+                    receive_error = std::string("receive error: ") + strerror(errno);
+                    return false;
+                }
+#endif
+                if (n == 0) { continue; }
+                // On a socket error or hang-up, the read below reports it
+            }
 #ifdef _WIN32
             ret = recv(sock, (char*)&buf[received], count - received, 0);
 #else
-            ret = read(sockfd, &buf[received], count - received);
-            if (ret < 0 && errno == EINTR) { continue; }
+            // With keep_going, never block here: poll() said readable, but do not rely on it
+            ret = keep_going ? recv(sockfd, &buf[received], count - received, MSG_DONTWAIT) : read(sockfd, &buf[received], count - received);
+            if (ret < 0 && (errno == EINTR || (keep_going && (errno == EAGAIN || errno == EWOULDBLOCK)))) { continue; }
 #endif
             if (ret == 0) {
                 receive_error = "the server closed the connection";
@@ -304,6 +332,8 @@ private:
         return true;
     }
 #endif
+
+    static const int RECEIVE_POLL_MS = 50;
 
 #ifdef _WIN32
     SOCKET sock;
