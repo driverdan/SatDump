@@ -152,7 +152,7 @@ public:
     //     uint32_t arg;
     // };
 
-    // Returns false if the command was dropped as there is no connection
+    // Returns false if the command was dropped as there is no connection, or not sent
     bool sendCommand(uint8_t command, uint32_t param) {
         command_t cmd;
         cmd.cmd = command;
@@ -164,11 +164,11 @@ public:
             return false;
         }
 #ifdef _WIN32
-        send(sock, (char*)&cmd, sizeof(command_t), 0);
+        int sent = send(sock, (char*)&cmd, sizeof(command_t), 0);
 #else
-        (void)send(sockfd, &cmd, sizeof(command_t), MSG_NOSIGNAL);
+        ssize_t sent = send(sockfd, &cmd, sizeof(command_t), MSG_NOSIGNAL);
 #endif
-        return true;
+        return sent == (int)sizeof(command_t);
     }
 
     // Fills buf with count bytes. Returns false if the server closed the connection or on a

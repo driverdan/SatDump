@@ -80,6 +80,7 @@ void RTLTCPSource::set_settings(nlohmann::json settings)
 
 nlohmann::json RTLTCPSource::get_settings()
 {
+    std::lock_guard<std::mutex> lock(settings_mtx);
     d_settings["ip_address"] = ip_address;
     d_settings["port"] = port;
     d_settings["gain"] = gain;
@@ -269,6 +270,8 @@ void RTLTCPSource::set_samplerate(uint64_t samplerate)
 
 uint64_t RTLTCPSource::get_samplerate()
 {
+    // DoubleList::get_value() writes the widget too, and configure() calls it from the worker
+    std::lock_guard<std::mutex> lock(settings_mtx);
     return samplerate_widget.get_value();
 }
 

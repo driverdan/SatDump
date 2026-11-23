@@ -59,12 +59,14 @@ namespace
     };
 
     // A port on which connecting hangs, as with a host that does not answer: the listening
-    // socket never accepts and its queue is full, so the kernel drops the SYNs. hangs() says
-    // whether a connection attempt did hang (if not, the blackhole is closed again).
+    // socket never accepts and its queue is full, so the kernel drops the SYNs. ready() says
+    // whether the socket could be set up, hangs() whether a connection attempt did hang (if
+    // not, the blackhole is closed again).
     class Blackhole
     {
     private:
         int listen_fd = -1, filler = -1;
+        bool is_ready = false;
         bool does_hang = false;
 
         static sockaddr_in loopback(int port)
@@ -97,6 +99,7 @@ namespace
                 closeAll();
                 return;
             }
+            is_ready = true;
 
             // Fills the queue
             filler = socket(AF_INET, SOCK_STREAM, 0);
@@ -117,6 +120,7 @@ namespace
 
         ~Blackhole() { closeAll(); }
 
+        bool ready() const { return is_ready; }
         bool hangs() const { return does_hang; }
     };
 
@@ -729,6 +733,7 @@ TEST_CASE("RTLTCPSource gives a reconnection attempt up when the host does not a
         REQUIRE(server.waitForDisconnect());
         auto t = std::chrono::steady_clock::now();
         Blackhole hole(port);
+        REQUIRE(hole.ready());
         if (!hole.hangs())
             SKIP("connecting to a full listening queue does not hang here");
 
@@ -754,6 +759,7 @@ TEST_CASE("RTLTCPSource stop interrupts a reconnection attempt", "[plugins][sdr_
         Drain drain(source);
         REQUIRE(server.waitForDisconnect());
         Blackhole hole(port);
+        REQUIRE(hole.ready());
         if (!hole.hangs())
             SKIP("connecting to a full listening queue does not hang here");
 
@@ -766,6 +772,47 @@ TEST_CASE("RTLTCPSource stop interrupts a reconnection attempt", "[plugins][sdr_
         INFO(log.dump());
         CHECK_FALSE(log.contains("reconnection attempt 1/1 failed"));
         CHECK_FALSE(log.contains("could not reconnect"));
+    }
+}
+
+// The status page of autotrack (on the HTTP thread) and the recorder read the samplerate and
+// the settings while the worker thread configures the dongle again after each reconnection
+TEST_CASE("RTLTCPSource settings can be read while it reconnects", "[plugins][sdr_sources][rtltcp]")
+{
+    auto server = std::make_unique<FakeRtlTcp>(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close);
+    int port = server->port();
+    auto source = setUp(std::make_shared<QuickRetrySource>(200, 5, 10), port);
+    source->start();
+    {
+        Drain drain(source);
+
+        std::atomic<bool> reading{true};
+        std::atomic<size_t> reads{0};
+        std::thread reader(
+            [&]()
+            {
+                while (reading)
+                {
+                    if (source->get_samplerate() == 2400000 && source->get_settings()["port"] == port)
+                        reads++;
+                    std::this_thread::yield();
+                }
+            });
+
+        // Each server sends a little and leaves, then the next one comes on the same port
+        const int RECONNECTIONS = 3;
+        for (int i = 0; i < RECONNECTIONS; i++)
+        {
+            REQUIRE(server->waitForDisconnect());
+            server.reset();
+            server = std::make_unique<FakeRtlTcp>(std::vector<uint8_t>(8192, 100), false, 0, AfterIQ::Close, port);
+            CHECK(server->waitForCommands(7).size() == 7); // Configured again
+        }
+
+        reading = false;
+        reader.join();
+        CHECK(reads > 0);
+        source->stop();
     }
 }
 #endif
