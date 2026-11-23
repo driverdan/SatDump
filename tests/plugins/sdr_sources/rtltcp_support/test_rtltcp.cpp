@@ -1,5 +1,6 @@
 #include "cli_test_helpers.h"
 #include "core/exception.h"
+#include "helpers/compare.h"
 #include "helpers/guards.h"
 #include "helpers/satdump_guards.h"
 #include "helpers/sockets.h"
@@ -9,6 +10,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <cstring>
 #include <ctime>
 #include <fcntl.h>
 #include <future>
@@ -29,7 +31,8 @@ namespace
     using Commands = std::vector<Command>;
 
     // Sets a source up like "satdump legacy live" does it, pointed at a server on port
-    std::shared_ptr<dsp::DSPSampleSource> setUp(std::shared_ptr<dsp::DSPSampleSource> source, int port, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000, uint64_t samplerate = 2400000)
+    std::shared_ptr<dsp::DSPSampleSource> setUp(std::shared_ptr<dsp::DSPSampleSource> source, int port, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000,
+                                                uint64_t samplerate = 2400000)
     {
         if (!settings.contains("ip_address"))
             settings["ip_address"] = "127.0.0.1";
@@ -342,6 +345,20 @@ TEST_CASE("RTLTCPSource settings have defaults and are read back", "[plugins][sd
         CHECK(s["tuner_agc"] == true);
         CHECK_FALSE(s.contains("agc"));
     }
+
+    SECTION("lna_agc and tuner_agc given with the legacy agc setting win over it")
+    {
+        source->set_settings({{"agc", true}, {"lna_agc", false}});
+        auto s = source->get_settings();
+        CHECK(s["lna_agc"] == false);
+        CHECK(s["tuner_agc"] == true);
+
+        source->set_settings({{"agc", false}, {"tuner_agc", true}});
+        s = source->get_settings();
+        CHECK(s["lna_agc"] == false);
+        CHECK(s["tuner_agc"] == true);
+        CHECK_FALSE(s.contains("agc"));
+    }
 }
 
 // The two AGCs are independent settings, as for the USB RTL-SDR source: enabling the LNA AGC
@@ -513,9 +530,225 @@ TEST_CASE("RTLTCPClient connectError is cleared once an address connects", "[plu
     RTLTCPClient client;
 
     SECTION("blocking") { REQUIRE(client.connectToAddresses(list.get())); }
-    SECTION("with a timeout") { REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 2000)); }
+    SECTION("with a timeout")
+    {
+        REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 2000));
+    }
 
     CHECK(client.connectError().empty());
+    client.disconnect();
+}
+
+TEST_CASE("RTLTCPClient connectToAddresses fails on an empty list", "[plugins][sdr_sources][rtltcp]")
+{
+    RTLTCPClient client;
+    CHECK_FALSE(client.connectToAddresses(nullptr));
+    CHECK(client.connectError() == "no address to connect to");
+    CHECK_FALSE(client.connectToAddresses(nullptr, []() { return true; }, 1000));
+    CHECK(client.connectError() == "no address to connect to");
+    CHECK_FALSE(client.setFrequency(137100000));
+}
+
+// An address of a family the system has no socket for (a socket() error), or one that
+// connect() refuses at once (not EINPROGRESS, even without blocking), is skipped
+TEST_CASE("RTLTCPClient skips an address it cannot even try", "[plugins][sdr_sources][rtltcp]")
+{
+    bool with_timeout = GENERATE(false, true);
+    bool bad_family = GENERATE(true, false);
+    CAPTURE(with_timeout, bad_family);
+
+    auto connect = [&](RTLTCPClient &client, const addrinfo *list)
+    {
+        if (with_timeout)
+            return client.connectToAddresses(list, []() { return true; }, 2000);
+        return client.connectToAddresses(list);
+    };
+
+    FakeRtlTcp server;
+    AddressList list({test_helpers::closedPort(), server.port()});
+    if (bad_family)
+        list.infos[0].ai_family = AF_UNSPEC;
+    else
+        list.infos[0].ai_addrlen = 1; // EINVAL
+
+    SECTION("the next address is tried")
+    {
+        RTLTCPClient client;
+        REQUIRE(connect(client, list.get()));
+        CHECK(client.connectError().empty());
+        CHECK(client.setFrequency(137100000));
+        CHECK(server.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+        client.disconnect();
+    }
+
+    SECTION("alone, why it failed is kept")
+    {
+        list.infos[0].ai_next = nullptr;
+        RTLTCPClient client;
+        auto t = std::chrono::steady_clock::now();
+        CHECK_FALSE(connect(client, list.get()));
+        CHECK(secondsSince(t) < 0.5); // No wait
+        CHECK(client.connectError() == strerror(bad_family ? EAFNOSUPPORT : EINVAL));
+        CHECK_FALSE(client.setFrequency(137100000));
+    }
+}
+
+// An attempt only ends between two polls, so it may take more than its share of the timeout:
+// the next addresses are then not tried at all, and the error says both why
+TEST_CASE("RTLTCPClient does not try more addresses once the timeout is spent", "[plugins][sdr_sources][rtltcp]")
+{
+    Blackhole hole(test_helpers::closedPort());
+    if (!hole.hangs())
+        SKIP("connecting to a full listening queue does not hang here");
+
+    FakeRtlTcp server;
+    AddressList list({hole.port(), server.port()});
+    RTLTCPClient client;
+    CHECK_FALSE(client.connectToAddresses(list.get(), []() { return true; }, 1));
+    CHECK(client.connectError() == "timed out, then timed out");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECK_FALSE(server.connected());
+}
+
+TEST_CASE("RTLTCPClient cancelling a connection does not try the next addresses", "[plugins][sdr_sources][rtltcp]")
+{
+    Blackhole hole(test_helpers::closedPort());
+    if (!hole.hangs())
+        SKIP("connecting to a full listening queue does not hang here");
+
+    FakeRtlTcp server;
+    AddressList list({hole.port(), server.port()});
+    RTLTCPClient client;
+    auto t = std::chrono::steady_clock::now();
+    std::atomic<int> polls{0};
+    CHECK_FALSE(client.connectToAddresses(list.get(), [&]() { return ++polls < 4; }, 0));
+    CHECK(secondsSince(t) < 1.0);
+    CHECK(client.connectError() == "cancelled");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECK_FALSE(server.connected());
+}
+
+TEST_CASE("RTLTCPClient keeps its connection when asked to connect again", "[plugins][sdr_sources][rtltcp]")
+{
+    FakeRtlTcp first, second;
+    RTLTCPClient client;
+    REQUIRE(client.connectToRTL((char *)"127.0.0.1", first.port()));
+
+    CHECK(client.connectToRTL((char *)"127.0.0.1", second.port()));
+    AddressList list({second.port()});
+    CHECK(client.connectToAddresses(list.get()));
+
+    CHECK(client.setFrequency(137100000));
+    CHECK(first.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    CHECK_FALSE(second.connected());
+    client.disconnect();
+}
+
+TEST_CASE("RTLTCPClient drops the commands sent without a connection", "[plugins][sdr_sources][rtltcp]")
+{
+    RTLTCPClient client;
+    CHECK_FALSE(client.setFrequency(137100000));
+    CHECK_NOTHROW(client.disconnect()); // Never connected
+
+    FakeRtlTcp server;
+    REQUIRE(client.connectToRTL((char *)"127.0.0.1", server.port()));
+    CHECK(client.setFrequency(137100000));
+    REQUIRE(server.waitForCommands(1).size() == 1);
+
+    client.disconnect();
+    CHECK(server.waitForDisconnect());
+    CHECK_FALSE(client.setFrequency(137500000));
+    CHECK_FALSE(client.setBiasTee(false));
+    CHECK_NOTHROW(client.disconnect()); // Twice
+    CHECK(server.commands().size() == 1);
+}
+
+// The 5 bytes of a command: its number, then its parameter as a big-endian 32-bit integer
+TEST_CASE("RTLTCPClient encodes the commands as rtl_tcp expects them", "[plugins][sdr_sources][rtltcp]")
+{
+    CHECK(sizeof(command_t) == 5);
+
+    FakeRtlTcp server;
+    RTLTCPClient client;
+    REQUIRE(client.connectToRTL((char *)"127.0.0.1", server.port()));
+
+    CHECK(client.setFrequency(1694100000));
+    CHECK(client.setFrequency(4294967295.0)); // The largest one
+    CHECK(client.setSampleRate(2400000));
+    CHECK(client.setGainMode(1));
+    CHECK(client.setGain(49.6 * 10)); // Truncated
+    CHECK(client.setPPM(-3));         // Two's complement
+    CHECK(client.setAGCMode(1));
+    CHECK(client.setDirectSampling(2)); // Q branch
+    CHECK(client.setOffsetTuning(true));
+    CHECK(client.setGainIndex(28));
+    CHECK(client.setBiasTee(true));
+    CHECK(client.sendCommand(0xAB, 0x01020304));
+
+    CHECK(server.waitForCommands(12) == Commands{{CMD_FREQUENCY, 1694100000},
+                                                 {CMD_FREQUENCY, 4294967295u},
+                                                 {CMD_SAMPLERATE, 2400000},
+                                                 {CMD_GAIN_MODE, 1},
+                                                 {CMD_GAIN, 496},
+                                                 {CMD_PPM, 0xFFFFFFFDu},
+                                                 {CMD_AGC_MODE, 1},
+                                                 {CMD_DIRECT_SAMPLING, 2},
+                                                 {CMD_OFFSET_TUNING, 1},
+                                                 {CMD_GAIN_INDEX, 28},
+                                                 {CMD_BIAS_TEE, 1},
+                                                 {0xAB, 0x01020304}});
+    client.disconnect();
+}
+
+// The source always waits with keep_going, the blocking read is the default of the client
+TEST_CASE("RTLTCPClient receiveData fills the whole buffer", "[plugins][sdr_sources][rtltcp]")
+{
+    bool with_keep_going = GENERATE(false, true);
+    CAPTURE(with_keep_going);
+
+    std::vector<uint8_t> iq(20000);
+    for (size_t i = 0; i < iq.size(); i++)
+        iq[i] = (i * 7) & 0xFF;
+    // Paced, so that the data comes in many pieces (about 100 ms in all)
+    FakeRtlTcp server(iq, true, 100000, AfterIQ::Close);
+    RTLTCPClient client;
+    REQUIRE(client.connectToRTL((char *)"127.0.0.1", server.port()));
+
+    auto receive = [&](uint8_t *buf, size_t count)
+    {
+        if (with_keep_going)
+            return client.receiveData(buf, count, []() { return true; });
+        return client.receiveData(buf, count);
+    };
+
+    std::vector<uint8_t> expected = dongleInfo();
+    expected.insert(expected.end(), iq.begin(), iq.end());
+    std::vector<uint8_t> got(expected.size());
+    REQUIRE(receive(got.data(), got.size()));
+    CHECK(test_helpers::bytesDiff(got, expected) == "");
+
+    // Then the server leaves
+    uint8_t more[16];
+    CHECK_FALSE(receive(more, sizeof(more)));
+    CHECK(client.receiveError() == "the server closed the connection");
+    client.disconnect();
+}
+
+TEST_CASE("RTLTCPClient receiveData reads nothing once cancelled", "[plugins][sdr_sources][rtltcp]")
+{
+    FakeRtlTcp server;
+    RTLTCPClient client;
+    REQUIRE(client.connectToRTL((char *)"127.0.0.1", server.port()));
+    REQUIRE(test_helpers::waitUntil([&]() { return server.connected(); }, std::chrono::seconds(10)));
+
+    uint8_t buf[12];
+    CHECK_FALSE(client.receiveData(buf, sizeof(buf), []() { return false; }));
+    CHECK(client.receiveError() == "cancelled");
+
+    // What the server sent is still there
+    REQUIRE(client.receiveData(buf, sizeof(buf)));
+    CHECK(std::vector<uint8_t>(buf, buf + sizeof(buf)) == dongleInfo());
     client.disconnect();
 }
 
@@ -602,6 +835,17 @@ TEST_CASE("RTLTCPSource applies changes while it is started", "[plugins][sdr_sou
         REQUIRE(commands.size() == at_start + 5);
         Commands changes(commands.begin() + at_start, commands.end());
         CHECK(changes == Commands{{CMD_AGC_MODE, 0}, {CMD_GAIN_MODE, 1}, {CMD_GAIN, 330}, {CMD_BIAS_TEE, 1}, {CMD_PPM, (uint32_t)-2}});
+    }
+
+    SECTION("switching to the tuner AGC: the gain is not sent")
+    {
+        source->set_settings({{"tuner_agc", true}, {"lna_agc", true}, {"gain", 33}});
+        auto commands = server.waitForCommands(at_start + 4);
+        REQUIRE(commands.size() == at_start + 4);
+        Commands changes(commands.begin() + at_start, commands.end());
+        CHECK(changes == Commands{{CMD_AGC_MODE, 1}, {CMD_GAIN_MODE, 0}, {CMD_BIAS_TEE, 0}, {CMD_PPM, 0}});
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        CHECK(server.commands().size() == at_start + 4);
     }
 
     source->stop();

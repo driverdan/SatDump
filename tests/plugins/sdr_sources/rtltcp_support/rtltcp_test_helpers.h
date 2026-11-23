@@ -34,6 +34,9 @@ namespace rtltcp_test
         CMD_GAIN = 4,      // Tenths of dB
         CMD_PPM = 5,
         CMD_AGC_MODE = 8, // The AGC of the RTL2832
+        CMD_DIRECT_SAMPLING = 9,
+        CMD_OFFSET_TUNING = 10,
+        CMD_GAIN_INDEX = 13,
         CMD_BIAS_TEE = 14,
     };
 
