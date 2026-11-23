@@ -23,6 +23,7 @@ namespace satdump
             CLI::App app;
 
             bool is_help = false;
+            bool verbose = false;
 
             std::vector<std::shared_ptr<satdump::CmdHandler>> cmd_handlers;
 
@@ -30,6 +31,7 @@ namespace satdump
             CommandHandler(bool is_gui = false);
             int parse(int argc, char *argv[]);
             bool has_command();
+            bool is_verbose();
             bool run();
         };
     } // namespace cli
