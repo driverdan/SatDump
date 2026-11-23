@@ -149,63 +149,72 @@ namespace satdump
 
     void KeplerDBHandler::putKepler(KeplerData kep)
     {
-        replaceAllStr(kep.name, "'", "''");
-        std::string sql = "INSERT INTO kepler (id,"         //
-                          " satellite_number,"              //
-                          " element_number,"                //
-                          " name,"                          //
-                          " designator,"                    //
-                          " epoch,"                         //
-                          " inclination,"                   //
-                          " right_ascension,"               //
-                          " eccentricity,"                  //
-                          " argument_of_perigee,"           //
-                          " mean_anomaly,"                  //
-                          " mean_motion,"                   //
-                          " derivative_mean_motion,"        //
-                          " second_derivative_mean_motion," //
-                          " bstar_drag_term,"               //
-                          " revolutions_at_epoch"           //
-                          ") VALUES ('" +
-                          to_string_with_precision(kep.satellite_number, 30) + "_" + to_string_with_precision(kep.epoch, 30) + "', '" + //
-                          to_string_with_precision(kep.satellite_number, 30) + "', '" +                                                 //
-                          to_string_with_precision(kep.element_number, 30) + "', '" +                                                   //
-                          kep.name + "', '" +                                                                                           //
-                          kep.designator + "', '" +                                                                                     //
-                          to_string_with_precision(kep.epoch, 30) + "', '" +                                                            //
-                          to_string_with_precision(kep.inclination, 30) + "', '" +                                                      //
-                          to_string_with_precision(kep.right_ascension, 30) + "', '" +                                                  //
-                          to_string_with_precision(kep.eccentricity, 30) + "', '" +                                                     //
-                          to_string_with_precision(kep.argument_of_perigee, 30) + "', '" +                                              //
-                          to_string_with_precision(kep.mean_anomaly, 30) + "', '" +                                                     //
-                          to_string_with_precision(kep.mean_motion, 30) + "', '" +                                                      //
-                          to_string_with_precision(kep.derivative_mean_motion, 30) + "', '" +                                           //
-                          to_string_with_precision(kep.second_derivative_mean_motion, 30) + "', '" +                                    //
-                          to_string_with_precision(kep.bstar_drag_term, 30) + "', '" +                                                  //
-                          to_string_with_precision(kep.revolutions_at_epoch, 30) + "'" +                                                //
-                          ") ON CONFLICT(id) DO UPDATE SET " +                                                                          //
-                          "element_number='" + to_string_with_precision(kep.element_number, 30) + "', " +                               //
-                          "name='" + kep.name + "', " +                                                                                 //
-                          "designator='" + kep.designator + "', " +                                                                     //
-                          "epoch='" + to_string_with_precision(kep.epoch, 30) + "', " +                                                 //
-                          "inclination='" + to_string_with_precision(kep.inclination, 30) + "', " +                                     //
-                          "right_ascension='" + to_string_with_precision(kep.right_ascension, 30) + "', " +                             //
-                          "eccentricity='" + to_string_with_precision(kep.eccentricity, 30) + "', " +                                   //
-                          "argument_of_perigee='" + to_string_with_precision(kep.argument_of_perigee, 30) + "', " +                     //
-                          "mean_anomaly='" + to_string_with_precision(kep.mean_anomaly, 30) + "', " +                                   //
-                          "mean_motion='" + to_string_with_precision(kep.mean_motion, 30) + "', " +                                     //
-                          "derivative_mean_motion='" + to_string_with_precision(kep.derivative_mean_motion, 30) + "', " +               //
-                          "second_derivative_mean_motion='" + to_string_with_precision(kep.second_derivative_mean_motion, 30) + "', " + //
-                          "bstar_drag_term='" + to_string_with_precision(kep.bstar_drag_term, 30) + "', " +                             //
-                          "revolutions_at_epoch='" + to_string_with_precision(kep.revolutions_at_epoch, 30) + "'" +                     //
-                          ";";
+        // Values are bound, not concatenated, so names and designators from downloaded files can hold any character
+        const char *sql = "INSERT INTO kepler (id,"                                                          //
+                          " satellite_number,"                                                               //
+                          " element_number,"                                                                 //
+                          " name,"                                                                           //
+                          " designator,"                                                                     //
+                          " epoch,"                                                                          //
+                          " inclination,"                                                                    //
+                          " right_ascension,"                                                                //
+                          " eccentricity,"                                                                   //
+                          " argument_of_perigee,"                                                            //
+                          " mean_anomaly,"                                                                   //
+                          " mean_motion,"                                                                    //
+                          " derivative_mean_motion,"                                                         //
+                          " second_derivative_mean_motion,"                                                  //
+                          " bstar_drag_term,"                                                                //
+                          " revolutions_at_epoch"                                                            //
+                          ") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)" //
+                          " ON CONFLICT(id) DO UPDATE SET"                                                   //
+                          " element_number=excluded.element_number,"                                         //
+                          " name=excluded.name,"                                                             //
+                          " designator=excluded.designator,"                                                 //
+                          " epoch=excluded.epoch,"                                                           //
+                          " inclination=excluded.inclination,"                                               //
+                          " right_ascension=excluded.right_ascension,"                                       //
+                          " eccentricity=excluded.eccentricity,"                                             //
+                          " argument_of_perigee=excluded.argument_of_perigee,"                               //
+                          " mean_anomaly=excluded.mean_anomaly,"                                             //
+                          " mean_motion=excluded.mean_motion,"                                               //
+                          " derivative_mean_motion=excluded.derivative_mean_motion,"                         //
+                          " second_derivative_mean_motion=excluded.second_derivative_mean_motion,"           //
+                          " bstar_drag_term=excluded.bstar_drag_term,"                                       //
+                          " revolutions_at_epoch=excluded.revolutions_at_epoch;";
 
-        char *err = NULL;
-        if (sqlite3_exec(h->db, sql.c_str(), NULL, 0, &err))
+        // The id format must not change, or existing rows would no longer be matched by ON CONFLICT(id)
+        std::string id = to_string_with_precision(kep.satellite_number, 30) + "_" + to_string_with_precision(kep.epoch, 30);
+
+        sqlite3_stmt *res;
+        if (sqlite3_prepare_v2(h->db, sql, -1, &res, 0))
         {
-            logger->error("Error inserting Kepler in database! %s (%s)", err, sql.c_str());
-            sqlite3_free(err);
+            logger->error("Error inserting Kepler in database! %s", sqlite3_errmsg(h->db));
+            sqlite3_finalize(res);
+            return;
         }
+
+        sqlite3_bind_text(res, 1, id.c_str(), id.size(), SQLITE_TRANSIENT);
+        sqlite3_bind_int64(res, 2, kep.satellite_number);
+        sqlite3_bind_int64(res, 3, kep.element_number);
+        sqlite3_bind_text(res, 4, kep.name.c_str(), kep.name.size(), SQLITE_TRANSIENT);
+        sqlite3_bind_text(res, 5, kep.designator.c_str(), kep.designator.size(), SQLITE_TRANSIENT);
+        sqlite3_bind_double(res, 6, kep.epoch);
+        sqlite3_bind_double(res, 7, kep.inclination);
+        sqlite3_bind_double(res, 8, kep.right_ascension);
+        sqlite3_bind_double(res, 9, kep.eccentricity);
+        sqlite3_bind_double(res, 10, kep.argument_of_perigee);
+        sqlite3_bind_double(res, 11, kep.mean_anomaly);
+        sqlite3_bind_double(res, 12, kep.mean_motion);
+        sqlite3_bind_double(res, 13, kep.derivative_mean_motion);
+        sqlite3_bind_double(res, 14, kep.second_derivative_mean_motion);
+        sqlite3_bind_double(res, 15, kep.bstar_drag_term);
+        sqlite3_bind_int64(res, 16, kep.revolutions_at_epoch);
+
+        if (sqlite3_step(res) != SQLITE_DONE)
+            logger->error("Error inserting Kepler in database! %s (%d, %s)", sqlite3_errmsg(h->db), kep.satellite_number, kep.name.c_str());
+
+        sqlite3_finalize(res);
     }
 
     bool KeplerDBHandler::getKepler(KeplerData &kep, int norad, time_t time)

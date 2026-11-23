@@ -163,6 +163,27 @@ TEST_CASE("KeplerDBHandler stores names containing quotes", "[db][kepler]")
     CHECK(out.name == "SAT 'QUOTED' NAME");
 }
 
+TEST_CASE("KeplerDBHandler stores designators containing quotes and SQL", "[db][kepler]")
+{
+    KeplerDb t;
+    auto k = iss();
+    k.designator = "1998-067'A";
+    t.kep.putKepler(k);
+    CHECK(t.db->get_table_size("kepler") == 1);
+    satdump::KeplerData out;
+    REQUIRE(t.kep.getKepler(out, 25544, k.epoch));
+    checkSame(out, k);
+
+    // Same row again (ON CONFLICT path), with text that would end the statement if it was concatenated
+    k.name = "X'); DROP TABLE kepler; --";
+    k.designator = "', name='overwritten";
+    k.element_number = 293;
+    t.kep.putKepler(k);
+    CHECK(t.db->get_table_size("kepler") == 1);
+    REQUIRE(t.kep.getKepler(out, 25544, k.epoch));
+    checkSame(out, k);
+}
+
 TEST_CASE("KeplerDBHandler getAllNewestKepler returns the newest epoch per satellite", "[db][kepler]")
 {
     KeplerDb t;
