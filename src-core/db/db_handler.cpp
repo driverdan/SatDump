@@ -13,7 +13,14 @@ namespace satdump
 
         // Open
         if (sqlite3_open(path.c_str(), &db))
-            throw satdump_exception("Couldn't open SQLite database! " + std::string(sqlite3_errmsg(db)));
+        {
+            // SQLite allocates a handle even when opening fails, and the destructor
+            // will not run after a throw, so copy the message and close it here
+            std::string err = sqlite3_errmsg(db);
+            sqlite3_close(db);
+            db = nullptr;
+            throw satdump_exception("Couldn't open SQLite database! " + err);
+        }
         else
             logger->info("Opened SQLite Database!");
         sqlite3_busy_timeout(db, 1000);

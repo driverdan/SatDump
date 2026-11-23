@@ -2,6 +2,7 @@
 #include "db/db_handler.h"
 #include "helpers/temp_files.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <filesystem>
 
 // Uses in-memory databases or files under the temp directory; never the global satdump::db.
@@ -185,4 +186,6 @@ TEST_CASE("DBHandler throws when the database cannot be opened", "[db][db_handle
     TempDir dir("unopenable");
     // A directory cannot be opened as a database file
     CHECK_THROWS_AS(satdump::DBHandler(dir.path.string()), satdump::satdump_exception_t);
+    // The handle SQLite allocated is closed before throwing; SQLite's message is copied first
+    CHECK_THROWS_WITH(satdump::DBHandler(dir.path.string()), Catch::Matchers::ContainsSubstring("unable to open database file"));
 }
