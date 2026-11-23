@@ -29,10 +29,26 @@ namespace satdump
      * is appended to it, also when the request fails
      * @param added_header optional additional headers
      * @param progress optional progress float pointer
+     * @param http_status optional, set to the final HTTP status,
+     * or 0 if no response was received or the protocol has no
+     * status (e.g. file://)
      * @return 0 on success, 1 if the request failed or
      * the final HTTP status is 300 or above
      */
-    int perform_http_request(std::string url, std::string &result, std::string added_header = "", float *progress = nullptr);
+    int perform_http_request(std::string url, std::string &result, std::string added_header = "", float *progress = nullptr, long *http_status = nullptr);
+
+    /**
+     * @brief Whether a failed request is worth retrying,
+     * given the HTTP status perform_http_request() reported.
+     * That is the case of transport errors (no status),
+     * 429 Too Many Requests and 5xx server errors, but not of
+     * other statuses, such as 403 or 404, which a retry would
+     * only get again.
+     *
+     * @param http_status status reported by perform_http_request()
+     * @return true if the request may succeed when retried
+     */
+    bool http_request_should_retry(long http_status);
 
     /**
      * @brief Perform a HTTP Request on the

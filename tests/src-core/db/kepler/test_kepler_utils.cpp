@@ -1,10 +1,14 @@
+#include "core/config.h"
 #include "db/kepler/kepler_handler.h"
+#include "helpers/http_server.h"
+#include "helpers/satdump_guards.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <string>
 
-// Only the offline conversion helpers are tested; tryFetchOMMFileFromURL and
-// tryFetchSingleOMMwithNorad download from the internet.
+// tryFetchOMMFileFromURL and tryFetchSingleOMMwithNorad are only tested
+// against a loopback server started by the test (helpers/http_server.h).
 
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
@@ -261,3 +265,40 @@ TEST_CASE("keplerToTle writes a two digit zero padded epoch year", "[db][kepler_
     auto tle = satdump::keplerToTle(issKepler());
     CHECK(tle.line1.substr(18, 2) == "08");
 }
+
+#ifndef _WIN32
+TEST_CASE("tryFetchOMMFileFromURL does not retry a refused request", "[db][kepler_utils]")
+{
+    // #232: a 403 / 404 used to be requested 10 times. The second response is only there to record a retry.
+    test_helpers::NoProxy np;
+    std::string status = GENERATE(as<std::string>{}, "403 Forbidden", "404 Not Found");
+    test_helpers::LoopbackHttpServer server({{status, OMM_HEADER + "\n" + ISS_OMM + "\n"}, {status, ""}});
+    CHECK(satdump::tryFetchOMMFileFromURL(server.url("/omm.csv")).empty());
+    server.stop();
+    CHECK(server.requests.size() == 1);
+}
+
+TEST_CASE("tryFetchOMMFileFromURL retries a server error and only parses the last response", "[db][kepler_utils]")
+{
+    // The body of the failed attempt must not be parsed along with the next one
+    test_helpers::NoProxy np;
+    test_helpers::LoopbackHttpServer server({{"503 Service Unavailable", OMM_HEADER + "\n" + ISS_OMM + "\n"}, {"200 OK", OMM_HEADER + "\n" + NOAA19_OMM + "\n"}});
+    auto keps = satdump::tryFetchOMMFileFromURL(server.url("/omm.csv"));
+    server.finish();
+    CHECK(server.requests.size() == 2);
+    REQUIRE(keps.size() == 1);
+    CHECK(keps[0].satellite_number == 33591);
+}
+
+TEST_CASE("tryFetchSingleOMMwithNorad does not retry a refused request", "[db][kepler_utils]")
+{
+    test_helpers::ConfigGuard cfg;
+    test_helpers::NoProxy np;
+    test_helpers::LoopbackHttpServer server({{"404 Not Found", "No GP data found"}, {"404 Not Found", ""}});
+    satdump::satdump_cfg.main_cfg["kepler_settings"]["url_template"] = server.url("/gp.php?CATNR=%NORAD%&FORMAT=CSV");
+    CHECK(satdump::tryFetchSingleOMMwithNorad(25544).empty());
+    server.stop();
+    REQUIRE(server.requests.size() == 1);
+    CHECK(server.requests[0].rfind("GET /gp.php?CATNR=25544&FORMAT=CSV HTTP/1.1\r\n", 0) == 0);
+}
+#endif
