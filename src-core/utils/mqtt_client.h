@@ -10,12 +10,15 @@ namespace satdump
     class MQTTClient
     {
     private:
-        int sockfd = 0;
+        int sockfd = -1;
         struct mqtt_client client;
         char *client_id = NULL;
 
-        uint8_t *sendbuf;
-        uint8_t *recvbuf;
+        uint8_t *sendbuf = nullptr;
+        uint8_t *recvbuf = nullptr;
+
+        // Frees the buffers and closes the socket
+        void release();
 
         std::function<void(std::string topic, uint8_t *data, int len)> callback;
 

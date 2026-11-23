@@ -195,16 +195,25 @@ TEST_CASE("MQTTClient connects, publishes, subscribes and receives over loopback
     }
 }
 
-// Bug: MQTTClient::~MQTTClient (mqtt_client.cpp:51-61) never closes sockfd, so every client leaks
-// its socket and the broker never sees the connection end. (Whether the queued DISCONNECT is sent
-// at all is also racy, as the refresher thread may stop before flushing it.)
-TEST_CASE("MQTTClient destructor closes the broker connection", "[utils][mqtt][!shouldfail]")
+// The destructor closes the socket. (Whether the queued DISCONNECT is sent at all is racy, as the
+// refresher thread may stop before flushing it, so only the end of the connection is checked.)
+TEST_CASE("MQTTClient destructor closes the broker connection", "[utils][mqtt]")
 {
     FakeBroker broker;
     {
         satdump::MQTTClient client("127.0.0.1", std::to_string(broker.port), 1024);
         REQUIRE(broker.waitFor(std::string("\x00\x04MQTT", 6)));
     }
+    CHECK(broker.waitClosed(std::chrono::milliseconds(1000)));
+}
+
+// Issue #212: when the constructor throws after opening the socket, the destructor does not run,
+// so the constructor itself must close the socket (and free the buffers).
+TEST_CASE("MQTTClient closes the socket when the constructor throws", "[utils][mqtt]")
+{
+    FakeBroker broker;
+    // The TCP connection succeeds, but a 16-byte send buffer cannot hold the CONNECT packet
+    CHECK_THROWS_AS(satdump::MQTTClient("127.0.0.1", std::to_string(broker.port), 16), satdump::satdump_exception_t);
     CHECK(broker.waitClosed(std::chrono::milliseconds(1000)));
 }
 #endif
