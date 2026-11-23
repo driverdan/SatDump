@@ -60,7 +60,7 @@ namespace rtltcp_test
         Stall,   // Sends nothing more but keeps the connection open, as when the network drops
     };
 
-    // A rtl_tcp server on a free 127.0.0.1 port, for one client. It sends the dongle
+    // A rtl_tcp server on a free 127.0.0.1 (or other loopback) port, for one client. It sends the dongle
     // information, then `iq` (unsigned 8-bit I/Q), then by default silence for as long as the
     // client stays connected, as a dongle never stops sending. The commands of the client are
     // recorded. Every blocking step is bounded, and the destructor stops everything.
@@ -183,10 +183,32 @@ namespace rtltcp_test
             client_left = true;
         }
 
+        // Fills addr from a numeric IPv4 or IPv6 address, returns its length or 0
+        static socklen_t loopbackAddress(const std::string &address, int port, sockaddr_storage &addr)
+        {
+            addr = {};
+            sockaddr_in *v4 = (sockaddr_in *)&addr;
+            sockaddr_in6 *v6 = (sockaddr_in6 *)&addr;
+            if (inet_pton(AF_INET, address.c_str(), &v4->sin_addr) == 1)
+            {
+                v4->sin_family = AF_INET;
+                v4->sin_port = htons(port);
+                return sizeof(sockaddr_in);
+            }
+            if (inet_pton(AF_INET6, address.c_str(), &v6->sin6_addr) == 1)
+            {
+                v6->sin6_family = AF_INET6;
+                v6->sin6_port = htons(port);
+                return sizeof(sockaddr_in6);
+            }
+            return 0;
+        }
+
     public:
         // With a port, that port is used instead of a free one, e.g. to bring a server back on
-        // the port of one that left
-        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0, AfterIQ after = AfterIQ::Silence, int port = 0)
+        // the port of one that left. address is the numeric IPv4 or IPv6 address to listen on.
+        explicit FakeRtlTcp(const std::vector<uint8_t> &iq = {}, bool send_dongle_info = true, double samplerate = 0, AfterIQ after = AfterIQ::Silence, int port = 0,
+                            const std::string &address = "127.0.0.1")
             : bytes_per_second(samplerate * 2), after_iq(after)
         {
             if (send_dongle_info)
@@ -194,22 +216,30 @@ namespace rtltcp_test
             iq_start = data.size();
             data.insert(data.end(), iq.begin(), iq.end());
 
-            listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-            sockaddr_in addr{};
-            addr.sin_family = AF_INET;
-            addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-            addr.sin_port = htons(port);
+            sockaddr_storage addr{};
+            socklen_t len = loopbackAddress(address, port, addr);
+            if (len == 0)
+                throw std::runtime_error("FakeRtlTcp: not a numeric address: " + address);
+            listen_fd = socket(addr.ss_family, SOCK_STREAM, 0);
+            if (listen_fd < 0)
+                throw std::runtime_error("FakeRtlTcp: cannot create a socket for " + address + ": " + strerror(errno));
             int reuse = 1;
             setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-            socklen_t len = sizeof(addr);
-            if (bind(listen_fd, (sockaddr *)&addr, sizeof(addr)) < 0)
+            if (addr.ss_family == AF_INET6)
             {
+                // Only IPv6, so that a client has to reach it over IPv6
+                int v6only = 1;
+                setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only));
+            }
+            if (bind(listen_fd, (sockaddr *)&addr, len) < 0)
+            {
+                std::string err = strerror(errno);
                 close(listen_fd);
-                throw std::runtime_error("FakeRtlTcp: cannot bind port " + std::to_string(port) + ": " + strerror(errno));
+                throw std::runtime_error("FakeRtlTcp: cannot bind " + address + " port " + std::to_string(port) + ": " + err);
             }
             listen(listen_fd, 1);
             getsockname(listen_fd, (sockaddr *)&addr, &len);
-            listen_port = ntohs(addr.sin_port);
+            listen_port = ntohs(addr.ss_family == AF_INET6 ? ((sockaddr_in6 *)&addr)->sin6_port : ((sockaddr_in *)&addr)->sin_port);
 
             th = std::thread([this]() { serve(); });
         }
@@ -227,6 +257,20 @@ namespace rtltcp_test
         FakeRtlTcp &operator=(const FakeRtlTcp &) = delete;
 
         int port() const { return listen_port; }
+
+        // Whether a server can listen on the IPv6 loopback address ::1 here
+        static bool ipv6Available()
+        {
+            int fd = socket(AF_INET6, SOCK_STREAM, 0);
+            if (fd < 0)
+                return false;
+            sockaddr_in6 addr{};
+            addr.sin6_family = AF_INET6;
+            addr.sin6_addr = in6addr_loopback;
+            bool ok = bind(fd, (sockaddr *)&addr, sizeof(addr)) == 0;
+            close(fd);
+            return ok;
+        }
 
         // A client connected (it may have left since)
         bool connected() const { return client_connected; }

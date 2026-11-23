@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <future>
 #include <memory>
+#include <netdb.h>
 
 // The RTL-TCP source is run against a rtl_tcp server made by the test, which records the
 // commands it is sent and plays back samples. No dongle and no rtl_tcp are involved.
@@ -30,7 +31,8 @@ namespace
     // Sets a source up like "satdump legacy live" does it, pointed at a server on port
     std::shared_ptr<dsp::DSPSampleSource> setUp(std::shared_ptr<dsp::DSPSampleSource> source, int port, nlohmann::json settings = nlohmann::json::object(), uint64_t frequency = 1694100000, uint64_t samplerate = 2400000)
     {
-        settings["ip_address"] = "127.0.0.1";
+        if (!settings.contains("ip_address"))
+            settings["ip_address"] = "127.0.0.1";
         settings["port"] = port;
 
         source->open();
@@ -67,6 +69,7 @@ namespace
     {
     private:
         int listen_fd = -1, filler = -1;
+        int listen_port;
         bool is_ready = false;
         bool does_hang = false;
 
@@ -89,7 +92,7 @@ namespace
         }
 
     public:
-        explicit Blackhole(int port)
+        explicit Blackhole(int port) : listen_port(port)
         {
             sockaddr_in addr = loopback(port);
             listen_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -123,6 +126,48 @@ namespace
 
         bool ready() const { return is_ready; }
         bool hangs() const { return does_hang; }
+        int port() const { return listen_port; }
+    };
+
+    // Whether host resolves to at least one address of family (AF_INET or AF_INET6)
+    bool resolvesTo(const char *host, int family)
+    {
+        addrinfo hints{};
+        hints.ai_family = family;
+        hints.ai_socktype = SOCK_STREAM;
+        addrinfo *result = nullptr;
+        if (getaddrinfo(host, "1234", &hints, &result) != 0)
+            return false;
+        freeaddrinfo(result);
+        return true;
+    }
+
+    // A list of 127.0.0.1 addresses with these ports, as getaddrinfo() gives them, to try
+    // several addresses one after the other without depending on the resolver
+    struct AddressList
+    {
+        std::vector<sockaddr_in> addrs;
+        std::vector<addrinfo> infos;
+
+        explicit AddressList(const std::vector<int> &ports) : addrs(ports.size()), infos(ports.size())
+        {
+            for (size_t i = 0; i < ports.size(); i++)
+            {
+                addrs[i] = {};
+                addrs[i].sin_family = AF_INET;
+                addrs[i].sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+                addrs[i].sin_port = htons(ports[i]);
+                infos[i] = {};
+                infos[i].ai_family = AF_INET;
+                infos[i].ai_socktype = SOCK_STREAM;
+                infos[i].ai_protocol = IPPROTO_TCP;
+                infos[i].ai_addr = (sockaddr *)&addrs[i];
+                infos[i].ai_addrlen = sizeof(sockaddr_in);
+                infos[i].ai_next = i + 1 < ports.size() ? &infos[i + 1] : nullptr;
+            }
+        }
+
+        const addrinfo *get() const { return infos.data(); }
     };
 
     double secondsSince(std::chrono::steady_clock::time_point t) { return std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); }
@@ -362,6 +407,116 @@ TEST_CASE("RTLTCPSource start fails when there is no server", "[plugins][sdr_sou
 
     CHECK_THROWS_AS(source->start(), satdump::satdump_exception_t);
     CHECK_NOTHROW(source->stop());
+}
+
+TEST_CASE("RTLTCPSource start fails when the host cannot be resolved", "[plugins][sdr_sources][rtltcp]")
+{
+    auto source = RTLTCPSource::getInstance(RTLTCPSource::getAvailableSources()[0]);
+    source->open();
+    source->set_frequency(100000000);
+    source->set_samplerate(2400000);
+    source->set_settings({{"ip_address", "nonexistent.invalid"}, {"port", 1234}});
+
+    CHECK_THROWS_AS(source->start(), satdump::satdump_exception_t);
+    CHECK_NOTHROW(source->stop());
+
+    RTLTCPClient client;
+    CHECK_FALSE(client.connectToRTL((char *)"nonexistent.invalid", 1234));
+    CHECK(client.connectError().find("could not resolve nonexistent.invalid") == 0);
+}
+
+// The POSIX client used to resolve with gethostbyname() into an AF_INET socket only
+TEST_CASE("RTLTCPSource connects to a server on the IPv6 loopback address", "[plugins][sdr_sources][rtltcp]")
+{
+    if (!FakeRtlTcp::ipv6Available())
+        SKIP("no IPv6 loopback here");
+
+    FakeRtlTcp server({}, true, 0, AfterIQ::Silence, 0, "::1");
+    auto source = setUp(RTLTCPSource::getInstance(RTLTCPSource::getAvailableSources()[0]), server.port(), {{"ip_address", "::1"}, {"tuner_agc", true}, {"lna_agc", false}});
+    source->start();
+    {
+        Drain drain(source);
+        CHECK(server.waitForCommands(6) == Commands{{CMD_SAMPLERATE, 2400000}, {CMD_FREQUENCY, 1694100000}, {CMD_AGC_MODE, 0}, {CMD_GAIN_MODE, 0}, {CMD_BIAS_TEE, 0}, {CMD_PPM, 0}});
+        source->stop();
+    }
+    CHECK(server.connected());
+}
+
+// "localhost" usually resolves to both ::1 and 127.0.0.1, while a rtl_tcp server may listen on
+// one of them only: every address is tried, not only the first one
+TEST_CASE("RTLTCPSource tries every address of a host name", "[plugins][sdr_sources][rtltcp]")
+{
+    std::string address = GENERATE("127.0.0.1", "::1");
+    int family = address == "::1" ? AF_INET6 : AF_INET;
+    if (family == AF_INET6 && !FakeRtlTcp::ipv6Available())
+        SKIP("no IPv6 loopback here");
+    if (!resolvesTo("localhost", family))
+        SKIP("localhost does not resolve to " + address + " here");
+
+    CAPTURE(address);
+    FakeRtlTcp server({}, true, 0, AfterIQ::Silence, 0, address);
+    RTLTCPClient client;
+    REQUIRE(client.connectToRTL((char *)"localhost", server.port()));
+    CHECK(client.setFrequency(137100000));
+    CHECK(server.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+
+    // The same with the non-blocking attempts used to reconnect
+    client.disconnect();
+    FakeRtlTcp server2({}, true, 0, AfterIQ::Silence, 0, address);
+    REQUIRE(client.connectToRTL((char *)"localhost", server2.port(), []() { return true; }, 2000));
+    CHECK(client.setFrequency(137100000));
+    CHECK(server2.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+    client.disconnect();
+}
+
+// With a timeout, each address gets a share of the time left: one that does not answer (an
+// AAAA record behind a firewall that drops packets) used to take all of it, so the next ones
+// were never tried when reconnecting
+TEST_CASE("RTLTCPClient tries the next addresses when one does not answer", "[plugins][sdr_sources][rtltcp]")
+{
+    Blackhole hole1(test_helpers::closedPort());
+    Blackhole hole2(test_helpers::closedPort());
+    if (!hole1.hangs() || !hole2.hangs())
+        SKIP("connecting to a full listening queue does not hang here");
+
+    SECTION("two addresses that do not answer, then one that does")
+    {
+        FakeRtlTcp server;
+        AddressList list({hole1.port(), hole2.port(), server.port()});
+        RTLTCPClient client;
+        auto t = std::chrono::steady_clock::now();
+        REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 1500));
+        double elapsed = secondsSince(t);
+        CHECK(elapsed < 1.5);
+        CHECK(elapsed > 0.6); // The two first attempts did time out
+        CHECK(client.connectError().empty());
+        CHECK(client.setFrequency(137100000));
+        CHECK(server.waitForCommands(1) == Commands{{CMD_FREQUENCY, 137100000}});
+        client.disconnect();
+    }
+
+    SECTION("the timeout covers all the attempts")
+    {
+        AddressList list({hole1.port(), hole2.port(), hole1.port()});
+        RTLTCPClient client;
+        auto t = std::chrono::steady_clock::now();
+        CHECK_FALSE(client.connectToAddresses(list.get(), []() { return true; }, 600));
+        CHECK(secondsSince(t) < 1.0);
+        CHECK(client.connectError().find("timed out") != std::string::npos);
+    }
+}
+
+TEST_CASE("RTLTCPClient connectError is cleared once an address connects", "[plugins][sdr_sources][rtltcp]")
+{
+    FakeRtlTcp server;
+    AddressList list({test_helpers::closedPort(), server.port()});
+    RTLTCPClient client;
+
+    SECTION("blocking") { REQUIRE(client.connectToAddresses(list.get())); }
+    SECTION("with a timeout") { REQUIRE(client.connectToAddresses(list.get(), []() { return true; }, 2000)); }
+
+    CHECK(client.connectError().empty());
+    client.disconnect();
 }
 
 TEST_CASE("RTLTCPSource start configures the dongle", "[plugins][sdr_sources][rtltcp]")

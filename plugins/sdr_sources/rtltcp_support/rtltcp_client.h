@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <string.h>
 #include <string>
+#include <algorithm>
+#include <chrono>
 #include <functional>
 #include <mutex>
 
@@ -99,30 +101,93 @@ public:
         }
         freeaddrinfo(result);
 #else
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0) {
-            connect_error = strerror(errno);
+        // getaddrinfo() is reentrant (this runs on the reconnection thread too) and gives the
+        // IPv6 addresses as well as the IPv4 ones. Each one is tried in turn, e.g. "localhost"
+        // may give ::1 first while the server listens on 127.0.0.1 only.
+        struct addrinfo hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_UNSPEC;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_protocol = IPPROTO_TCP;
+
+        std::string port_str = std::to_string(port);
+        struct addrinfo* result = NULL;
+        int gai = getaddrinfo(host, port_str.c_str(), &hints, &result);
+        if (gai != 0) {
+            connect_error = std::string("could not resolve ") + host + ": " + gai_strerror(gai);
             return false;
         }
-        struct hostent* server = gethostbyname(host);
-        if (server == NULL) {
-            connect_error = std::string("could not resolve ") + host;
+
+        bool ok = connectToAddresses(result, keep_going, timeout_ms);
+        freeaddrinfo(result);
+        return ok;
+#endif
+
+#ifdef _WIN32
+        {
+            std::lock_guard<std::mutex> lock(send_mtx);
+            connected = true;
+        }
+
+        return true;
+#endif
+    }
+
+#ifndef _WIN32
+    // Tries each address of the list in turn, as connectToRTL() does with those of the host.
+    // timeout_ms covers all the attempts: each one is given an equal share of the time left, so
+    // that an address that does not answer leaves time for the next ones. Public for the tests.
+    bool connectToAddresses(const struct addrinfo* list, std::function<bool()> keep_going = nullptr, int timeout_ms = 0) {
+        if (connected) {
+            return true;
+        }
+        connect_error.clear();
+
+        int addresses_left = 0;
+        for (const struct addrinfo* ai = list; ai != NULL; ai = ai->ai_next) {
+            addresses_left++;
+        }
+        if (addresses_left == 0) {
+            connect_error = "no address to connect to";
+            return false;
+        }
+
+        auto start = std::chrono::steady_clock::now();
+        bool ok = false;
+        for (const struct addrinfo* ai = list; ai != NULL; ai = ai->ai_next, addresses_left--) {
+            int attempt_timeout_ms = timeout_ms;
+            if (timeout_ms > 0) {
+                int elapsed_ms = (int)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+                if (elapsed_ms >= timeout_ms) {
+                    // Keeps why the previous address failed
+                    connect_error = connect_error.empty() ? "timed out" : connect_error + ", then timed out";
+                    break;
+                }
+                // At least 1 ms, as 0 means no timeout
+                attempt_timeout_ms = (std::max)(1, (timeout_ms - elapsed_ms) / addresses_left);
+            }
+
+            sockfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+            if (sockfd < 0) {
+                connect_error = strerror(errno);
+                continue;
+            }
+            if (connectSocket(ai->ai_addr, ai->ai_addrlen, keep_going, attempt_timeout_ms)) {
+                ok = true;
+                break;
+            }
             close(sockfd);
+            if (keep_going && !keep_going()) {
+                break; // Cancelled, the other addresses are not tried
+            }
+        }
+        if (!ok) {
             return false;
         }
-        struct sockaddr_in serv_addr;
-        bzero(&serv_addr, sizeof(struct sockaddr_in));
-        serv_addr.sin_family = AF_INET;
-        bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
-        serv_addr.sin_port = htons(port);
-        if (!connectSocket((struct sockaddr*)&serv_addr, sizeof(serv_addr), keep_going, timeout_ms)) {
-            close(sockfd);
-            return false;
-        }
+        connect_error.clear(); // Not the error of an address tried before
 #ifdef SO_NOSIGPIPE
         int no_sigpipe = 1;
         setsockopt(sockfd, SOL_SOCKET, SO_NOSIGPIPE, &no_sigpipe, sizeof(no_sigpipe));
-#endif
 #endif
 
         {
@@ -132,6 +197,7 @@ public:
 
         return true;
     }
+#endif
 
     void disconnect() {
         std::lock_guard<std::mutex> lock(send_mtx);
