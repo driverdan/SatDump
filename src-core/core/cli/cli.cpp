@@ -27,15 +27,6 @@ namespace satdump
             return verbose;
         }
 
-        bool checkHelp(int argc, char *argv[])
-        {
-            bool help = false;
-            for (int i = 0; i < argc; i++)
-                if (std::string(argv[i]) == "-h" || std::string(argv[i]) == "--help" || std::string(argv[i]) == "--help-all")
-                    help = true;
-            return help;
-        }
-
         CommandHandler::CommandHandler(bool is_gui) : is_gui(is_gui), app("SatDump v" + satdump::SATDUMP_VERSION)
         {
             // Command basics
@@ -70,8 +61,18 @@ namespace satdump
 
         int CommandHandler::parse(int argc, char *argv[])
         {
-            is_help = checkHelp(argc, argv);
-            CLI11_PARSE(app, argc, argv);
+            // Only skip running when CLI11 itself handled a help flag (reported as CLI::Success).
+            // Scanning argv for -h would also catch arguments meant for a prefix command, such as
+            // `legacy -h` (#228)
+            try
+            {
+                app.parse(argc, argv);
+            }
+            catch (const CLI::ParseError &e)
+            {
+                is_help = dynamic_cast<const CLI::Success *>(&e) != nullptr;
+                return app.exit(e);
+            }
             return 0;
         }
 

@@ -15,7 +15,6 @@ namespace satdump
         };
 
         bool checkVerbose(int argc, char *argv[]);
-        bool checkHelp(int argc, char *argv[]);
 
         class CommandHandler
         {

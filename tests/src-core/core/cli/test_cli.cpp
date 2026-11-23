@@ -49,6 +49,8 @@ namespace
         std::string arg;
         bool flag = false;
         bool throw_on_run = false;
+        int prefix_runs = 0;
+        std::vector<std::string> prefix_args;
     };
 
     std::shared_ptr<TestCmdState> testCmdState()
@@ -78,8 +80,28 @@ namespace
                                 throw std::runtime_error("unit test command failure");
                         }
                     };
+                    // Set up like LegacyCmdHandler: every argument after it, -h included, is its own
+                    struct PrefixCmd : public satdump::CmdHandler
+                    {
+                        std::shared_ptr<TestCmdState> st;
+                        PrefixCmd(std::shared_ptr<TestCmdState> s) : satdump::CmdHandler("unit_test_prefix_cmd"), st(s) {}
+                        void reg(CLI::App *app)
+                        {
+                            auto sub = app->add_subcommand("unit_test_prefix_cmd", "Test only");
+                            sub->prefix_command();
+                            sub->set_help_flag();
+                        }
+                        void run(CLI::App *, CLI::App *subcom, bool)
+                        {
+                            st->prefix_runs++;
+                            st->prefix_args = subcom->remaining();
+                        }
+                    };
                     if (st->enabled)
+                    {
                         evt.cmd_handlers.push_back(std::make_shared<Cmd>(st));
+                        evt.cmd_handlers.push_back(std::make_shared<PrefixCmd>(st));
+                    }
                 });
             return st;
         }();
@@ -106,17 +128,6 @@ TEST_CASE("cli::checkVerbose detects -v and --verbose", "[core][cli]")
     Argv similar({"satdump", "-vv", "--verbosity"});
     CHECK_FALSE(satdump::cli::checkVerbose(similar.argc(), similar.argv()));
     CHECK_FALSE(satdump::cli::checkVerbose(0, nullptr));
-}
-
-TEST_CASE("cli::checkHelp detects -h, --help and --help-all", "[core][cli]")
-{
-    for (std::string flag : {"-h", "--help", "--help-all"})
-    {
-        Argv a({"satdump", "pipeline", flag});
-        CHECK(satdump::cli::checkHelp(a.argc(), a.argv()));
-    }
-    Argv none({"satdump", "probe", "--helpful"});
-    CHECK_FALSE(satdump::cli::checkHelp(none.argc(), none.argv()));
 }
 
 TEST_CASE("CommandHandler requires a known subcommand", "[core][cli]")
@@ -203,6 +214,48 @@ TEST_CASE("CommandHandler help succeeds and run does nothing", "[core][cli]")
     // CLI11 reports help as a successful exit
     CHECK(parse(h, {"probe", "--help"}) == 0);
     CHECK_FALSE(h.run());
+}
+
+TEST_CASE("CommandHandler does not run a subcommand when CLI11 prints help", "[core][cli]")
+{
+    ConfigGuard cg;
+    TestCmdEnabled tc;
+    for (std::vector<std::string> args : std::vector<std::vector<std::string>>{
+             {"unit_test_cmd", "x", "-h"}, {"unit_test_cmd", "x", "--help"}, {"--help-all", "unit_test_cmd", "x"}, {"-h", "unit_test_prefix_cmd"}})
+    {
+        satdump::cli::CommandHandler h(false);
+        CHECK(parse(h, args) == 0);
+        CHECK_FALSE(h.run());
+    }
+    CHECK(tc.st->runs == 0);
+    CHECK(tc.st->prefix_runs == 0);
+}
+
+TEST_CASE("CommandHandler passes -h to a prefix command (#228)", "[core][cli]")
+{
+    ConfigGuard cg;
+    TestCmdEnabled tc;
+    for (std::string flag : {"-h", "--help"})
+    {
+        tc.st->prefix_runs = 0;
+        satdump::cli::CommandHandler h(false);
+        REQUIRE(parse(h, {"unit_test_prefix_cmd", flag}) == 0);
+        CHECK_FALSE(h.run());
+        CHECK(tc.st->prefix_runs == 1);
+        CHECK(tc.st->prefix_args == std::vector<std::string>{flag});
+    }
+    // An argument such as `legacy live -h` reaches the command too
+    satdump::cli::CommandHandler h(false);
+    REQUIRE(parse(h, {"unit_test_prefix_cmd", "live", "-h"}) == 0);
+    CHECK_FALSE(h.run());
+    CHECK(tc.st->prefix_args == std::vector<std::string>{"live", "-h"});
+
+    // --help-all belongs to the top-level app, which CLI11 still handles after a prefix command
+    tc.st->prefix_runs = 0;
+    satdump::cli::CommandHandler h2(false);
+    CHECK(parse(h2, {"unit_test_prefix_cmd", "--help-all"}) == 0);
+    CHECK_FALSE(h2.run());
+    CHECK(tc.st->prefix_runs == 0);
 }
 
 TEST_CASE("CommandHandler runs subcommands registered through RegisterSubcommandEvent", "[core][cli]")
