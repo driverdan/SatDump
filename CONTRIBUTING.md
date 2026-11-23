@@ -16,20 +16,20 @@ Check the file before pushing:
 python3 tools/check_third_party.py
 ```
 
-It checks that the JSON parses, that every entry has the fields below with valid values, that every listed path exists, that no path is listed twice or lies inside another listed path, and that everything directly under `src-core/libs/` belongs to an entry.
+It checks that the JSON parses without duplicate keys, that every entry has the fields below with valid values, that every listed path exists, that no path is listed twice or lies inside another listed path, that `satdump_files` are placed as described below, and that everything directly under `src-core/libs/` belongs to an entry.
 
-Paths must not nest: a file inside a directory that some entry lists would count as a change to both libraries, so when two libraries share a directory, list their files individually (as `imgui` and `implot` do for `src-core/imgui`). `satdump_files` are the exception: they may lie inside the entry's `paths`.
+Paths must not nest: a file inside a directory that some entry lists would count as a change to both libraries, so when two libraries share a directory, list their files individually (as `imgui` and `implot` do for `src-core/imgui`). `satdump_files` are the exception: they may lie inside the entry's own `paths`, but not inside another entry's.
 
 ### Fields
 
-The top level has `description`, `format_version`, `libraries` and `not_tracked`, a list of notes on third-party material that is deliberately not listed (git submodules, small fragments inside SatDump's own files). Each entry in `libraries` has these fields:
+The top level has `description`, `format_version` (currently `1`), `libraries` and `not_tracked`, a list of notes on third-party material that is deliberately not listed (git submodules, small fragments inside SatDump's own files). Each entry in `libraries` has these fields:
 
 | Field | Meaning |
 | --- | --- |
 | `id` | Short unique name, e.g. `openjpeg`. |
 | `name` | Human-readable name. |
 | `paths` | Files and directories in the tree that hold the upstream code, relative to the repository root, with `/` and no trailing slash. |
-| `satdump_files` | Optional. SatDump's own files inside or next to those paths (e.g. `src-core/nlohmann/json_utils.cpp`), which are not upstream code. |
+| `satdump_files` | Optional. SatDump's own files that sit inside one of the entry's `paths` or in the same directory as one of them (e.g. `src-core/nlohmann/json_utils.cpp` next to `json.hpp`), which are not upstream code. A file may be claimed by only one entry, and must not also be in `paths`. |
 | `upstream_url` | Upstream repository or home page, or `null` if unknown. |
 | `version` | Upstream version the copy is based on, as precisely as known (e.g. `2.5.0`, `0.18 WIP`), or `unknown`. |
 | `commit` | Full 40-character upstream commit SHA the copy is based on, `unknown`, or `n/a` when upstream has no commits to point at (tarball releases, closed-source headers). Never guess: use `unknown` until someone has checked. |

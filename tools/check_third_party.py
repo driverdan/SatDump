@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Check third_party.json, the manifest of vendored libraries.
 
-Checks that the file parses, that every entry has the documented fields with
-valid values, that every listed path exists, that no path is listed twice or
-nested inside another entry's path, and that every file or directory directly
-under src-core/libs/ belongs to an entry.
+Checks that the file parses without duplicate keys, that every entry has the
+documented fields with valid values, that every listed path exists, that no
+path is listed twice or nested inside another listed path, that satdump_files
+sit inside or next to their own entry's paths and nowhere else, and that every
+file or directory directly under src-core/libs/ belongs to an entry.
 
 Usage: python3 tools/check_third_party.py [path/to/third_party.json]
 Exits 0 if the manifest is valid, 1 otherwise. Uses only the standard library.
@@ -37,6 +38,7 @@ REQUIRED = {
 }
 OPTIONAL = {"satdump_files": (list, False)}
 TOP_LEVEL = {"description", "format_version", "libraries", "not_tracked"}
+FORMAT_VERSION = 1
 
 LOCAL_CHANGES_STATUS = {"yes", "no", "unknown", "adapted"}
 CONSUMPTION = {
@@ -84,6 +86,8 @@ def check(data, root):
     for key in data:
         if key not in TOP_LEVEL:
             errors.append(f"unknown top-level field '{key}'")
+    if not type_ok(data.get("format_version"), int) or data.get("format_version") != FORMAT_VERSION:
+        errors.append(f"'format_version' must be {FORMAT_VERSION}")
     if "not_tracked" in data and not (
         isinstance(data["not_tracked"], list) and all(isinstance(x, str) for x in data["not_tracked"])
     ):
@@ -121,6 +125,10 @@ def check(data, root):
             if lib_id in ids:
                 errors.append(f"{where}: duplicate id")
             ids.add(lib_id)
+
+        issue = lib.get("update_issue")
+        if type_ok(issue, int) and issue < 1:
+            errors.append(f"{where}: 'update_issue' must be a positive issue number or null")
 
         commit = lib.get("commit")
         if isinstance(commit, str) and commit and not (SHA_RE.match(commit) or commit in ("unknown", "n/a")):
@@ -170,8 +178,8 @@ def check(data, root):
             else:
                 owner[p] = lib_id
 
-    # A path inside another entry's path would make a change count for both
-    # libraries. satdump_files may sit inside paths: that is their purpose.
+    # A path inside another listed path would make a change count twice (or
+    # for two libraries). Either side may be the mistake, so name both.
     for where, lib_id, paths, _ in entries:
         for p in paths:
             for q, other in owner.items():
@@ -179,11 +187,28 @@ def check(data, root):
                     if other == lib_id:
                         errors.append(f"{where}: {p} is inside {q}, which this entry already lists")
                     else:
-                        errors.append(f"{where}: {p} is inside {q}, which belongs to {other}")
+                        errors.append(f"paths overlap: {p} (entry {lib_id}) is inside {q} (entry {other})")
 
-    listed = set(owner)
-    for _, _, _, own in entries:
-        listed.update(own)
+    # satdump_files are SatDump's own files inside an entry's paths or in the
+    # same directory as one of them, and belong to that entry only.
+    claimed = {}
+    for where, lib_id, paths, own in entries:
+        for f in own:
+            if f in paths:
+                errors.append(f"{where}: {f} is in both 'paths' and 'satdump_files'")
+                continue
+            near = any(inside(f, q) or os.path.dirname(f) == os.path.dirname(q) for q in paths)
+            if not near:
+                errors.append(f"{where}: satdump_files entry {f} is neither inside nor next to this entry's paths")
+            for q, other in owner.items():
+                if other != lib_id and inside(f, q):
+                    errors.append(f"{where}: satdump_files entry {f} is inside {q}, which belongs to {other}")
+            if f in claimed:
+                errors.append(f"{where}: satdump_files entry {f} is also claimed by {claimed[f]}")
+            else:
+                claimed[f] = lib_id
+
+    listed = set(owner) | set(claimed)
     for d in COVERED_DIRS:
         full = os.path.join(root, d)
         if not os.path.isdir(full):
@@ -204,14 +229,24 @@ def main():
         manifest = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "third_party.json")
     root = os.path.dirname(os.path.abspath(manifest))
 
+    duplicates = []
+
+    def no_duplicates(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                duplicates.append(key)
+            obj[key] = value
+        return obj
+
     try:
         with open(manifest, encoding="utf-8") as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=no_duplicates)
     except (OSError, ValueError) as e:
         print(f"{manifest}: {e}")
         return 1
 
-    errors = check(data, root)
+    errors = [f"duplicate key '{k}' in a JSON object" for k in duplicates] + check(data, root)
     for e in errors:
         print(f"{manifest}: {e}")
     if errors:
