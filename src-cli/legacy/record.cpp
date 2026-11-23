@@ -61,10 +61,12 @@ int main_record(int argc, char *argv[])
         return 1;
     }
 
-    // Create output dir
-    if (std::filesystem::path(output_file).has_parent_path())
-        if (!std::filesystem::exists(std::filesystem::path(output_file).parent_path().string()))
-            std::filesystem::create_directories(std::filesystem::path(output_file).parent_path().string());
+    // Checked before anything is created or started, as nothing would stop it on return
+    if (!parameters.contains("baseband_format"))
+    {
+        logger->error("baseband_format flag is required!");
+        return 1;
+    }
 
     // Get the sources of the requested type
     dsp::registerAllSources();
@@ -170,12 +172,6 @@ int main_record(int argc, char *argv[])
         webserver_already_set = true;
     }
 
-    if (!parameters.contains("baseband_format"))
-    {
-        logger->error("baseband_format flag is required!");
-        return 1;
-    }
-
     dsp::BasebandType baseband_type = parameters["baseband_format"].get<std::string>();
 
 #if defined(BUILD_ZIQ) || defined(BUILD_ZIQ2)
@@ -185,6 +181,11 @@ int main_record(int argc, char *argv[])
     if (parameters["baseband_format"].get<std::string>() == "ziq")
         logger->info("Using ZIQ Depth %d", baseband_type.ziq_depth);
 #endif
+
+    // Create output dir, only once the source runs so that a failure leaves nothing behind
+    if (std::filesystem::path(output_file).has_parent_path())
+        if (!std::filesystem::exists(std::filesystem::path(output_file).parent_path().string()))
+            std::filesystem::create_directories(std::filesystem::path(output_file).parent_path().string());
 
     file_sink->set_output_sample_type(baseband_type);
     file_sink->start();
