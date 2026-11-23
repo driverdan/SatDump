@@ -20,6 +20,7 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                 {
                     data_in = std::ifstream(d_input_file, std::ios::binary);
+                    data_in.peek(); // Sets EOF on an empty file, so should_run() is false from the start
                     logger->info("Using input file %s", d_input_file.c_str());
                 }
                 progress = 0;
@@ -44,17 +45,24 @@ namespace satdump
                 return v;
             }
 
-            void FileStreamToFileStreamModule::read_data(uint8_t *buffer, size_t size)
+            bool FileStreamToFileStreamModule::read_data(uint8_t *buffer, size_t size)
             {
+                bool full;
+
                 // Read buffer
                 if (input_data_type == DATA_FILE)
                 {
                     data_in.read((char *)buffer, size);
-                    progress = data_in.tellg();
+                    full = (size_t)data_in.gcount() == size;
+                    progress += data_in.gcount();
+                    // Look ahead so EOF is set right after the last byte is read. Otherwise
+                    // should_run() stays true for one more loop, whose read comes up empty
+                    // and leaves the previous buffer to be processed a second time.
+                    data_in.peek();
                 }
                 else
                 {
-                    input_fifo->read((uint8_t *)buffer, size);
+                    full = input_fifo->read((uint8_t *)buffer, size) == (int)size;
                 }
 
                 if (time(0) - time_)
@@ -64,6 +72,8 @@ namespace satdump
                         logger->trace("%s", stats.dump(4).c_str());
                     time_ = time(0);
                 }
+
+                return full;
             }
 
             void FileStreamToFileStreamModule::write_data(uint8_t *buffer, size_t size)

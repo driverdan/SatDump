@@ -27,9 +27,6 @@ namespace
             while (should_run())
             {
                 read_data(buf, 8);
-                // Inputs used here are multiples of 8 bytes: stop on the read that hit EOF
-                if (input_data_type == pl::DATA_FILE && !should_run())
-                    break;
                 if (input_data_type == pl::DATA_FILE && chunks == 0)
                     stats_mid = getModuleStats();
                 for (auto &b : buf)
@@ -45,6 +42,37 @@ namespace
 
         void publicInit() { init(); }
         nlohmann::json stats() { return getModuleStats(); }
+    };
+
+    // Mimics the interleaved Meteor LRPT decoder: a reader pulls 8-byte blocks through a callback
+    // that reports whether the read succeeded, and stops pulling after the first failed read
+    class BlockReaderModule : public pl::base::FileStreamToFileStreamModule
+    {
+    public:
+        std::vector<std::string> blocks;
+
+        BlockReaderModule(std::string in, std::string hint, nlohmann::json params) : FileStreamToFileStreamModule(in, hint, params) { fsfsm_enable_output = false; }
+
+        void process()
+        {
+            std::function<bool(uint8_t *, size_t)> input_function = [this](uint8_t *buf, size_t len) { return read_data(buf, len); };
+
+            bool error = false;
+            while (should_run() && !error)
+            {
+                uint8_t buf[8];
+                error = !input_function(buf, 8);
+                if (!error)
+                    blocks.push_back(std::string((char *)buf, 8));
+            }
+            cleanup();
+        }
+
+        void drawUI(bool) {}
+        std::string getIDM() { return "unit_block_reader"; }
+
+        void publicInit() { init(); }
+        bool publicRead(uint8_t *buf, size_t len) { return read_data(buf, len); }
     };
 
     std::string xorString(const std::string &s)
@@ -102,10 +130,7 @@ TEST_CASE("FileStreamToFileStreamModule without output does not create a file", 
     CHECK_FALSE(std::filesystem::exists(tmp.file("result.bin")));
 }
 
-// Bug: filestream_to_filestream.cpp:53 : once the input is exhausted, the last read fails and
-// data_in.tellg() returns -1, which is stored in the unsigned `progress`, so the final stats
-// report an astronomically large percentage instead of 100%.
-TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a whole file", "[pipeline][modules][filestream_to_filestream][!shouldfail]")
+TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a whole file", "[pipeline][modules][filestream_to_filestream]")
 {
     TempDir tmp("pipe_fsfs");
     std::string input = tmp.file("in.raw");
@@ -118,6 +143,76 @@ TEST_CASE("FileStreamToFileStreamModule reports 100% progress after processing a
     m.process();
 
     CHECK(m.stats()["progress"].get<double>() == Catch::Approx(100.0));
+}
+
+// Issue #220: after the last full read EOF was not yet set, so the loop ran once more, its read
+// came up empty and the last buffer was processed a second time.
+TEST_CASE("FileStreamToFileStreamModule processes the last buffer of a file only once", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "ABCDEFGH12345678");
+
+    XorModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+    m.process();
+
+    CHECK(m.chunks == 2);
+    CHECK(readFile(tmp.file("result.bin")) == xorString("ABCDEFGH12345678"));
+}
+
+TEST_CASE("FileStreamToFileStreamModule does not process anything from an empty file", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "");
+
+    XorModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+    m.process();
+
+    CHECK(m.chunks == 0);
+    CHECK(readFile(tmp.file("result.bin")) == "");
+}
+
+TEST_CASE("FileStreamToFileStreamModule::read_data reports whether a full buffer was read", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "ABCDEFGH1234");
+
+    BlockReaderModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+
+    uint8_t buf[8];
+    CHECK(m.publicRead(buf, 8));
+    CHECK(std::string((char *)buf, 8) == "ABCDEFGH");
+    CHECK_FALSE(m.publicRead(buf, 8)); // Only 4 bytes left
+    CHECK_FALSE(m.publicRead(buf, 8)); // Past the end
+}
+
+// Review of #220: the interleaved Meteor LRPT decoder used should_run() as the success value of
+// its reads. Once EOF is set right after the last byte, that drops the last block of a file whose
+// size is a multiple of the block size.
+TEST_CASE("FileStreamToFileStreamModule delivers every block of an aligned file once through a read callback", "[pipeline][modules][filestream_to_filestream]")
+{
+    TempDir tmp("pipe_fsfs");
+    std::string input = tmp.file("in.raw");
+    writeFile(input, "ABCDEFGH12345678abcdefgh");
+
+    BlockReaderModule m(input, tmp.file("result"), {});
+    m.setInputType(pl::DATA_FILE);
+    m.setOutputType(pl::DATA_FILE);
+    m.publicInit();
+    m.process();
+
+    CHECK(m.blocks == std::vector<std::string>{"ABCDEFGH", "12345678", "abcdefgh"});
 }
 
 TEST_CASE("FileStreamToFileStreamModule streams FIFO input to FIFO output", "[pipeline][modules][filestream_to_filestream]")
