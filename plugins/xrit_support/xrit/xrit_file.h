@@ -129,10 +129,12 @@ namespace satdump
             }
         };
 
+        // CCSDS day segmented time: a P-field byte, then the days since 1958-01-01 and the
+        // milliseconds of the day
         struct TimeStampRecord
         {
             static constexpr int TYPE = 5;
-            static constexpr int MIN_LENGTH = 9;
+            static constexpr int MIN_LENGTH = 10;
 
             uint8_t type;
             uint16_t record_length;
@@ -145,10 +147,11 @@ namespace satdump
             {
                 type = data[0];
                 record_length = data[1] << 8 | data[2];
-                uint16_t days = data[3] << 8 | data[4];
-                uint32_t milliseconds_of_day = data[5] << 24 | data[6] << 16 | data[7] << 8 | data[8];
+                days = data[4] << 8 | data[5];
+                milliseconds_of_day = (uint32_t)data[6] << 24 | (uint32_t)data[7] << 16 | (uint32_t)data[8] << 8 | (uint32_t)data[9];
 
-                timestamp = (days - 4383) * 86400 + milliseconds_of_day;
+                // 4383 days from 1958-01-01 to the Unix epoch
+                timestamp = ((time_t)days - 4383) * 86400 + milliseconds_of_day / 1000;
             }
         };
         ////////////////////////////////////////
