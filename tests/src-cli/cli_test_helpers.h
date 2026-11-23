@@ -14,10 +14,12 @@
 #include "helpers/temp_files.h"
 #include "legacy/webserver.h"
 #include "logger.h"
+#include <atomic>
 #include <csignal>
 #include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifndef _WIN32
@@ -193,6 +195,65 @@ namespace cli_test
 
         CommandEnv() { satdump::satdump_cfg.main_cfg["satdump_directories"]["default_input_directory"]["value"] = dir.str(); }
     };
+
+    // A source that outputs `buffers` buffers of 1024 samples and then ends, like a network source
+    // whose connection was lost for good: has_ended() turns true and the stream is left open
+    class EndingSource : public dsp::DSPSampleSource
+    {
+    private:
+        int buffers;
+        uint64_t samplerate = 48000;
+        std::atomic<bool> should_run{false};
+        std::thread work_thread;
+
+        void run()
+        {
+            for (int i = 0; i < buffers && should_run; i++)
+            {
+                for (int j = 0; j < 1024; j++)
+                    output_stream->writeBuf[j] = complex_t(0.5f, -0.5f);
+                if (!output_stream->swap(1024))
+                    return;
+                // Paced a little, so that a command has set up what reads the samples before
+                // the source ends
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            if (should_run)
+                d_ended = true;
+        }
+
+    public:
+        EndingSource(dsp::SourceDescriptor source, int buffers) : DSPSampleSource(source), buffers(buffers) {}
+        ~EndingSource() { stop(); }
+
+        void open() {}
+        void start()
+        {
+            DSPSampleSource::start();
+            should_run = true;
+            work_thread = std::thread(&EndingSource::run, this);
+        }
+        void stop()
+        {
+            should_run = false;
+            if (output_stream)
+                output_stream->stopWriter();
+            if (work_thread.joinable())
+                work_thread.join();
+        }
+        void close() {}
+        void drawControlUI() {}
+        void set_samplerate(uint64_t s) { samplerate = s; }
+        uint64_t get_samplerate() { return samplerate; }
+    };
+
+    // Registers EndingSource as the source type "unit_cli_ending_sdr" (until the
+    // DeviceRegistryGuard of the CommandEnv puts the registry back)
+    inline void registerEndingSource(int buffers)
+    {
+        dsp::dsp_sources_registry["unit_cli_ending_sdr"] = {[buffers](dsp::SourceDescriptor d) -> std::shared_ptr<dsp::DSPSampleSource> { return std::make_shared<EndingSource>(d, buffers); },
+                                                            []() { return std::vector<dsp::SourceDescriptor>{{"unit_cli_ending_sdr", "Ending SDR", "0"}}; }};
+    }
 
     // Sample k of the test baseband is (k, -k)
     inline std::string writeRampBaseband(const TempDir &dir, int samples, const std::string &name = "input.cf32")

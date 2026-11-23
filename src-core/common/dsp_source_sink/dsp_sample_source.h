@@ -3,6 +3,7 @@
 #include "common/dsp/complex.h"
 #include "nlohmann/json.hpp"
 #include "common/dsp/buffer.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 #include "nlohmann/json_utils.h"
@@ -32,6 +33,9 @@ namespace dsp
         std::string d_sdr_id;
 
     protected:
+        // Set by a source that stopped delivering samples for good while started, see has_ended()
+        std::atomic<bool> d_ended{false};
+
         inline int calculate_buffer_size_from_samplerate(int samplerate, int buffer_per_sec = 60, int blocksize = 512)
         {
             return std::min<int>(ceil((double)samplerate / double(buffer_per_sec * blocksize)) * blocksize, dsp::STREAM_BUFFER_SIZE);
@@ -39,9 +43,19 @@ namespace dsp
 
     public:
         virtual void open() = 0;                                                              // Open the device, source, etc, but don't start the stream yet
-        virtual void start() { output_stream = std::make_shared<dsp::stream<complex_t>>(); }; // Start streaming samples
+        virtual void start() // Start streaming samples
+        {
+            d_ended = false;
+            output_stream = std::make_shared<dsp::stream<complex_t>>();
+        }
         virtual void stop() = 0;                                                              // Stop streaming samples
         virtual void close() = 0;                                                             // Close the device, source etc
+
+        // True once the source, while started, stopped delivering samples and will not deliver
+        // any again until it is stopped and started again (eg, its connection was lost and could
+        // not be recovered). The output stream is left as it is: its readers would otherwise
+        // spin on read() returning -1, so callers waiting on the source poll this instead.
+        virtual bool has_ended() { return d_ended; }
 
         virtual void drawControlUI() = 0; // Draw the source control UI, eg, gain settings etc
 

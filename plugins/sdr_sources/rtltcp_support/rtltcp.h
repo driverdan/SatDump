@@ -71,7 +71,12 @@ protected:
                     break;
                 logger->error("RTL-TCP connection lost (%s), trying to reconnect", client.receiveError().c_str());
                 if (!reconnect())
-                    break; // Idle until the source is stopped (starting it again connects again)
+                {
+                    // Idle until the source is stopped (starting it again connects again)
+                    if (thread_should_run)
+                        d_ended = true;
+                    break;
+                }
                 continue;
             }
 

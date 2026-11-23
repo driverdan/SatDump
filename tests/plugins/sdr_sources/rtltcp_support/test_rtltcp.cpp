@@ -852,6 +852,7 @@ TEST_CASE("RTLTCPSource reconnects and configures the dongle again when the serv
         CHECK(log.contains("RTL-TCP connection lost (the server closed the connection), trying to reconnect", slog::LOG_ERROR));
         CHECK(log.contains("RTL-TCP reconnected", slog::LOG_INFO));
         CHECK_FALSE(log.contains("could not reconnect"));
+        CHECK_FALSE(source->has_ended());
 
         source->stop();
         CHECK(second.waitForDisconnect());
@@ -873,6 +874,9 @@ TEST_CASE("RTLTCPSource gives up reconnecting after a few attempts when the serv
         CHECK(log.contains("RTL-TCP reconnection attempt 3/3 failed (Connection refused)", slog::LOG_WARN));
         CHECK_FALSE(log.contains("attempt 4/"));
 
+        // The source says it ended, for "satdump legacy live" to stop instead of idling
+        CHECK(test_helpers::waitUntil([&]() { return source->has_ended(); }, std::chrono::seconds(10)));
+
         // Then idle: no samples, and next to no CPU
         size_t count = counter.samples;
         std::clock_t cpu_start = std::clock();
@@ -884,7 +888,19 @@ TEST_CASE("RTLTCPSource gives up reconnecting after a few attempts when the serv
         auto t = std::chrono::steady_clock::now();
         source->stop();
         CHECK(secondsSince(t) < 1.0);
+        CHECK(source->has_ended());
     }
+
+    // Until it is started again
+    FakeRtlTcp second(std::vector<uint8_t>(8192 * 2, 200), false);
+    source->set_settings({{"port", second.port()}});
+    source->start();
+    CHECK_FALSE(source->has_ended());
+    auto samples = readSamples(source, 8192);
+    CHECK(samples.size() >= 8192);
+    CHECK_FALSE(source->has_ended());
+    source->output_stream->stopReader();
+    source->stop();
 }
 
 TEST_CASE("RTLTCPSource stop interrupts the wait before a reconnection attempt", "[plugins][sdr_sources][rtltcp]")
@@ -904,6 +920,8 @@ TEST_CASE("RTLTCPSource stop interrupts the wait before a reconnection attempt",
 
         INFO(log.dump());
         CHECK_FALSE(log.contains("reconnection attempt"));
+        // Stopped, it did not end by itself
+        CHECK_FALSE(source->has_ended());
     }
 }
 
