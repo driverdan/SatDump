@@ -578,7 +578,7 @@
       "commit": "unknown",
       "commit_verified": false,
       "version_source": "Not recorded (no upstream releases). dvb_s2_tables.hh, encoder.hh and ldpc.hh match current master (32357d8, 2023-05-05); algorithms.hh, layered_decoder.hh, simd.hh and avx2.hh differ.",
-      "license": "0BSD",
+      "license": "0BSD AND GPL-3.0-or-later",
       "local_changes": {
         "status": "unknown",
         "details": "avx2.hh, neon.hh, simd.hh and sse4_1.hh carry \"Ahmet Inan, Ron Economos\" and GPL-3.0-or-later headers, so they likely come from the gr-dvbs2rx variant rather than xdsopl/LDPC. Not yet diffed."
@@ -725,7 +725,7 @@
       "version": "1.3.0",
       "commit": "df7eebf17ca6396cc545bff4869dbeccc1e7dfcd",
       "commit_verified": true,
-      "version_source": "MBELIB_VERSION in mbelib.h. mbelib.h, mbelib.c and ambe4800x3600.c match the mbelib-master copy in jontio/libaeroambe at this commit; ambe3600x2400.c and ecc.c match https://github.com/szechyjs/mbelib master.",
+      "version_source": "MBELIB_VERSION in mbelib.h. Every source file (.c and .h) matches the mbelib-master copy in jontio/libaeroambe at this commit (the .c files apart from the line below). That copy is https://github.com/szechyjs/mbelib plus ambe4800x3600.c/_const.h and their prototypes in mbelib.h.",
       "license": "ISC",
       "local_changes": {
         "status": "yes",
@@ -830,11 +830,11 @@
       "version": "unknown",
       "commit": "822de6e8c368abb986b403792082189f3c602c45",
       "commit_verified": true,
-      "version_source": "No releases. Identical to strings.h on master at this commit (2023-03-17).",
+      "version_source": "No releases. Identical to strings.h on master at this commit (2023-03-17) apart from the missing final newline.",
       "license": "MIT",
       "local_changes": {
         "status": "no",
-        "details": ""
+        "details": "Only the final newline is missing."
       },
       "consumption": "vendored-platform",
       "upstream_state": "current",
@@ -870,9 +870,9 @@
       ],
       "upstream_url": "https://github.com/geeanlooca/deepspace-turbo",
       "version": "unknown",
-      "commit": "5d53fe0411075780127fa0435be3a88bb7b4ac7c",
+      "commit": "9b1676983816e61dd9a94cdc8826d0a6a718eb40",
       "commit_verified": true,
-      "version_source": "No releases. The files match this commit (2017-07-20) apart from the local changes below. Upstream's last commit (2019-03-18) changed the API to pass code structs by pointer.",
+      "version_source": "No releases. The four source files are identical in upstream from 5d53fe04 (2017-07-20) to 9b167698 (2018-01-23), and match them apart from the local changes below; LICENSE.md is identical to upstream's, which was only added in fe0ace15 (2017-11-06). So the copy was taken between fe0ace15 and 9b167698; 9b167698 is recorded as the last commit with this code.",
       "license": "MIT",
       "local_changes": {
         "status": "yes",
@@ -881,7 +881,7 @@
       "consumption": "vendored",
       "upstream_state": "inactive",
       "update_issue": null,
-      "notes": "Upstream inactive since 2019. The one later commit changes the API and fixes minor memory leaks; not pulled in."
+      "notes": "Upstream inactive since 2019. Two later commits change the code (5a536870 passes code structs by pointer and fixes minor memory leaks; 7f26d3f6 frees the interleaver in turbocode_clear); neither is pulled in."
     },
     {
       "id": "imgui-notify",
@@ -903,6 +903,28 @@
       "upstream_state": "archived",
       "update_issue": null,
       "notes": "Upstream is archived (read-only), so there is nothing to update from."
+    },
+    {
+      "id": "imguicolortextedit",
+      "name": "ImGuiColorTextEdit",
+      "paths": [
+        "src-core/handlers/dataset/TextEditor.cpp",
+        "src-core/handlers/dataset/TextEditor.h"
+      ],
+      "upstream_url": "https://github.com/BalazsJako/ImGuiColorTextEdit",
+      "version": "unknown",
+      "commit": "unknown",
+      "commit_verified": false,
+      "version_source": "No releases. TextEditor.h matches upstream master (ca2f9f1, 2025-11-24) apart from the include path (hence 11282 bytes against 11276). TextEditor.cpp differs from master in 8 lines: the local changes below, plus master's isspace()/isalnum() '!= 0' comparisons and PushItemFlag(ImGuiItemFlags_NoTabStop) call, which the copy lacks. So the copy predates those upstream changes; the exact commit is not known.",
+      "license": "MIT",
+      "local_changes": {
+        "status": "yes",
+        "details": "Both files include \"imgui/imgui.h\" instead of \"imgui.h\"; TextEditor.cpp defines IMGUI_DEFINE_MATH_OPERATORS and stubs out PushAllowKeyboardFocus/PopAllowKeyboardFocus (\"TODOIMGUI\") for the newer Dear ImGui."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Used by the dataset handler's script editor. Found in the PR #330 review; not covered by #273 to #300."
     },
     {
       "id": "iconfontcppheaders",
@@ -957,18 +979,18 @@
       ],
       "upstream_url": "https://github.com/gnuradio/volk",
       "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded (copyright 2019). Differs from current master by about 15 lines.",
-      "license": "LGPL-3.0-or-later",
+      "commit": "092a59997a1e1d5f421a0a5f87ee655ad173b93f",
+      "commit_verified": true,
+      "version_source": "Not recorded in the file. Identical (ignoring whitespace) to include/volk/volk_alloc.hh at this commit (2020-03-17); upstream changed the file again in 2022 (SPDX header) and in January 2023 (d732e3e, relicensed to LGPL-3.0-or-later).",
+      "license": "GPL-3.0-or-later",
       "local_changes": {
-        "status": "unknown",
+        "status": "no",
         "details": ""
       },
       "consumption": "system-first-vendored-fallback",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "Only used when the system VOLK lacks volk_alloc.hh (VOLK 1.x, VOLK_HAS_ALLOC check in src-core/CMakeLists.txt), and always on Android. Kept only for old VOLK, so it does not need to follow upstream."
+      "notes": "Only used when the system VOLK lacks volk_alloc.hh (VOLK 1.x, VOLK_HAS_ALLOC check in src-core/CMakeLists.txt), and always on Android. Kept only for old VOLK, so it does not need to follow upstream. This copy predates VOLK's January 2023 relicensing, so its header (and license) is still GPL-3.0-or-later."
     },
     {
       "id": "sdrplay-api",
@@ -990,6 +1012,27 @@
       "upstream_state": "unknown",
       "update_issue": null,
       "notes": "Headers only; the API library is loaded at run time (dynload.h). Update when a new API version adds devices or calls SatDump needs."
+    },
+    {
+      "id": "aaronia-rtsa-api-header",
+      "name": "Aaronia RTSA API header (cut-down)",
+      "paths": [
+        "plugins/sdr_sources/aaronia_sdr_support/small_aaroniartsaapli.h"
+      ],
+      "upstream_url": "https://aaronia.com/",
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded. A simplified copy of Aaronia's <aaroniartsaapi.h>, so the plugin builds without the API installed (the library is loaded at run time, dynload.h).",
+      "license": "unknown",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Reduced to the declarations SatDump uses."
+      },
+      "consumption": "vendored",
+      "upstream_state": "unknown",
+      "update_issue": null,
+      "notes": "Distributed with Aaronia's closed-source RTSA API. Update when SatDump needs calls or constants that are missing."
     },
     {
       "id": "stb-font",
@@ -1153,6 +1196,27 @@
       "notes": "Only libmirisdr.c is compiled; it #includes the other .c files. Found in the sweep; not covered by #273 to #300."
     },
     {
+      "id": "librfnm",
+      "name": "librfnm",
+      "paths": [
+        "plugins/sdr_sources/rfnm_sdr_support/librfnm"
+      ],
+      "upstream_url": "https://github.com/rfnm/librfnm",
+      "version": "unknown",
+      "commit": "761eb95078914781a61810841f7f6da6bde9c29e",
+      "commit_verified": false,
+      "version_source": "No version in the files. librfnm.cpp is closest to upstream src/librfnm.cpp at this commit (2024-05-28, \"release interfaces on close\"): the 47 differing lines are the local changes below. librfnm/librfnm.h differs in 4 lines and librfnm_api.h is reformatted, so the base is not certain. Imported by SatDump commit d9a68c72a (2024-10-10, \"Include old librfnm, as new one is still giving some trouble\"). Upstream has since been restructured (src/api, src/core, include/librfnm/device.h ...).",
+      "license": "MPL-2.0",
+      "local_changes": {
+        "status": "yes",
+        "details": "librfnm.cpp: spdlog calls replaced by printf, the include made relative, <cstring>/<algorithm>/<chrono> added, and one condition-variable wait predicate replaced with a constant. librfnm.h: LIBRFNM_MIN_RX_BUFCNT 1000 -> 500 and LIBRFNM_RX_RECOMB_BUF_LEN 400 -> 300. librfnm_api.h: reformatted."
+      },
+      "consumption": "vendored",
+      "upstream_state": "newer-available",
+      "update_issue": null,
+      "notes": "Built into the rfnm_sdr_support plugin by its file(GLOB_RECURSE *.cpp) when libusb-1.0 is found; the system-library lookup (pkg_check_modules(RFNM rfnm)) is commented out, so this copy is always used. Upstream added its MPL-2.0 LICENSE.md on 2025-06-09, after the commit this copy is based on, which had no license file. Found in the PR #330 review; not covered by #273 to #300."
+    },
+    {
       "id": "wjwwood-serial",
       "name": "serial (William Woodall)",
       "paths": [
@@ -1314,7 +1378,8 @@
       "name": "GDAL thin plate spline",
       "paths": [
         "src-core/projection/thinplatespline.cpp",
-        "src-core/projection/thinplatespline.h"
+        "src-core/projection/thinplatespline.h",
+        "src-core/projection/utils/tps_transform.cpp"
       ],
       "upstream_url": "https://github.com/OSGeo/gdal",
       "version": "unknown",
@@ -1324,7 +1389,7 @@
       "license": "MIT",
       "local_changes": {
         "status": "adapted",
-        "details": "Extracted from GDAL alg/thinplatespline.* with the GDAL helpers it needs copied in. Merge upstream fixes by hand."
+        "details": "thinplatespline.* are extracted from GDAL alg/thinplatespline.* with the GDAL helpers they need copied in; projection/utils/tps_transform.cpp is GDAL's TPS transformer code, modified for SatDump (its header says so; tps_transform.h is SatDump's interface). Merge upstream fixes by hand."
       },
       "consumption": "vendored",
       "upstream_state": "unknown",
@@ -1351,6 +1416,30 @@
       "upstream_state": "unknown",
       "update_issue": null,
       "notes": "VNG and AHD code originates from dcraw. Found in the sweep."
+    },
+    {
+      "id": "gimp-image-algorithms",
+      "name": "GIMP image algorithms (hue-saturation, adaptive despeckle)",
+      "paths": [
+        "src-core/image/hue_saturation.cpp",
+        "src-core/image/hue_saturation.h",
+        "src-core/image/adaptive_despeckle.cpp",
+        "src-core/image/adaptive_despeckle.h"
+      ],
+      "upstream_url": "https://github.com/GNOME/gimp",
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Not recorded. hue_saturation.* are ported from GIMP's app/base/hue-saturation.{c,h} (per the header); adaptive_despeckle.h says \"Adaptive Despeckle from Gimp\".",
+      "license": "GPL-3.0-or-later",
+      "local_changes": {
+        "status": "adapted",
+        "details": "Ported to C++ for SatDump images."
+      },
+      "consumption": "vendored",
+      "upstream_state": "inactive",
+      "update_issue": null,
+      "notes": "Ports of algorithms rather than copied files; there is nothing to update. The *_json.h files next to them are SatDump's own. brightness_contrast.h is only \"similar to Gimp\" and not listed."
     },
     {
       "id": "solarsoft-hinode",
@@ -1418,6 +1507,27 @@
       "notes": "Build scripts only; no need to follow upstream. FindAVX, FindNEON and FindSSE41 carry no origin or license and are not listed. Found in the sweep."
     },
     {
+      "id": "fonts",
+      "name": "Bundled fonts",
+      "paths": [
+        "resources/fonts"
+      ],
+      "upstream_url": null,
+      "version": "unknown",
+      "commit": "n/a",
+      "commit_verified": false,
+      "version_source": "Versions not recorded. Sources from resources/credits.md: Roboto (https://fonts.google.com/specimen/Roboto), 3270 Nerd Font (https://www.nerdfonts.com/) merged with Roboto into font.ttf, Liberation Serif, Perfect DOS VGA 437 and PX Sans Nouveaux (dafont.com). GloriaHallelujah-Regular.ttf, IBMPlexSans-*-FAT.ttf, NotoSansSC-Medium.ttf, monospace.medium.ttf and px_sans_nouveaux-FAT.ttf are not in the credits.",
+      "license": "various, not recorded in the tree",
+      "local_changes": {
+        "status": "yes",
+        "details": "font.ttf merges Roboto with 3270 Nerd Font; the *-FAT.ttf files are probably merged/extended variants."
+      },
+      "consumption": "vendored",
+      "upstream_state": "n/a",
+      "update_issue": null,
+      "notes": "Data files, not code. No font license files are shipped with them and their licenses are not recorded; this needs checking separately. Roboto-Regular.png is not a font."
+    },
+    {
       "id": "catch2",
       "name": "Catch2",
       "paths": [
@@ -1438,5 +1548,11 @@
       "update_issue": null,
       "notes": "Not vendored: a system Catch2 >= 3.4.0 is used if present, otherwise 3.16.1 is fetched at configure time. The path is where the version is set."
     }
+  ],
+  "not_tracked": [
+    "android/deps is a git submodule (https://github.com/SatDump/Android-Dependencies) with prebuilt Android dependencies; it is versioned by its submodule commit, not by this file.",
+    "docs/res is a git submodule (SatDump Resources).",
+    "Small GNU Radio, SDR++ and LeanDVB fragments inside SatDump's own files (e.g. src-core/common/dsp/filter/firdes.h, src-core/common/codings/lfsr.h, plugins/dvb_support/codings/dvb-s2/s2_scrambling.*) are noted in the gnuradio-viterbi-k7 entry but not listed individually.",
+    "cmake/FindAVX.cmake, FindNEON.cmake and FindSSE41.cmake carry no origin or license."
   ]
 }

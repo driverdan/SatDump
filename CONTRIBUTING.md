@@ -16,11 +16,13 @@ Check the file before pushing:
 python3 tools/check_third_party.py
 ```
 
-It checks that the JSON parses, that every entry has the fields below with valid values, that every listed path exists, that no path is listed twice, and that everything directly under `src-core/libs/` belongs to an entry.
+It checks that the JSON parses, that every entry has the fields below with valid values, that every listed path exists, that no path is listed twice or lies inside another listed path, and that everything directly under `src-core/libs/` belongs to an entry.
+
+Paths must not nest: a file inside a directory that some entry lists would count as a change to both libraries, so when two libraries share a directory, list their files individually (as `imgui` and `implot` do for `src-core/imgui`). `satdump_files` are the exception: they may lie inside the entry's `paths`.
 
 ### Fields
 
-Each entry in `libraries` has these fields:
+The top level has `description`, `format_version`, `libraries` and `not_tracked`, a list of notes on third-party material that is deliberately not listed (git submodules, small fragments inside SatDump's own files). Each entry in `libraries` has these fields:
 
 | Field | Meaning |
 | --- | --- |
