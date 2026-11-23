@@ -59,7 +59,9 @@ namespace satdump
 
                 if (time(0) - time_)
                 {
-                    logger->trace("%s", getModuleStats().dump(4).c_str());
+                    nlohmann::json stats = getModuleStats();
+                    if (!stats.empty())
+                        logger->trace("%s", stats.dump(4).c_str());
                     time_ = time(0);
                 }
             }

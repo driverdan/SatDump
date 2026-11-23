@@ -174,7 +174,8 @@ namespace orbcomm
             if (time(NULL) % 10 == 0 && lastTime != time(NULL))
             {
                 lastTime = time(NULL);
-                logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
+                if (!d_is_streaming_input)
+                    logger->info("Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%");
             }
         }
 
@@ -187,7 +188,8 @@ namespace orbcomm
     nlohmann::json OrbcommSTXAutoDemodModule::getModuleStats()
     {
         nlohmann::json v;
-        v["progress"] = ((double)progress / (double)filesize);
+        if (!d_is_streaming_input)
+            v["progress"] = ((double)progress / (double)filesize);
         stx_link_lst_mtx.lock();
         // Update module stats
         for (auto &freq : stx_link_lst)

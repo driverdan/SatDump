@@ -395,6 +395,13 @@ namespace satdump
                 );
             }
 
+            std::string BaseDemodModule::getProgressLogPrefix()
+            {
+                if (d_is_streaming_input)
+                    return "";
+                return "Progress " + std::to_string(round(((double)progress / (double)filesize) * 1000.0) / 10.0) + "%%, ";
+            }
+
             void BaseDemodModule::drawStopButton()
             {
                 if (input_data_type != DATA_FILE)
