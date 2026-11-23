@@ -19,13 +19,14 @@ namespace satdump
                 if (parameters.contains("client_mode"))
                     mode = parameters["client_mode"].get<std::string>();
 
+                // Both modes receive into a buffer sized from it
+                if (parameters.count("pkt_size") > 0)
+                    pkt_size = parameters["pkt_size"].get<int>();
+                else
+                    throw satdump_exception("pkt_size parameter must be present!");
+
                 if (mode == "default")
                 {
-                    if (parameters.count("pkt_size") > 0)
-                        pkt_size = parameters["pkt_size"].get<int>();
-                    else
-                        throw satdump_exception("pkt_size parameter must be present!");
-
                     if (parameters.count("server_address") > 0)
                         address = parameters["server_address"].get<std::string>();
                     else
@@ -48,21 +49,46 @@ namespace satdump
 
             void NetworkClientModule::process()
             {
+                // The receives time out, so that input_active is checked and stopping does not hang when no data arrives
                 if (mode == "default")
                 {
                     nng_socket sock;
                     nng_dialer dialer;
+                    std::string url = "tcp://" + address + ":" + std::to_string(port);
 
-                    logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
+                    logger->info("Opening TCP socket on %s", url.c_str());
 
-                    nng_sub0_open_raw(&sock);
-                    nng_dialer_create(&dialer, sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());
-                    nng_dialer_start(dialer, (int)0);
+                    int rv = nng_sub0_open_raw(&sock);
+                    if (rv != 0)
+                        throw satdump_exception("Couldn't open nng socket : " + std::string(nng_strerror(rv)));
+
+                    // Without the timeout the receive would block forever and stopping would hang
+                    if ((rv = nng_socket_set_ms(sock, NNG_OPT_RECVTIMEO, RECV_TIMEOUT_MS)) != 0)
+                    {
+                        nng_close(sock);
+                        throw satdump_exception("Couldn't set nng receive timeout : " + std::string(nng_strerror(rv)));
+                    }
+
+                    // Non-blocking, so the dialer keeps retrying in the background if the server is not up yet
+                    if ((rv = nng_dialer_create(&dialer, sock, url.c_str())) != 0 || (rv = nng_dialer_start(dialer, NNG_FLAG_NONBLOCK)) != 0)
+                    {
+                        nng_close(sock);
+                        throw satdump_exception("Couldn't connect to " + url + " : " + std::string(nng_strerror(rv)));
+                    }
 
                     while (input_active.load())
                     {
-                        size_t lpkt_size;
-                        nng_recv(sock, buffer, &lpkt_size, (int)0);
+                        size_t lpkt_size = pkt_size * 10; // Size of the buffer in, size received out
+                        rv = nng_recv(sock, buffer, &lpkt_size, (int)0);
+
+                        if (rv == NNG_ETIMEDOUT)
+                            continue;
+
+                        if (rv != 0)
+                        {
+                            nng_close(sock);
+                            throw satdump_exception("Error receiving from " + url + " : " + std::string(nng_strerror(rv)));
+                        }
 
                         if (pkt_size != (int)lpkt_size)
                             continue;
@@ -70,16 +96,27 @@ namespace satdump
                         output_fifo->write(buffer, pkt_size);
                     }
 
-                    nng_dialer_close(dialer);
+                    nng_close(sock); // Also closes the dialer
                 }
                 else if (mode == "udp_listen")
                 {
                     net::UDPServer udp_server(port);
+                    udp_server.enableTimeout();
 
                     while (input_active.load())
                     {
-                        int lpkt_size = udp_server.recv(buffer, pkt_size);
-                        output_fifo->write(buffer, lpkt_size);
+                        int lpkt_size;
+                        try
+                        {
+                            lpkt_size = udp_server.recv(buffer, pkt_size);
+                        }
+                        catch (std::exception &)
+                        {
+                            continue; // Timed out
+                        }
+
+                        if (lpkt_size > 0)
+                            output_fifo->write(buffer, lpkt_size);
                     }
                 }
             }

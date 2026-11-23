@@ -23,6 +23,9 @@ namespace satdump
                 std::string address;
                 int port;
 
+                // How long a receive waits for data before input_active is checked again
+                static constexpr int RECV_TIMEOUT_MS = 100;
+
             public:
                 NetworkClientModule(std::string input_file, std::string output_file_hint, nlohmann::json parameters);
                 ~NetworkClientModule();
