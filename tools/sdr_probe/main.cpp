@@ -21,11 +21,11 @@ int main(/*int argc, char *argv[]*/)
 
     logger->info("Found devices (sources) :");
     for (dsp::SourceDescriptor src : sources)
-        logger->info("- " + src.name);
+        logger->info("- %s", src.name.c_str());
 
     logger->info("Found devices (sinks) :");
     for (dsp::SinkDescriptor src : sinks)
-        logger->info("- " + src.name);
+        logger->info("- %s", src.name.c_str());
 
     satdump::exitSatDump();
 }

@@ -22,7 +22,7 @@ int main_record(int argc, char *argv[])
 {
     if (argc < 5) // Check overall command
     {
-        logger->error("Usage : " + std::string(argv[0]) + " record [output_baseband (without extension!)] [additional options as required]");
+        logger->error("Usage : %s record [output_baseband (without extension!)] [additional options as required]", argv[0]);
         logger->error("Extra options (examples. Any parameter used in sources can be used here) :");
         logger->error(" --samplerate [baseband_samplerate] --baseband_format [cf32/cs32/cs16/cs8/cu8/wav16/ziq] --dc_block --iq_swap");
         logger->error(" --source [airspy/rtlsdr/etc] --gain 20 --bias");
@@ -75,7 +75,7 @@ int main_record(int argc, char *argv[])
     bool src_found = false;
     for (dsp::SourceDescriptor src : source_tr)
     {
-        logger->debug("Device " + src.name);
+        logger->debug("Device %s", src.name.c_str());
         if (handler_id == src.source_type)
         {
             if (parameters.contains("source_id"))
@@ -119,7 +119,7 @@ int main_record(int argc, char *argv[])
     }
     catch (std::exception &e)
     {
-        logger->error("Fatal error starting device : " + std::string(e.what()));
+        logger->error("Fatal error starting device : %s", e.what());
         return 1;
     }
 
@@ -220,7 +220,7 @@ int main_record(int argc, char *argv[])
         {
             if (elapsed_time >= timeout)
             {
-                logger->warn("Timeout is over! (%ds >= %ds) Stopping.", elapsed_time, timeout);
+                logger->warn("Timeout is over! (%llus >= %llus) Stopping.", (unsigned long long)elapsed_time, (unsigned long long)timeout);
                 break;
             }
         }

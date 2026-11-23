@@ -165,7 +165,7 @@ namespace satdump
                 else if (d_rx_channel == "Rx2")
                     rtsa_api->AARTSAAPI_ConfigSetString(&aaronia_device, &config, L"Rx2");
                 else
-                    logger->error("Invalid channel " + d_rx_channel);
+                    logger->error("Invalid channel %s", d_rx_channel.c_str());
             }
 
             if (rtsa_api->AARTSAAPI_ConfigFind(&aaronia_device, &root, &config, L"device/outputformat") == AARTSAAPI_OK)
@@ -193,7 +193,7 @@ namespace satdump
                     while (decim <= 128)
                     {
                         uint64_t samprate = SPECTRAN_SAMPLERATE_61_44M / decim;
-                        logger->info("%llu %llu", p_samplerate, samprate);
+                        logger->info("%.0f %llu", p_samplerate, (unsigned long long)samprate);
                         if (samprate == p_samplerate)
                         {
                             current_decimation = decim;
@@ -211,7 +211,7 @@ namespace satdump
                     while (decim <= 128)
                     {
                         uint64_t samprate = SPECTRAN_SAMPLERATE_92M / decim;
-                        logger->info("%llu %llu", p_samplerate, samprate);
+                        logger->info("%.0f %llu", p_samplerate, (unsigned long long)samprate);
                         if (samprate == p_samplerate)
                         {
                             current_decimation = decim;

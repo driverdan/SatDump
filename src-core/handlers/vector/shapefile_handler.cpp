@@ -26,7 +26,7 @@ namespace satdump
             file = std::make_unique<shapefile::Shapefile>(f);
             std::string db = std::filesystem::path(shapefile).parent_path().string() + "/" + std::filesystem::path(shapefile).stem().string() + ".dbf";
             shapefile_name = std::filesystem::path(shapefile).stem().string() + ".shp";
-            logger->critical(db);
+            logger->critical("%s", db.c_str());
             if (std::filesystem::exists(db))
             {
                 dbf_file = dbf_file::readDbfFile(db);

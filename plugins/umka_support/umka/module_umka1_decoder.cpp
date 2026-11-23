@@ -84,7 +84,7 @@ namespace umka
                             if (wip_payload_1.size() > 1008)
                             {
                                 payload_cnt_1++;
-                                logger->info("Saving (new) file payload %d, size %d", payload_cnt_1, wip_payload_1.size());
+                                logger->info("Saving (new) file payload %d, size %zu", payload_cnt_1, wip_payload_1.size());
                                 std::ofstream(directory + "/file_" + std::to_string(payload_cnt_1) + ".bin", std::ios::binary).write((char *)wip_payload_1.data(), wip_payload_1.size());
                             }
 
@@ -113,7 +113,7 @@ namespace umka
         if (wip_payload_1.size() > 1008)
         {
             payload_cnt_1++;
-            logger->info("Saving (end) file payload %d, size %d", payload_cnt_1, wip_payload_1.size());
+            logger->info("Saving (end) file payload %d, size %zu", payload_cnt_1, wip_payload_1.size());
             std::ofstream(directory + "/file_" + std::to_string(payload_cnt_1) + ".bin", std::ios::binary).write((char *)wip_payload_1.data(), wip_payload_1.size());
         }
     }

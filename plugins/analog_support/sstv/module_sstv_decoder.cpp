@@ -62,7 +62,7 @@ namespace sstv
             if (md.timestamp != 0 && (d_parameters.contains("start_timestamp") ? d_parameters["start_timestamp"] == -1 : 1))
             {
                 d_parameters["start_timestamp"] = md.timestamp;
-                logger->trace("Has timestamp %d", md.timestamp);
+                logger->trace("Has timestamp %lld", (long long)md.timestamp);
             }
             else
             {
@@ -72,7 +72,7 @@ namespace sstv
             data_in = std::ifstream(d_input_file, std::ios::binary);
         }
 
-        logger->info("Using input wav " + d_input_file);
+        logger->info("Using input wav %s", d_input_file.c_str());
 
         // SSTV Blocks
         satdump::ndsp::FIRBlock<float> bpf;

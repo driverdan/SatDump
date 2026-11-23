@@ -1,6 +1,7 @@
 #include "core/exception.h"
 #include "helpers/ccsds_tx.h"
 #include "helpers/compare.h"
+#include "helpers/prefilled.h"
 #include "helpers/random.h"
 #include "pipeline/modules/ccsds/module_ccsds_conv_concat_decoder.h"
 #include "pipeline/pipeline_test_helpers.h"
@@ -300,6 +301,27 @@ TEST_CASE("CCSDSConvConcatDecoderModule outputs nothing for noise", "[pipeline][
     CHECK(stats["viterbi_lock"] == 0);
     CHECK(stats["viterbi_state"] == "NOSYNC");
     CHECK(stats["deframer_lock"] == false);
+}
+
+// The Reed-Solomon results are only written for the frames the deframer outputs. The module is
+// built over memory filled with 0x01, so that a read of them before the first frame would give
+// 0x01010101 every time rather than whatever the heap held
+TEST_CASE("CCSDSConvConcatDecoderModule reports an rs_avg of 0 until it has a frame", "[pipeline][modules][ccsds_conv_concat_decoder]")
+{
+    TempDir tmp("pipe_concat");
+    std::string input = tmp.file("in.soft");
+    writeBytes(input, softSymbols(randomBits(8192 * 6 + 100, 42)));
+
+    auto module = makePrefilled<pl::ccsds::CCSDSConvConcatDecoderModule>(0x01, input, tmp.file("out"), hritParams());
+    pl::ProcessingModule *m = module.get(); // init() is protected in the module class
+    m->setInputType(pl::DATA_FILE);
+    m->setOutputType(pl::DATA_FILE);
+    m->init();
+    CHECK(m->getModuleStats()["rs_avg"] == 0);
+
+    m->process();
+    REQUIRE(std::filesystem::file_size(m->getOutput()) == 0);
+    CHECK(m->getModuleStats()["rs_avg"] == 0);
 }
 
 TEST_CASE("CCSDSConvConcatDecoderModule decodes a live stream", "[pipeline][modules][ccsds_conv_concat_decoder]")

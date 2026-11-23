@@ -15,16 +15,16 @@ void sdr_probe()
     logger->info("Found devices (sources) :");
     for (dsp::SourceDescriptor src : sources)
     {
-        logger->info("- " + src.name);
-        logger->debug("    - type : " + src.source_type);
+        logger->info("- %s", src.name.c_str());
+        logger->debug("    - type : %s", src.source_type.c_str());
         logger->debug("    - id : %s", src.unique_id.c_str());
     }
 
     logger->info("Found devices (sinks) :");
     for (dsp::SinkDescriptor src : sinks)
     {
-        logger->info("- " + src.name);
-        logger->debug("    - type : " + src.sink_type);
+        logger->info("- %s", src.name.c_str());
+        logger->debug("    - type : %s", src.sink_type.c_str());
         logger->debug("    - id : %s", src.unique_id.c_str());
     }
 }

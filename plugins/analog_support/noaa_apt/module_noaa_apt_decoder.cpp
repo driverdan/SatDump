@@ -100,7 +100,7 @@ namespace noaa_apt
             if (md.timestamp != 0 && (d_parameters.contains("start_timestamp") ? d_parameters["start_timestamp"] == -1 : 1))
             {
                 d_parameters["start_timestamp"] = md.timestamp;
-                logger->trace("Has timestamp %d", md.timestamp);
+                logger->trace("Has timestamp %lld", (long long)md.timestamp);
             }
             else
             {
@@ -110,7 +110,7 @@ namespace noaa_apt
             if (md.frequency == 0 && d_parameters.contains("frequency"))
                 md.frequency = d_parameters["frequency"].get<uint64_t>();
 
-            logger->trace("Freq from meta : %llu", md.frequency);
+            logger->trace("Freq from meta : %llu", (unsigned long long)md.frequency);
 
             if (abs(md.frequency - 137.1e6) < 1e4)
             {
@@ -162,7 +162,7 @@ namespace noaa_apt
             }
         }
 
-        logger->info("Using input wav " + d_input_file);
+        logger->info("Using input wav %s", d_input_file.c_str());
 
         // Init stream source
         std::shared_ptr<dsp::stream<float>> input_stream = std::make_shared<dsp::stream<float>>();
@@ -537,7 +537,7 @@ namespace noaa_apt
             if (channel_a1 != -1)
             {
                 auto space_a1 = space_a;
-                logger->info("%d, %d", switchy, space_a1.height());
+                logger->info("%d, %zu", switchy, space_a1.height());
                 space_a1.crop(0, switchy - 1, space_a1.width(), space_a1.height());
 
                 for (size_t y = 0; y < space_a1.height() - 1; y++)
@@ -774,7 +774,7 @@ namespace noaa_apt
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
         }
         else
@@ -910,7 +910,7 @@ namespace noaa_apt
                     }
                 }
                 else
-                    logger->warn("(AVHRR) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(AVHRR) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
             }
 
             if (d_parameters.contains("start_timestamp") && norad != 0)
@@ -1159,7 +1159,7 @@ namespace noaa_apt
             }
             /////////////////////////////////////
 
-            logger->trace("Wedge %d Pos %d Cor %d CAL %d %d %d %d %d %d %d %d CHV %d CH %d", line, best_pos, best_cor, wed.ref1, wed.ref2, wed.ref3, wed.ref4, wed.ref5, wed.ref6, wed.ref7, wed.ref8,
+            logger->trace("Wedge %zu Pos %d Cor %d CAL %d %d %d %d %d %d %d %d CHV %d CH %d", line, best_pos, best_cor, wed.ref1, wed.ref2, wed.ref3, wed.ref4, wed.ref5, wed.ref6, wed.ref7, wed.ref8,
                           wed.channel, best_wedge);
             logger->trace("StdDev %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", wed.std_dev[0], wed.std_dev[1], wed.std_dev[2], wed.std_dev[3], wed.std_dev[4], wed.std_dev[5], wed.std_dev[6],
                           wed.std_dev[7], wed.std_dev[8], wed.std_dev[9], wed.std_dev[10], wed.std_dev[11], wed.std_dev[12], wed.std_dev[13], wed.std_dev[14], wed.std_dev[15]);

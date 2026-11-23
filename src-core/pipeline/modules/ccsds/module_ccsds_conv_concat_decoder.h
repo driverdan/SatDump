@@ -95,7 +95,7 @@ namespace satdump
                 std::shared_ptr<deframing::BPSK_CCSDS_Deframer> deframer;
                 std::shared_ptr<reedsolomon::ReedSolomon> reed_solomon;
 
-                int errors[10];
+                int errors[10] = {};
 
                 // UI Stuff
                 float ber_history[200];

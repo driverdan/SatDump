@@ -109,7 +109,7 @@ namespace orbcomm
     {
 
         std::ofstream data_out(d_output_file_hint + "_plotter.frm", std::ios::binary);
-        logger->info("Using input frames " + d_input_file);
+        logger->info("Using input frames %s", d_input_file.c_str());
         uint8_t frm[600];
 
         double qth_lon = satdump::satdump_cfg.getValueFromSatDumpGeneral<double>("qth_lon");
@@ -191,7 +191,7 @@ namespace orbcomm
 
                         time_t ephem_time = gps_time_to_unix(week_number, time_of_week);
 
-                        logger->info("SCID %d, Week Number %d, Time Of Week %d, Time %s - X %.3d Y %.3d Z %.3d - X %.3f Y %.3f Z %.3f - Lon %.1f, Lat %.1f, Alt %.1f - Az %.1f El %.1f Range %.1f",
+                        logger->info("SCID %d, Week Number %d, Time Of Week %d, Time %s - X %.3ld Y %.3ld Z %.3ld - X %.3f Y %.3f Z %.3f - Lon %.1f, Lat %.1f, Alt %.1f - Az %.1f El %.1f Range %.1f",
                                      scid + 70, week_number, time_of_week, satdump::timestamp_to_string(ephem_time).c_str(), x_raw, y_raw, z_raw, X_DOT, Y_DOT, Z_DOT, lla.lon, lla.lat, lla.alt, az,
                                      el, range);
 

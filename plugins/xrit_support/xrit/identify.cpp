@@ -65,9 +65,9 @@ namespace satdump
             i.satellite_short_name = "L" + std::to_string(sat_num);
 
             i.groupid = std::to_string(sat_num) + "_" + std::to_string((time_t)i.timestamp);
-            if (parts[4] != "_________")
-                i.seg_groupid = parts[5] + "_" + i.groupid;
 
+            // The segmented decoder places a segment by its segment identification header: a
+            // file without one is an image of its own
             if (file.all_headers.count(msg::SegmentIdentificationHeader::TYPE))
             {
                 i.channel = std::to_string(file.getHeader<msg::SegmentIdentificationHeader>().channel_id + 1);

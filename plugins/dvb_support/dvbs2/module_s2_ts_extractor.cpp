@@ -67,7 +67,7 @@ namespace dvbs2
         if (input_data_type == satdump::pipeline::DATA_FILE)
             data_in = std::ifstream(d_input_file, std::ios::binary);
 
-        logger->info("Using input bbframes " + d_input_file);
+        logger->info("Using input bbframes %s", d_input_file.c_str());
 
         time_t lastTime = 0;
 

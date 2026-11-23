@@ -20,7 +20,7 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                 {
                     data_in = std::ifstream(d_input_file, std::ios::binary);
-                    logger->info("Using input file " + d_input_file);
+                    logger->info("Using input file %s", d_input_file.c_str());
                 }
                 progress = 0;
 
@@ -29,7 +29,7 @@ namespace satdump
                     if (output_data_type == DATA_FILE)
                     {
                         data_out = std::ofstream(d_output_file_hint + fsfsm_file_ext, std::ios::binary);
-                        logger->info("Ouputing to " + d_output_file_hint + fsfsm_file_ext);
+                        logger->info("Ouputing to %s%s", d_output_file_hint.c_str(), fsfsm_file_ext.c_str());
                     }
 
                     d_output_file = d_output_file_hint + fsfsm_file_ext;
@@ -61,7 +61,7 @@ namespace satdump
                 {
                     nlohmann::json stats = getModuleStats();
                     if (!stats.empty())
-                        logger->trace(stats.dump(4));
+                        logger->trace("%s", stats.dump(4).c_str());
                     time_ = time(0);
                 }
             }

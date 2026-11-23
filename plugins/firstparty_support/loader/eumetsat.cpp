@@ -121,7 +121,7 @@ namespace satdump
         std::string resp = "";
         if (satdump::perform_http_request_post("https://api.eumetsat.int/token", resp, "grant_type=client_credentials", "Authorization: Basic " + final_token) != 1)
             resp = nlohmann::json::parse(resp)["access_token"];
-        logger->trace("Token " + resp);
+        logger->trace("Token %s", resp.c_str());
         return resp;
     }
 
@@ -141,7 +141,7 @@ namespace satdump
             std::string url = "https://api.eumetsat.int/data/browse/1.0.0/collections/" + std::string(eumetsat_products[eumetsat_selected_dataset].id) + "/dates/" + std::to_string(year) + "/" +
                               (month < 10 ? "0" : "") + std::to_string(month) + "/" + (day < 10 ? "0" : "") + std::to_string(day) + "/products?format=json";
             std::string resp;
-            logger->info(url);
+            logger->info("%s", url.c_str());
             if (satdump::perform_http_request(url, resp, "") != 1)
             {
                 eumetsat_list.clear();
@@ -297,7 +297,7 @@ namespace satdump
                                             {
                                                 std::vector<ExceptionReport> errs = json["exceptions"];
                                                 for (auto &e : errs)
-                                                    logger->critical("EUMETSAT Error : " + e.exceptionText);
+                                                    logger->critical("EUMETSAT Error : %s", e.exceptionText.c_str());
                                             }
                                         }
                                         catch (std::exception &e)

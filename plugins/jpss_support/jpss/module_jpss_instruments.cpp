@@ -164,7 +164,7 @@ namespace jpss
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
 
             // ATMS
@@ -203,7 +203,7 @@ namespace jpss
                     }
                 }
                 else
-                    logger->warn("(ATMS) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(ATMS) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                 atms::add_pols(&atms_products);
 

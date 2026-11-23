@@ -150,8 +150,8 @@ namespace satdump
                 }
 
                 logger->info("MODCOD : %d", d_modcod);
-                logger->info("Using input baseband " + d_input_file);
-                logger->info("Demodulating to " + d_output_file_hint + ".bbframe");
+                logger->info("Using input baseband %s", d_input_file.c_str());
+                logger->info("Demodulating to %s.bbframe", d_output_file_hint.c_str());
                 logger->info("Buffer size : %d", d_buffer_size);
 
                 time_t lastTime = 0;

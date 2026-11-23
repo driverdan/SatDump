@@ -166,7 +166,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
         std::string manam_path = manam_directory + "/MANAM_" + timestamp + ".txt";
-        logger->info("Saving MANAM to " + manam_path + "...");
+        logger->info("Saving MANAM to %s...", manam_path.c_str());
 
         std::ofstream outfile(manam_path, std::ios::out | std::ios::binary);
         outfile.write(reinterpret_cast<const char *>(&manam_data[0]), 10250);
@@ -195,7 +195,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
         std::string telemetry_path = telemetry_directory + "/Telemetry_" + timestamp + ".jsonc";
-        logger->info("Saving telemetry to " + telemetry_path + "...");
+        logger->info("Saving telemetry to %s...", telemetry_path.c_str());
 
         std::ofstream outfile(telemetry_path, std::ios::out | std::ios::binary);
         outfile.write(telemetry_jsonc.c_str(), telemetry_jsonc.size());
@@ -230,7 +230,7 @@ namespace fengyun_svissr
         }
         else
         {
-            logger->debug("Minor frame size is not valid, skipping! %d bytes, %f groups", current_subcom_frame.size(), current_subcom_frame.size() / SUBCOM_GROUP_SIZE);
+            logger->debug("Minor frame size is not valid, skipping! %zu bytes, %f groups", current_subcom_frame.size(), current_subcom_frame.size() / (double)SUBCOM_GROUP_SIZE);
             current_subcom_frame.clear();
         }
     }
@@ -315,7 +315,7 @@ namespace fengyun_svissr
         bool process_subcom_data = false;
 
         // Ensures we can and should decode it in the first place
-        logger->debug("Pulled %d subcommunication frames", buffer.subcommunication_frames.size());
+        logger->debug("Pulled %zu subcommunication frames", buffer.subcommunication_frames.size());
         if (!buffer.subcommunication_frames.empty())
         {
             final_subcom_frame = satdump::majority_law_vec(buffer.subcommunication_frames);
@@ -527,7 +527,7 @@ namespace fengyun_svissr
                                 (timeReadable.tm_hour > 9 ? std::to_string(timeReadable.tm_hour) : "0" + std::to_string(timeReadable.tm_hour)) + "-" +
                                 (timeReadable.tm_min > 9 ? std::to_string(timeReadable.tm_min) : "0" + std::to_string(timeReadable.tm_min));
 
-        logger->info("Full disk finished, saving at " + timestamp + "...");
+        logger->info("Full disk finished, saving at %s...", timestamp.c_str());
 
         std::filesystem::create_directory(buffer.directory + "/" + timestamp);
 
@@ -594,8 +594,8 @@ namespace fengyun_svissr
         if (!std::filesystem::exists(directory))
             std::filesystem::create_directory(directory);
 
-        logger->info("Using input frames " + d_input_file);
-        logger->info("Decoding to " + directory);
+        logger->info("Using input frames %s", d_input_file.c_str());
+        logger->info("Decoding to %s", directory.c_str());
 
         uint8_t last_status[20];
         memset(last_status, 0, 20);

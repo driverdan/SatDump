@@ -61,6 +61,8 @@
 #define M_EXIT 0
 #define M_ERROR (-1)
 
+#define SE_TABLE_SIZE 90
+
 #define MIN(a, b) (((a) < (b))? (a): (b))
 
 struct aec_stream;
@@ -89,7 +91,7 @@ struct internal_state {
     uint32_t xmax;
 
      /* length of uncompressed input block should be the longest
-        possible block */
+        legal block */
     uint32_t in_blklen;
 
     /* length of output block in bytes */
@@ -105,7 +107,7 @@ struct internal_state {
     int bitp;
 
     /* last fundamental sequence in accumulator */
-    int fs;
+    uint32_t fs;
 
     /* 1 if current block has reference sample */
     int ref;
@@ -129,7 +131,7 @@ struct internal_state {
     uint32_t *flush_start;
 
     /* table for decoding second extension option */
-    int se_table[182];
+    int se_table[2 * (SE_TABLE_SIZE + 1)];
 } decode_state;
 
 #endif /* DECODE_H */

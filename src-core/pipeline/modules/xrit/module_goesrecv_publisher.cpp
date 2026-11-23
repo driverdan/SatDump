@@ -33,7 +33,7 @@ namespace satdump
                 nng_socket sock;
                 nng_listener listener;
 
-                logger->info("Opening TCP socket on " + std::string("tcp://" + address + ":" + std::to_string(port)));
+                logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
 
                 nng_pub0_open_raw(&sock);
                 nng_listener_create(&listener, sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());

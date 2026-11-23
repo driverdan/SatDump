@@ -117,8 +117,8 @@ namespace satdump
                     data_out = std::ofstream(d_output_file_hint + extension, std::ios::binary);
                 d_output_file = d_output_file_hint + extension;
 
-                logger->info("Using input symbols " + d_input_file);
-                logger->info("Decoding to " + d_output_file_hint + extension);
+                logger->info("Using input symbols %s", d_input_file.c_str());
+                logger->info("Decoding to %s%s", d_output_file_hint.c_str(), extension.c_str());
 
                 SoftSymbolReader soft_reader(data_in, input_fifo, input_data_type, d_parameters);
 

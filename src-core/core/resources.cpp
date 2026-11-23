@@ -18,13 +18,13 @@ namespace resources
         if (std::filesystem::exists("resources"))
         {
             if (!std::filesystem::exists("resources/" + resource))
-                logger->error("Resources " + resource + " does not exist!");
+                logger->error("Resources %s does not exist!", resource.c_str());
             return "resources/" + resource;
         }
         else
         {
             if (!std::filesystem::exists(satdump::RESPATH + "resources/" + resource))
-                logger->error("Resources " + resource + " does not exist!");
+                logger->error("Resources %s does not exist!", resource.c_str());
             return satdump::RESPATH + "resources/" + resource;
         }
     }

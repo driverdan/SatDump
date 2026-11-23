@@ -163,7 +163,7 @@ namespace satdump
                                 {
                                     if (ImGui::Selectable(opt.c_str(), current_language == opt))
                                     {
-                                        logger->info("Setting language to : " + opt);
+                                        logger->info("Setting language to : %s", opt.c_str());
                                         initLanguage(opt);
                                         db->set_user("language", opt);
                                     }

@@ -42,6 +42,22 @@ namespace satdump
                 if (reverse_table != nullptr)
                     reverse_table->resize(corrected_width, -1);
 
+                // The tables only depend on the column, so they are filled once here rather than by
+                // every row of the parallel loop below. In ascending order, so that an input column
+                // used by several output columns maps to the last of them. As before, an image with
+                // no row or no channel leaves them as they are
+                if (image.height() > 0 && image.channels() > 0)
+                {
+                    for (int i = 0; i < corrected_width; i++)
+                    {
+                        int currPixel = correction_factors[i];
+                        if (foward_table != nullptr)
+                            (*foward_table)[currPixel] = i;
+                        if (reverse_table != nullptr)
+                            (*reverse_table)[i] = currPixel;
+                    }
+                }
+
                 for (int channel = 0; channel < image.channels(); channel++)
                 {
                     // Process each row
@@ -65,11 +81,6 @@ namespace satdump
                             int px = px1 * (1.0 - fractionalPx) + px2 * fractionalPx;
 
                             output_image.set(channel, i, row, px);
-
-                            if (foward_table != nullptr)
-                                (*foward_table)[currPixel] = i;
-                            if (reverse_table != nullptr)
-                                (*reverse_table)[i] = currPixel;
 #else
                             int pixel_to_use = correction_factors[i]; // Input pixel to use, will get rounder automatically
                             output_image[channel_offset_output + row * corrected_width + i] = image[channel_offset + row * image.width() + pixel_to_use]; // Copy over that pixel!
@@ -124,7 +135,7 @@ namespace satdump
                 {
                     if ((int)img.width() != proj_cfg["corr_width"].get<int>())
                     {
-                        logger->debug("Image width mistmatch %d %d => RES %f/%f", proj_cfg["corr_width"].get<int>(), img.width(), resol, swath);
+                        logger->debug("Image width mistmatch %d %zu => RES %f/%f", proj_cfg["corr_width"].get<int>(), img.width(), resol, swath);
                         resol *= proj_cfg["corr_width"].get<int>() / float(img.width());
                     }
                 }

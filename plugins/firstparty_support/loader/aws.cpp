@@ -45,7 +45,7 @@ namespace satdump
             if (doc.first_node("ListBucketResult")->first_node("NextContinuationToken") != nullptr)
             {
                 std::string next_token = doc.first_node("ListBucketResult")->first_node("NextContinuationToken")->value();
-                logger->trace("Continuation token : " + next_token);
+                logger->trace("Continuation token : %s", next_token.c_str());
 
                 CURL *curl = curl_easy_init();
                 if (curl)

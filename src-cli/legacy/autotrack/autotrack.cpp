@@ -38,7 +38,7 @@ AutoTrackApp::AutoTrackApp(nlohmann::json settings, nlohmann::json parameters, s
     std::vector<dsp::SourceDescriptor> source_tr = dsp::getAvailableSourcesOfType(handler_id);
 
     for (dsp::SourceDescriptor src : source_tr)
-        logger->debug("Device " + src.name);
+        logger->debug("Device %s", src.name.c_str());
 
     // Try to find it and check it's usable
     bool src_found = false;

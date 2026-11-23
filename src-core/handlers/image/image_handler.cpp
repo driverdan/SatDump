@@ -49,7 +49,7 @@ namespace satdump
                 if (y2 < y1)
                     std::swap(y1, y2);
 
-                logger->critical("CROPPING %d %d, %d %d, %d %d", x1, y1, x2, y2, getImage().width(), getImage().height());
+                logger->critical("CROPPING %d %d, %d %d, %zu %zu", x1, y1, x2, y2, getImage().width(), getImage().height());
 
                 auto img = getImage().crop_to(x1, y1, x2, y2);
                 auto proj_cfg = image::get_metadata_proj_cfg(getImage());
@@ -592,12 +592,12 @@ namespace satdump
 
                             if (image_filters.count(f.first))
                             {
-                                logger->info("Applying filter : " + f.first);
+                                logger->info("Applying filter : %s", f.first.c_str());
                                 image_filters[f.first].perform(curr_image, f.second.cfg, &f.second.progress);
                             }
                             else
                             {
-                                logger->error("Could not find image filter " + f.first + "!");
+                                logger->error("Could not find image filter %s!", f.first.c_str());
                             }
 
                             f.second.progress = 1;

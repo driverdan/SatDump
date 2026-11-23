@@ -21,7 +21,7 @@ void pipeline_done_processing_callback(const satdump::pipeline::events::Pipeline
 
     if (std::filesystem::exists(script_path))
     {
-        logger->trace("Calling " + script_path);
+        logger->trace("Calling %s", script_path.c_str());
 
         try
         {

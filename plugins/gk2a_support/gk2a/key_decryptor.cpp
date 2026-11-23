@@ -90,7 +90,7 @@ namespace gk2a
                 mac_bin = mac_bin << 8 | v;
             }
 
-            logger->info("Key is " + to_hex_str((uint8_t *)&mac_bin, 8));
+            logger->info("Key is %s", to_hex_str((uint8_t *)&mac_bin, 8).c_str());
 
             symmetric_key sk;
             des_setup((unsigned char *)&mac_bin, 8, 0, &sk);

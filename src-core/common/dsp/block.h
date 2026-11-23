@@ -4,6 +4,7 @@
 #include "complex.h"
 #include "core/exception.h"
 #include "logger.h"
+#include <atomic>
 #include <memory>
 #include <thread>
 
@@ -19,7 +20,7 @@ namespace dsp
     {
     protected:
         std::thread d_thread;
-        bool should_run = false;
+        std::atomic<bool> should_run{false};
         virtual void work() = 0;
         bool d_got_input;
         void run()

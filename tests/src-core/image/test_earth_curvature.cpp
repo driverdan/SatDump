@@ -27,6 +27,38 @@ TEST_CASE("image::earth_curvature::correct_earth_curvature output size and const
     REQUIRE(mismatches == 0);
 }
 
+// The tables only depend on the column. An input column used by several output columns maps
+// to the last of them
+TEST_CASE("image::earth_curvature::correct_earth_curvature lookup tables do not depend on the rows or channels", "[image][earth_curvature]")
+{
+    std::vector<float> fwd1, rev1;
+    Image one(8, 200, 1, 1);
+    ec::correct_earth_curvature(one, 830, 2900, 2.0f, &fwd1, &rev1);
+
+    std::vector<float> fwd, rev;
+    Image many(8, 200, 300, 3);
+    ec::correct_earth_curvature(many, 830, 2900, 2.0f, &fwd, &rev);
+    REQUIRE(fwd.size() == fwd1.size());
+    REQUIRE(rev.size() == rev1.size());
+    int fwd_diffs = 0, rev_diffs = 0;
+    for (size_t i = 0; i < fwd.size(); i++)
+        fwd_diffs += fwd[i] != fwd1[i];
+    for (size_t i = 0; i < rev.size(); i++)
+        rev_diffs += rev[i] != rev1[i];
+    CHECK(fwd_diffs == 0);
+    CHECK(rev_diffs == 0);
+
+    // Each input column that some output column reads maps to the last such output column
+    std::vector<int> last(200, -1);
+    for (size_t i = 0; i < rev.size(); i++)
+        last[(int)rev[i]] = i;
+    int wrong = 0;
+    for (int c = 0; c < 200; c++)
+        if (last[c] != -1 && fwd[c] != last[c])
+            wrong++;
+    CHECK(wrong == 0);
+}
+
 TEST_CASE("image::earth_curvature::correct_earth_curvature lookup tables", "[image][earth_curvature]")
 {
     Image in(16, 200, 1, 1);

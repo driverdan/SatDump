@@ -179,7 +179,7 @@ namespace metop
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
 
             // AVHRR
@@ -198,7 +198,7 @@ namespace metop
                 if (calib_coefs.contains(sat_name))
                     avhrr_reader.calibrate(calib_coefs[sat_name]);
                 else
-                    logger->warn("(AVHRR) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(AVHRR) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                 satdump::products::ImageProduct avhrr_products;
                 avhrr_products.instrument_name = "avhrr_3";
@@ -252,7 +252,7 @@ namespace metop
                         mhs_products.set_channel_wavenumber(i, calib_coefs[sat_name]["wavenumber"][i]);
                 }
                 else
-                    logger->warn("(MHS) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(MHS) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                 noaa_metop::mhs::add_pols(&mhs_products);
 
@@ -423,7 +423,7 @@ namespace metop
                         amsu_products.set_channel_wavenumber(i, calib_coefs["all"]["wavenumber"][i]);
                 }
                 else
-                    logger->warn("(AMSU) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                    logger->warn("(AMSU) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                 noaa_metop::amsu::add_pols(&amsu_products);
 

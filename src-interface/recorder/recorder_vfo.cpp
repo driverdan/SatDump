@@ -108,8 +108,25 @@ namespace satdump
 
             splitter->set_vfo_enabled(it->id, false);
 
+            // stop() throws the error of a module that failed, once every module is stopped
+            bool failed = false;
             if (it->selected_pipeline.id != "")
-                it->live_pipeline->stop();
+            {
+                try
+                {
+                    it->live_pipeline->stop();
+                }
+                catch (std::exception &e)
+                {
+                    failed = true;
+                    logger->error("Error stopping VFO %s : %s", it->id.c_str(), e.what());
+                }
+                catch (...)
+                {
+                    failed = true;
+                    logger->error("Error stopping VFO %s!", it->id.c_str());
+                }
+            }
 
             if (it->file_sink)
             {
@@ -120,7 +137,8 @@ namespace satdump
 
             splitter->del_vfo(it->id);
 
-            if (it->selected_pipeline.id != "")
+            // As with "satdump legacy live", the output of a failed pipeline is not processed further
+            if (it->selected_pipeline.id != "" && !failed)
             {
                 if (satdump_cfg.main_cfg["user_interface"]["finish_processing_after_live"]["value"].get<bool>() && it->live_pipeline->getOutputFile().size() > 0)
                 {

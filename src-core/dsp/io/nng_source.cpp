@@ -26,7 +26,7 @@ namespace satdump
         template <typename T>
         void NNGSourceBlock<T>::start()
         {
-            logger->info("Opening TCP socket on " + std::string("tcp://" + address + ":" + std::to_string(port)));
+            logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
 
             nng_sub0_open_raw(&n_sock);
             nng_dialer_create(&n_dialer, n_sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());

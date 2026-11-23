@@ -51,14 +51,14 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                     data_in = std::ifstream(d_input_file, std::ios::binary);
 
-                logger->info("Using input frames " + d_input_file);
+                logger->info("Using input frames %s", d_input_file.c_str());
 
                 if (mode == "default")
                 {
                     nng_socket sock;
                     nng_listener listener;
 
-                    logger->info("Opening TCP socket on " + std::string("tcp://" + address + ":" + std::to_string(port)));
+                    logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
 
                     nng_pub0_open_raw(&sock);
                     nng_listener_create(&listener, sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());

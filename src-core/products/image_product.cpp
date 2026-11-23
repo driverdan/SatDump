@@ -175,7 +175,7 @@ namespace satdump
             {
                 ImageHolder img_holder;
                 if (!save_as_matrix)
-                    logger->info("Loading " + contents["images"][c]["file"].get<std::string>());
+                    logger->info("Loading %s", contents["images"][c]["file"].get<std::string>().c_str());
 
                 //// META
                 //                printf("\n%s\n", contents["images"][c].dump(4).c_str());

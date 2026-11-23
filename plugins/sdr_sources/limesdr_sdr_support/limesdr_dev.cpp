@@ -176,7 +176,7 @@ namespace satdump
 
             if (!limesdr_dev_obj || err)
             {
-                logger->error("Could not open LimeSDR '" + std::string(dev_serial) + "' device! ");
+                logger->error("Could not open LimeSDR '%s' device! ", dev_serial.c_str());
                 LMS_Close(limesdr_dev_obj);
                 return;
             }

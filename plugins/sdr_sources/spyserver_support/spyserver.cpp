@@ -105,7 +105,7 @@ void SpyServerSource::set_frequency(uint64_t frequency)
     if (is_open && is_connected)
     {
         client->setSetting(SPYSERVER_SETTING_IQ_FREQUENCY, frequency);
-        logger->debug("Set SpyServer frequency to %d", frequency);
+        logger->debug("Set SpyServer frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }

@@ -128,6 +128,10 @@ namespace goes
                 {
                     try
                     {
+                        // A line must reach the data format field. Every field after it is checked before use.
+                        if (pdt_line.size() <= field_offsets[10])
+                            throw std::runtime_error("line too short");
+
                         std::shared_ptr<DCP> new_dcp = std::make_shared<DCP>();
 
                         // Agency
@@ -154,7 +158,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[14])
                         {
                             int desc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[14]; last_pos < field_offsets[15] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     desc_last_pos = last_pos;
                             if (desc_last_pos != 0)
@@ -168,7 +172,7 @@ namespace goes
                         // Lat and Lon
                         // This is supposed to be in Degrees, Minutes, and seconds, but some PDTs report it as a decimal.
                         // Often does not report correctly for West or East. These are all upstream errors.
-                        if (pdt_line.size() >= field_offsets[16])
+                        if (pdt_line.size() >= field_offsets[17])
                         {
                             // Correct format
                             if (pdt_line[field_offsets[16] + 1] == '0' || (pdt_line[field_offsets[16] + 1] == '1' && pdt_line[field_offsets[16] + 2] < '9'))
@@ -199,7 +203,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[18])
                         {
                             int manu_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[18]; last_pos < field_offsets[19] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     manu_last_pos = last_pos;
                             if (manu_last_pos != 0)
@@ -214,7 +218,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[19])
                         {
                             int model_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[19]; last_pos < field_offsets[20] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     model_last_pos = last_pos;
                             if (model_last_pos != 0)
@@ -229,7 +233,7 @@ namespace goes
                         if (pdt_line.size() >= field_offsets[22])
                         {
                             int nmc_last_pos = 0;
-                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23]; last_pos++)
+                            for (uint16_t last_pos = field_offsets[22]; last_pos < field_offsets[23] && last_pos < pdt_line.size(); last_pos++)
                                 if (pdt_line[last_pos] != ' ')
                                     nmc_last_pos = last_pos;
                             if (nmc_last_pos != 0)
@@ -243,9 +247,9 @@ namespace goes
                         // SHEF Codes in this file are mostly wrong - ignore!
 
                         // Finish up
-                        dcp_mtx.lock();
-                        dcp_list[std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16)] = new_dcp;
-                        dcp_mtx.unlock();
+                        uint32_t device_address = std::stoul(pdt_line.substr(field_offsets[1], 8), nullptr, 16);
+                        std::lock_guard<std::mutex> lock(dcp_mtx);
+                        dcp_list[device_address] = new_dcp;
                     }
                     catch (std::exception &e)
                     {
@@ -290,49 +294,36 @@ namespace goes
 
                     try
                     {
-                        std::shared_ptr<DCP> this_dcp;
+                        // Up to the description
+                        if (hads_tokens.size() < 10)
+                            throw std::runtime_error("too few fields");
+
                         uint32_t device_address = std::stoul(hads_tokens[0], nullptr, 16);
 
-                        dcp_mtx.lock();
-                        if (dcp_list.count(device_address) > 0)
-                            this_dcp = dcp_list[device_address];
-
-                        // DADDs should have all DCPs... but they do not. Fill in extras HADS has
-                        else
-                        {
-                            this_dcp = std::make_shared<DCP>();
-                            this_dcp->agency = hads_tokens[2];
-                            this_dcp->state = hads_tokens[3];
-                            dcp_list[device_address] = this_dcp;
-
-                            // Other info
-                            this_dcp->transmit_interval = std::stoi(hads_tokens[8]);
-                        }
-                        dcp_mtx.unlock();
+                        // The whole line is read before the DCP is changed or added
+                        DCP hads_dcp;
 
                         // Latitude
                         std::stringstream degree_stream;
                         std::string degree_str;
                         degree_stream = std::stringstream(hads_tokens[5]);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat = std::stof(degree_str);
+                        hads_dcp.lat = std::stof(degree_str);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat += (std::stof(degree_str) / 60.0f) * (this_dcp->lat > 0 ? 1 : -1);
+                        hads_dcp.lat += (std::stof(degree_str) / 60.0f) * (hads_dcp.lat > 0 ? 1 : -1);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lat += (std::stof(degree_str) / 3600.0f) * (this_dcp->lat > 0 ? 1 : -1);
+                        hads_dcp.lat += (std::stof(degree_str) / 3600.0f) * (hads_dcp.lat > 0 ? 1 : -1);
 
                         // Longitude
                         degree_stream = std::stringstream(hads_tokens[6]);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon = std::stof(degree_str);
+                        hads_dcp.lon = std::stof(degree_str);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon += (std::stof(degree_str) / 60.0f) * (this_dcp->lon > 0 ? 1 : -1);
+                        hads_dcp.lon += (std::stof(degree_str) / 60.0f) * (hads_dcp.lon > 0 ? 1 : -1);
                         std::getline(degree_stream, degree_str, ' ');
-                        this_dcp->lon += (std::stof(degree_str) / 3600.0f) * (this_dcp->lon > 0 ? 1 : -1);
+                        hads_dcp.lon += (std::stof(degree_str) / 3600.0f) * (hads_dcp.lon > 0 ? 1 : -1);
 
-                        this_dcp->description = hads_tokens[9];
-
-                        for (size_t i = 11; i < hads_tokens.size() - 5; i += 5)
+                        for (size_t i = 11; i + 5 < hads_tokens.size(); i += 5)
                         {
                             if (hads_tokens[i] == "")
                                 break;
@@ -348,8 +339,30 @@ namespace goes
                             else
                                 new_info.name = hads_tokens[i];
 
-                            this_dcp->pe_info.emplace_back(new_info);
+                            hads_dcp.pe_info.emplace_back(new_info);
                         }
+
+                        std::shared_ptr<DCP> this_dcp;
+                        std::lock_guard<std::mutex> lock(dcp_mtx);
+                        if (dcp_list.count(device_address) > 0)
+                            this_dcp = dcp_list[device_address];
+
+                        // DADDs should have all DCPs... but they do not. Fill in extras HADS has
+                        else
+                        {
+                            this_dcp = std::make_shared<DCP>();
+                            this_dcp->agency = hads_tokens[2];
+                            this_dcp->state = hads_tokens[3];
+
+                            // Other info
+                            this_dcp->transmit_interval = std::stoi(hads_tokens[8]);
+                            dcp_list[device_address] = this_dcp;
+                        }
+
+                        this_dcp->lat = hads_dcp.lat;
+                        this_dcp->lon = hads_dcp.lon;
+                        this_dcp->description = hads_tokens[9];
+                        this_dcp->pe_info.insert(this_dcp->pe_info.end(), hads_dcp.pe_info.begin(), hads_dcp.pe_info.end());
                     }
                     catch (std::exception&)
                     {
@@ -362,6 +375,13 @@ namespace goes
         bool GOESLRITDataDecoderModule::processDCS(uint8_t* data, size_t size)
         {
             DCSFile dcs_file;
+
+            // The 64 byte header and the 4 byte file CRC
+            if (size < 68)
+            {
+                logger->warn("Invalid DCS File size! Not parsing");
+                return false;
+            }
 
             // DCS Header
             dcs_file.name = std::string(&data[0], &data[32]);
@@ -410,6 +430,15 @@ namespace goes
                     // Empty file, ignore
                     block_ptr += 5;
                     continue;
+                }
+
+                // ID, length and CRC (5 bytes), plus the 36 byte header of a DCP message or the 24 byte
+                // header of a missed message (HRIT DCS File Format, Rev 1)
+                size_t min_block_length = block_id == 1 ? 41 : block_id == 2 ? 29 : 5;
+                if (block_length < min_block_length)
+                {
+                    logger->warn("Invalid DCS block length! Skipping remainder of file");
+                    return false;
                 }
 
                 // Calculate Block CRC
@@ -552,11 +581,15 @@ namespace goes
 
                     //std::string source_secondary = std::string(&block_ptr[37], &block_ptr[39]);
 
-                    dcs_message->header.type_id = block_ptr[39] & 0x3f;
+                    // The first data byte, if the message has data
+                    if (block_length > 41)
+                    {
+                        dcs_message->header.type_id = block_ptr[39] & 0x3f;
+                        hex_stream << std::hex << std::setfill('0') << std::setw(2) << +block_ptr[39];
+                    }
 
                     // Initial body parsing
                     bool found_beginning = false;
-                    hex_stream << std::hex << std::setfill('0') << std::setw(2) << +block_ptr[39];
                     for (size_t i = 40; i < block_length - 2; i++)
                     {
                         // Save raw data as hex
@@ -730,8 +763,8 @@ namespace goes
                                         }
 
                                         uint32_t val_int = (uint32_t)(pseudo_string[sensor_offset + (3 * i) + 2] - 0x40) |
-                                            (uint32_t)((pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
-                                            (uint32_t)((pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
+                                            ((uint32_t)(pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
+                                            ((uint32_t)(pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
 
                                         new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                     }
@@ -782,19 +815,23 @@ namespace goes
                             std::string instrument_string;
                             while (std::getline(message_stream, instrument_string, '+'))
                             {
+                                // Sensor, day of year, minute of day and interval
+                                if (instrument_string.size() < 7)
+                                    continue;
+
                                 DCSValue new_value;
                                 new_value.name = "Sensor " + std::to_string((int)(instrument_string[0] - 0x40));
 
                                 // Skipping Day of year
 
                                 // Minute of day to compute reading age
-                                uint16_t recorded_minute = (((uint16_t)instrument_string[3] - 0x40) << 6) | (instrument_string[4] - 0x40);
+                                uint16_t recorded_minute = ((uint32_t)(instrument_string[3] - 0x40) << 6) | (instrument_string[4] - 0x40);
                                 uint16_t transmission_minute = ((block_ptr[16] & 0x0f) * 10 + ((block_ptr[15] & 0xf0) >> 4)) * 60 +
                                     (block_ptr[15] & 0x0f) * 10 + ((block_ptr[14] & 0xf0) >> 4);
                                 new_value.reading_age = transmission_minute - recorded_minute;
 
                                 // Interval
-                                new_value.interval = (((uint16_t)instrument_string[5] - 0x40) << 6) | (instrument_string[6] - 0x40);
+                                new_value.interval = ((uint32_t)(instrument_string[5] - 0x40) << 6) | (instrument_string[6] - 0x40);
 
                                 // Reading values
                                 for (size_t i = 7; i + 2 < instrument_string.size(); i += 3)
@@ -807,8 +844,8 @@ namespace goes
                                     }
 
                                     uint32_t val_int = (uint32_t)(instrument_string[i + 2] - 0x40) |
-                                        (uint32_t)((instrument_string[i + 1] - 0x40) << 6) |
-                                        (uint32_t)((instrument_string[i] - 0x40) << 12);
+                                        ((uint32_t)(instrument_string[i + 1] - 0x40) << 6) |
+                                        ((uint32_t)(instrument_string[i] - 0x40) << 12);
 
                                     new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                 }
@@ -868,8 +905,8 @@ namespace goes
                                     }
 
                                     uint32_t val_int = (uint32_t)(pseudo_string[sensor_offset + (3 * i) + 2] - 0x40) |
-                                        (uint32_t)((pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
-                                        (uint32_t)((pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
+                                        ((uint32_t)(pseudo_string[sensor_offset + (3 * i) + 1] - 0x40) << 6) |
+                                        ((uint32_t)(pseudo_string[sensor_offset + (3 * i)] - 0x40) << 12);
 
                                     new_value.values.emplace_back(std::to_string((float)((int)((val_int ^ 0x20000) - 0x20000)) / 100.0f));
                                 }
@@ -882,7 +919,7 @@ namespace goes
                             {
                                 DCSValue transmission_count;
                                 transmission_count.name = "Transmissions since reboot";
-                                transmission_count.values.emplace_back(std::to_string((uint16_t)((dcs_message->data_ascii[sensor_offset] - 0x40) << 6 |
+                                transmission_count.values.emplace_back(std::to_string((uint16_t)((uint32_t)(dcs_message->data_ascii[sensor_offset] - 0x40) << 6 |
                                     (dcs_message->data_ascii[sensor_offset + 1] - 0x40))));
                                 dcs_message->data_values.emplace_back(transmission_count);
                             }

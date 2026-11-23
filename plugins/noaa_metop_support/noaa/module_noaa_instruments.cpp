@@ -145,7 +145,7 @@ namespace noaa
                 {
                     logger->info("----------- Satellite");
                     logger->info("NORAD : " + std::to_string(norad));
-                    logger->info("Name  : " + sat_name);
+                    logger->info("Name  : %s", sat_name.c_str());
                 }
 
                 // WARNINGS
@@ -204,7 +204,7 @@ namespace noaa
                         }
                     }
                     else
-                        logger->warn("(AVHRR) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                        logger->warn("(AVHRR) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                     nlohmann::ordered_json proj_settings;
 
@@ -261,7 +261,7 @@ namespace noaa
                         hirs_products.set_channel_unit(19, CALIBRATION_ID_REFLECTIVE_RADIANCE);
                     }
                     else
-                        logger->warn("(HIRS) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                        logger->warn("(HIRS) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                     hirs_products.save(directory);
                     dataset.products_list.push_back("HIRS");
@@ -320,7 +320,7 @@ namespace noaa
                         telemetry_reader.calibration(telemetry_coefficients[sat_name]);
                     }
                     else
-                        logger->warn("(telemetry) No telemetry coefficients for " + sat_name);
+                        logger->warn("(telemetry) No telemetry coefficients for %s", sat_name.c_str());
 
                     satdump::products::PunctiformProduct telemetry_products;
                     telemetry_products.instrument_name = "telemetry";
@@ -383,7 +383,7 @@ namespace noaa
                         }
                     }
                     else
-                        logger->warn("(MHS) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                        logger->warn("(MHS) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                     noaa_metop::mhs::add_pols(&mhs_products);
 
@@ -429,7 +429,7 @@ namespace noaa
                         }
                     }
                     else
-                        logger->warn("(AMSU) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                        logger->warn("(AMSU) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                     noaa_metop::amsu::add_pols(&amsu_products);
 
@@ -486,7 +486,7 @@ namespace noaa
                 {
                     logger->info("----------- Satellite");
                     logger->info("NORAD : " + std::to_string(norad));
-                    logger->info("Name  : " + sat_name);
+                    logger->info("Name  : %s", sat_name.c_str());
                 }
 
                 // HIRS
@@ -554,7 +554,7 @@ namespace noaa
                             hirs_products.set_channel_wavenumber(n, hirs_reader.calib_out["wavenumbers"][n]);
                     }
                     else
-                        logger->warn("(HIRS) Calibration data for " + sat_name + " not found. Calibration will not be performed");
+                        logger->warn("(HIRS) Calibration data for %s not found. Calibration will not be performed", sat_name.c_str());
 
                     hirs_products.save(directory);
                     dataset.products_list.push_back("HIRS");
@@ -609,7 +609,7 @@ namespace noaa
                         telemetry_reader.calibration(telemetry_coefficients[sat_name]);
                     }
                     else
-                        logger->warn("(telemetry) No telemetry coefficients for " + sat_name);
+                        logger->warn("(telemetry) No telemetry coefficients for %s", sat_name.c_str());
 
                     satdump::products::PunctiformProduct telemetry_products;
                     telemetry_products.instrument_name = "telemetry";

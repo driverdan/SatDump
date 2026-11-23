@@ -50,7 +50,7 @@ public:
         std::string ip_port = source.name.substr(0, source.name.find('-') - 1);
         std::string ip = ip_port.substr(0, ip_port.find(':'));
         std::string port = ip_port.substr(ip_port.find(':') + 1, ip_port.size() - 1 - ip_port.find(':'));
-        logger->info("Connecting to tcp://" + ip_port);
+        logger->info("Connecting to tcp://%s", ip_port.c_str());
         tcp_client = new TCPClient((char *)ip.c_str(), std::stoi(port));
         tcp_client->callback_func = [this](uint8_t *buf, int len)
         { handler(buf, len); };
@@ -87,7 +87,7 @@ public:
         if (pkt_type == dsp::remote::PKT_TYPE_SAMPLERATEFBK)
         {
             samplerate_current = *((uint64_t *)&buffer[1]);
-            logger->debug("Samplerate sent %llu", samplerate_current);
+            logger->debug("Samplerate sent %llu", (unsigned long long)samplerate_current);
         }
 
         if (pkt_type == dsp::remote::PKT_TYPE_IQ)

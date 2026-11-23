@@ -146,12 +146,12 @@ namespace satdump
                             }
                             catch (std::exception &e)
                             {
-                                logger->error("Error adding node with ID : " + n.value()["int_id"].get<std::string>() + ", Error : %s", e.what());
+                                logger->error("Error adding node with ID : %s, Error : %s", n.value()["int_id"].get<std::string>().c_str(), e.what());
                             }
                         }
                         else
                         {
-                            logger->error("Could not find node with ID : " + n.value()["int_id"].get<std::string>());
+                            logger->error("Could not find node with ID : %s", n.value()["int_id"].get<std::string>().c_str());
 
                             try
                             {
@@ -168,7 +168,7 @@ namespace satdump
                             }
                             catch (std::exception &e)
                             {
-                                logger->error("Error adding missing node with ID : " + n.value()["int_id"].get<std::string>() + ", Error : %s", e.what());
+                                logger->error("Error adding missing node with ID : %s, Error : %s", n.value()["int_id"].get<std::string>().c_str(), e.what());
                             }
                         }
                     }

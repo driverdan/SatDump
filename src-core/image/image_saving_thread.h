@@ -40,7 +40,7 @@ namespace satdump
                         queue_mutex.unlock();
 
                         // logger->debug("Queue length %d", queue.size());
-                        logger->info("Saving " + img.second);
+                        logger->info("Saving %s", img.second.c_str());
                         // An exception would end the program from this thread, and the queue would stop
                         try
                         {
@@ -84,7 +84,7 @@ namespace satdump
                 }
                 else
                 {
-                    logger->info("Saving " + path);
+                    logger->info("Saving %s", path.c_str());
                     save_img(img, path);
                 }
             }

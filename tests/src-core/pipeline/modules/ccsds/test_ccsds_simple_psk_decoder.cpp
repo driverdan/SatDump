@@ -1,4 +1,5 @@
 #include "core/exception.h"
+#include "helpers/prefilled.h"
 #include "pipeline/modules/ccsds/module_ccsds_simple_psk_decoder.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
@@ -225,6 +226,32 @@ TEST_CASE("CCSDSSimplePSKDecoderModule outputs nothing without a sync marker", "
     auto m = runDecoder(input, tmp.file("out"), bpskParams());
     REQUIRE(std::filesystem::exists(m->getOutput()));
     CHECK(std::filesystem::file_size(m->getOutput()) == 0);
+}
+
+// The Reed-Solomon results are only written for the frames the deframer outputs. The module is
+// built over memory filled with 0x01, so that a read of them before the first frame would give
+// 0x01010101 every time rather than whatever the heap held
+TEST_CASE("CCSDSSimplePSKDecoderModule reports an rs_avg of 0 until it has a frame", "[pipeline][modules][ccsds_simple_psk_decoder]")
+{
+    TempDir tmp("pipe_ccsds");
+    std::mt19937 rng(11);
+    std::vector<uint8_t> soft(8192 * 4 + 100);
+    for (auto &s : soft)
+        s = (uint8_t)(int8_t)((rng() & 1) ? 100 : -100);
+    std::string input = tmp.file("in.soft");
+    writeBytes(input, soft);
+
+    nlohmann::json params = {{"constellation", "bpsk"}, {"cadu_size", 8192}, {"rs_i", 4}, {"rs_type", "rs223"}};
+    auto module = test_helpers::makePrefilled<pl::ccsds::CCSDSSimplePSKDecoderModule>(0x01, input, tmp.file("out"), params);
+    pl::ProcessingModule *m = module.get(); // init() is protected in the module class
+    m->setInputType(pl::DATA_FILE);
+    m->setOutputType(pl::DATA_FILE);
+    m->init();
+    CHECK(m->getModuleStats()["rs_avg"] == 0);
+
+    m->process();
+    REQUIRE(std::filesystem::file_size(m->getOutput()) == 0);
+    CHECK(m->getModuleStats()["rs_avg"] == 0);
 }
 
 // Bug: module_ccsds_simple_psk_decoder.cpp:135-140 : the loop runs while !data_in.eof(); when the input

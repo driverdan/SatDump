@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <volk/volk.h>
@@ -387,15 +388,23 @@ namespace dsp
             return std::max<int>(std::min<int>(_w, maxLatency - _r), 0);
         }
 
+        // The flag is set with the mutex of the waiting side held, so that it can not be set
+        // (and notified) between that side checking its wait predicate and blocking in wait()
         void stopReader()
         {
-            _stopReader = true;
+            {
+                std::lock_guard<std::mutex> lck(_readable_mtx);
+                _stopReader = true;
+            }
             canReadVar.notify_one();
         }
 
         void stopWriter()
         {
-            _stopWriter = true;
+            {
+                std::lock_guard<std::mutex> lck(_writable_mtx);
+                _stopWriter = true;
+            }
             canWriteVar.notify_one();
         }
 
@@ -410,11 +419,11 @@ namespace dsp
         int size = 0;
         int readc;
         int writec;
-        int readable;
+        std::atomic<int> readable; // Changed under _readable_mtx, but also read by the writer under _writable_mtx
         int writable;
         int maxLatency;
-        bool _stopReader;
-        bool _stopWriter;
+        std::atomic<bool> _stopReader;
+        std::atomic<bool> _stopWriter;
         std::mutex _readable_mtx;
         std::mutex _writable_mtx;
         std::condition_variable canReadVar;

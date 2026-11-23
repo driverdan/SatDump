@@ -182,7 +182,7 @@ namespace satdump
             {
                 std::shared_ptr<image::Image> img = std::static_pointer_cast<image::Image>(inputs[i].ptr);
                 ch.push_back({channels[i].tokens, img.get()});
-                logger->warn(channels[i].tokens);
+                logger->warn("%s", channels[i].tokens.c_str());
             }
 
             std::shared_ptr<image::Image> img_out = std::make_shared<image::Image>();

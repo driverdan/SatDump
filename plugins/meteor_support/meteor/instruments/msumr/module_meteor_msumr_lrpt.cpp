@@ -118,8 +118,8 @@ namespace meteor
 
             std::string directory = d_output_file_hint.substr(0, d_output_file_hint.rfind('/')) + "/MSU-MR";
 
-            logger->info("Using input frames " + d_input_file);
-            logger->info("Decoding to " + directory);
+            logger->info("Using input frames %s", d_input_file.c_str());
+            logger->info("Decoding to %s", directory.c_str());
 
             bool meteorm2x_mode = d_parameters["m2x_mode"].get<bool>();
 
@@ -261,7 +261,7 @@ namespace meteor
             {
                 logger->info("----------- Satellite");
                 logger->info("NORAD : " + std::to_string(norad));
-                logger->info("Name  : " + sat_name);
+                logger->info("Name  : %s", sat_name.c_str());
             }
 
             if (!std::filesystem::exists(directory))

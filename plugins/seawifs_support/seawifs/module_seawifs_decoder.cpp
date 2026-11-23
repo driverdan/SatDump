@@ -207,7 +207,7 @@ namespace seawifs
         seawifs_product.set_channel_wavenumber(6, freq_to_wavenumber(SPEED_OF_LIGHT_M_S / 0.765e-6));
         seawifs_product.set_channel_wavenumber(7, freq_to_wavenumber(SPEED_OF_LIGHT_M_S / 0.865e-6));
 
-        logger->info("Saving imagery to " + directory);
+        logger->info("Saving imagery to %s", directory.c_str());
         seawifs_product.save(directory);
 
         dataset.products_list.push_back("SeaWiFS");

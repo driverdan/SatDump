@@ -74,11 +74,11 @@ namespace satdump
         {
             if (airspy_open_sn(&airspy_dev_obj, std::stoull(p_serial)) != AIRSPY_SUCCESS)
                 throw satdump_exception("Could not open Airspy One device! Serial : " + p_serial);
-            logger->info("Opened Airspy One device! Serial : " + p_serial);
+            logger->info("Opened Airspy One device! Serial : %s", p_serial.c_str());
             is_open = true;
 
             airspy_set_samplerate(airspy_dev_obj, p_samplerate);
-            logger->debug("Set Airspy samplerate to %d", p_samplerate);
+            logger->debug("Set Airspy samplerate to %.0f", p_samplerate);
 
             airspy_set_packing(airspy_dev_obj, 1);
             airspy_set_sample_type(airspy_dev_obj, AIRSPY_SAMPLE_FLOAT32_IQ);

@@ -16,7 +16,7 @@ namespace dsp
         }
         else if (mode == MODE_NNG_PUB)
         {
-            logger->info("Opening TCP socket on " + std::string("tcp://" + std::string(address) + ":" + std::to_string(port)));
+            logger->info("Opening TCP socket on tcp://%s:%d", address, port);
             nng_pub0_open_raw(&n_sock);
             nng_listener_create(&n_listener, n_sock, std::string("tcp://" + std::string(address) + ":" + std::to_string(port)).c_str());
             nng_listener_start(n_listener, NNG_FLAG_NONBLOCK);

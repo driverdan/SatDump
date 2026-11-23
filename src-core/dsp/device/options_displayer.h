@@ -200,7 +200,7 @@ namespace satdump
                         else if (v.is_stat)
                             v._stat = j;
                         else
-                            logger->error("Invalid options or JSON value! (SET " + v.id + " => " + j.dump() + ")");
+                            logger->error("Invalid options or JSON value! (SET %s => %s)", v.id.c_str(), j.dump().c_str());
                     }
                 }
                 opts_mtx.unlock();

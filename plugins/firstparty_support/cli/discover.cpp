@@ -48,11 +48,11 @@ namespace satdump
             logger->error("Not a file or ZIP!");
         }
 
-        logger->info(info.name);
+        logger->info("%s", info.name.c_str());
 
         if (info.group_id.size() || is_zip)
         {
-            logger->trace("Group : " + info.group_id);
+            logger->trace("Group : %s", info.group_id.c_str());
 
             std::shared_ptr<satdump::utils::FilesIterator> fit;
             if (is_zip)
@@ -68,14 +68,14 @@ namespace satdump
 
                 if (info.group_id == firstparty::parseFirstPartyInfo(f).group_id)
                 {
-                    logger->trace(" - " + f->name);
+                    logger->trace(" - %s", f->name.c_str());
                 }
             }
         }
         else
         {
             std::shared_ptr<satdump::utils::FilesIteratorItem> f = std::make_shared<satdump::utils::FolderFileIteratorItem>(path);
-            logger->trace(" - " + f->name);
+            logger->trace(" - %s", f->name.c_str());
         }
     }
 } // namespace satdump

@@ -69,11 +69,11 @@ namespace satdump
         {
             if (airspyhf_open_sn(&airspyhf_dev_obj, std::stoull(p_serial)) != AIRSPYHF_SUCCESS)
                 throw satdump_exception("Could not open AirspyHF device! Serial : " + p_serial);
-            logger->info("Opened AirspyHF device! Serial : " + p_serial);
+            logger->info("Opened AirspyHF device! Serial : %s", p_serial.c_str());
             is_open = true;
 
             airspyhf_set_samplerate(airspyhf_dev_obj, p_samplerate);
-            logger->debug("Set AirspyHF samplerate to %d", p_samplerate);
+            logger->debug("Set AirspyHF samplerate to %.0f", p_samplerate);
 
             init();
 
@@ -129,7 +129,7 @@ namespace satdump
                     airspyhf_version_string_read(airspy_dev_obj, version, 255);
                     //  if (std::string(version).find("MINI") != std::string::npos)
                     //      name = "AirSpy Mini " + ss.str();
-                    logger->critical(std::string(version));
+                    logger->critical("%s", version);
 
                     // Get available samplerates
                     uint32_t samprate_cnt;

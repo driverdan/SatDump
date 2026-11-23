@@ -22,7 +22,7 @@ void PlutoSDRSource::set_rfinput()
         iio_device_reg_read(phy, 0x00000003, &val);
         val = (val & 0x3F) | ((rf_input + 1) << 6);
         iio_device_reg_write(phy, 0x00000003, val);
-        logger->trace("RFInput %d", rf_input + 1l);
+        logger->trace("RFInput %ld", rf_input + 1l);
         iio_device_debug_attr_write_longlong(phy, "adi,1rx-1tx-mode-use-rx-num", rf_input + 1);
         // WorkAround because ad9361 driver doesnt reflect well rx change with gain
         iio_channel_attr_write(iio_device_find_channel(phy, "voltage0", false), "gain_control_mode", "fast_attack");
@@ -128,7 +128,7 @@ void PlutoSDRSource::set_frequency(uint64_t frequency)
     if (is_open && is_started)
     {
         iio_channel_attr_write_longlong(iio_device_find_channel(phy, "altvoltage0", true), "frequency", round(frequency));
-        logger->debug("Set PlutoSDR frequency to %d", frequency);
+        logger->debug("Set PlutoSDR frequency to %llu", (unsigned long long)frequency);
     }
     DSPSampleSource::set_frequency(frequency);
 }
@@ -220,12 +220,12 @@ void PlutoSDRSource::sdr_startup()
 
     if (is_usb)
     {
-        logger->trace("Using PlutoSDR Device at " + d_sdr_id);
+        logger->trace("Using PlutoSDR Device at %s", d_sdr_id.c_str());
         ctx = iio_create_context_from_uri(d_sdr_id.c_str());
     }
     else
     {
-        logger->trace("Using PlutoSDR IP Address " + ip_address);
+        logger->trace("Using PlutoSDR IP Address %s", ip_address.c_str());
         ctx = iio_create_context_from_uri(std::string("ip:" + ip_address).c_str());
     }
 

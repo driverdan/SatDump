@@ -31,7 +31,7 @@ void tcp_rx_handler(uint8_t *buffer, int len)
                 if (!src.remote_ok)
                     continue;
 
-                logger->trace("- " + src.name);
+                logger->trace("- %s", src.name.c_str());
                 sources_final.push_back(src);
             }
 
@@ -51,7 +51,7 @@ void tcp_rx_handler(uint8_t *buffer, int len)
 
             dsp::SourceDescriptor source = nlohmann::json::from_cbor(std::vector<uint8_t>(&buffer[1], &buffer[len]));
 
-            logger->info("Opening " + source.name);
+            logger->info("Opening %s", source.name.c_str());
 
             if(sources.size() == 0)
                 sources = dsp::getAllAvailableSources(true);
@@ -124,7 +124,7 @@ void tcp_rx_handler(uint8_t *buffer, int len)
         {
             source_mtx.lock();
             memcpy(&last_samplerate, &buffer[1], sizeof(uint64_t));
-            logger->debug("Samplerate sent %llu", last_samplerate);
+            logger->debug("Samplerate sent %llu", (unsigned long long)last_samplerate);
             if (source_is_open)
                 current_sample_source->set_samplerate(last_samplerate);
 

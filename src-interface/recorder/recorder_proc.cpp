@@ -216,14 +216,30 @@ namespace satdump
             is_stopping_processing = true;
             logger->trace("Stop pipeline...");
             splitter->set_enabled("live", false);
-            live_pipeline->stop();
+            // stop() throws the error of a module that failed, once every module is stopped
+            bool failed = false;
+            try
+            {
+                live_pipeline->stop();
+            }
+            catch (std::exception &e)
+            {
+                failed = true;
+                logger->error("Error stopping pipeline : %s", e.what());
+            }
+            catch (...)
+            {
+                failed = true;
+                logger->error("Error stopping pipeline!");
+            }
             is_stopping_processing = is_processing = false;
 
-            if (satdump_cfg.main_cfg["user_interface"]["finish_processing_after_live"]["value"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
+            // As with "satdump legacy live", the output of a failed pipeline is not processed further
+            if (!failed && satdump_cfg.main_cfg["user_interface"]["finish_processing_after_live"]["value"].get<bool>() && live_pipeline->getOutputFile().size() > 0)
             {
                 pipeline::Pipeline pipeline = pipeline_selector.selected_pipeline;
                 std::string input_file = live_pipeline->getOutputFile();
-                logger->critical(input_file);
+                logger->critical("%s", input_file.c_str());
                 int start_level = pipeline.live_cfg.normal_live[pipeline.live_cfg.normal_live.size() - 1];
                 std::string input_level = pipeline.steps[start_level].level;
                 eventBus->fire_event<explorer::ExplorerAddHandlerEvent>(
@@ -240,7 +256,7 @@ namespace satdump
         load_rec_path_data();
         std::string filename = recording_path + prepareBasebandFileName(getTime(), get_samplerate(), frequency_hz);
         recorder_filename = file_sink->start_recording(filename, get_samplerate());
-        logger->info("Recording to " + recorder_filename);
+        logger->info("Recording to %s", recorder_filename.c_str());
         is_recording = true;
     }
 

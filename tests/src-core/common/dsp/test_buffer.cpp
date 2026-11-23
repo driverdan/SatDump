@@ -1,9 +1,11 @@
 #include "common/dsp/buffer.h"
 #include "common/dsp/dsp_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <atomic>
 #include <cstdint>
 #include <future>
 #include <numeric>
+#include <vector>
 
 TEST_CASE("create_volk_buffer returns aligned zeroed memory", "[common][dsp][buffer]")
 {
@@ -267,4 +269,66 @@ TEST_CASE("RingBuffer streams data between a producer and a consumer", "[common]
             first = i;
     INFO("first mismatch at sample " << first);
     REQUIRE(mismatches == 0);
+}
+
+namespace
+{
+    // Starts a thread that blocks in read() on an empty RingBuffer, or in write() on a full one, stops it
+    // as soon as that thread is about to call it, and returns whether the thread came out (with -1) within
+    // the timeout. If it did not, it is released by giving it data or room, so that the test can end.
+    bool ringBufferStopReleases(bool writer)
+    {
+        dsp::RingBuffer<float> rb(100);
+        std::vector<float> full(100, 0.0f);
+        if (writer)
+            REQUIRE(rb.write(full.data(), 100) == 100);
+
+        std::atomic<bool> started{false};
+        auto blocked = std::async(std::launch::async,
+                                  [&]()
+                                  {
+                                      float sample = 0.0f;
+                                      started = true;
+                                      return writer ? rb.write(&sample, 1) : rb.read(&sample, 1);
+                                  });
+        // Not a REQUIRE: nothing may throw before the thread has been stopped and released, or the future's
+        // destructor would wait for it forever
+        bool did_start = test_helpers::waitUntil([&]() { return started.load(); }, dsp_test::kTimeout, std::chrono::microseconds(0));
+
+        if (writer)
+            rb.stopWriter();
+        else
+            rb.stopReader();
+
+        bool released = blocked.wait_for(dsp_test::kTimeout) == std::future_status::ready;
+        if (!released)
+        {
+            if (writer)
+                rb.read(full.data(), 100);
+            else
+                rb.write(full.data(), 1);
+        }
+        return did_start && released && blocked.get() == -1;
+    }
+} // namespace
+
+// stopReader() / stopWriter() used to set the flag and notify without the mutex of the waiting side. When that
+// happened between the waiting thread checking its predicate and blocking in wait(), the wake-up was lost and the
+// thread stayed blocked. Stopping as the thread starts to wait hits that window often, so repeat it.
+TEST_CASE("RingBuffer stopReader releases a reader blocked on an empty buffer", "[common][dsp][buffer][ringbuffer]")
+{
+    for (int i = 0; i < 500; i++)
+    {
+        INFO("iteration " << i);
+        REQUIRE(ringBufferStopReleases(false));
+    }
+}
+
+TEST_CASE("RingBuffer stopWriter releases a writer blocked on a full buffer", "[common][dsp][buffer][ringbuffer]")
+{
+    for (int i = 0; i < 500; i++)
+    {
+        INFO("iteration " << i);
+        REQUIRE(ringBufferStopReleases(true));
+    }
 }
