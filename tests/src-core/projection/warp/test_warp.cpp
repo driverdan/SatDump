@@ -95,6 +95,19 @@ TEST_CASE("warp computeGCPCenter averages on the sphere", "[projection][warp]")
     CHECK(lat < 40.5);
 }
 
+TEST_CASE("smart_warp splitRangeAtCuts covers the range without gaps or overlaps", "[projection][warp][smart_warp]")
+{
+    using Ranges = std::vector<std::pair<int, int>>;
+    using satdump::warp::splitRangeAtCuts;
+
+    REQUIRE(splitRangeAtCuts(0, 100, {}) == Ranges{{0, 100}});
+    REQUIRE(splitRangeAtCuts(0, 100, {40}) == Ranges{{0, 40}, {40, 100}});
+    // Issue #216: the range between the first two cuts was missing,
+    // and middle ranges ran to y_end instead of the next cut
+    REQUIRE(splitRangeAtCuts(0, 100, {30, 60}) == Ranges{{0, 30}, {30, 60}, {60, 100}});
+    REQUIRE(splitRangeAtCuts(10, 100, {20, 50, 70}) == Ranges{{10, 20}, {20, 50}, {50, 70}, {70, 100}});
+}
+
 // The ImageWarper tests and their helpers need CpuOnlyWarpGuard, which uses a data symbol
 // of satdump_core that is not exported from the Windows DLL (see warp_test_helpers.h)
 #ifndef _MSC_VER
@@ -149,6 +162,71 @@ namespace
         }
         // One output pixel per input pixel
         CHECK(covered == IW * IH);
+    }
+
+    // The input for the cut tests: blocks of IH rows stacked in one IW-wide image. Each block
+    // is the affine grid above, but block b starts BLK_LAT degrees further south, so the jump
+    // between blocks is far above the smart_warp cut threshold and every block edge is a cut.
+    const double BLK_LAT0 = 40.125, BLK_LAT = 20;
+
+    std::vector<GCP> blockGcps(int nblocks)
+    {
+        std::vector<GCP> g;
+        for (int b = 0; b < nblocks; b++)
+            for (auto gcp : affineGcps(IW, IH, LON0, BLK_LAT0 - BLK_LAT * b, RES, 3))
+            {
+                gcp.y += IH * b;
+                g.push_back(gcp);
+            }
+        return g;
+    }
+
+    // Checks that every block is warped to its own place with the right values, and that
+    // nothing is drawn outside the blocks. Expects an RGBA warp of a 1-channel gradientImage().
+    void checkWarpedBlocks(satdump::warp::WarpResult &res, int nblocks)
+    {
+        auto &out = res.output_image;
+        REQUIRE(out.channels() == 4);
+
+        std::vector<int> covered(nblocks, 0);
+        int stray = 0;
+        for (size_t y = 0; y < out.height(); y++)
+        {
+            for (size_t x = 0; x < out.width(); x++)
+            {
+                const double lon = res.top_left.lon + RES * x, lat = res.top_left.lat - RES * y;
+                const double xx = (lon - LON0) / RES;
+                int block = -1;
+                double yy = 0;
+                for (int b = 0; b < nblocks; b++)
+                {
+                    const double yb = (BLK_LAT0 - BLK_LAT * b - lat) / RES;
+                    if (xx >= 0 && xx < IW && yb >= 0 && yb < IH)
+                        block = b, yy = yb;
+                }
+                if (block == -1)
+                {
+                    if (out.get(3, x, y) != 0)
+                        stray++;
+                    continue;
+                }
+                if (out.get(3, x, y) == 0)
+                    continue;
+                covered[block]++;
+                // Past the last pixel centre the value depends on the image's edge handling
+                if (xx > IW - 1 || yy > IH - 1)
+                    continue;
+                INFO("x=" << x << " y=" << y << " block " << block << " samples input " << xx << ", " << yy);
+                for (int c = 0; c < 3; c++)
+                    CHECK(std::abs(out.get(c, x, y) - (1000 * xx + 100 * (yy + IH * block))) <= 2);
+            }
+        }
+        for (int b = 0; b < nblocks; b++)
+        {
+            INFO("block " << b);
+            CHECK(covered[b] == IW * IH);
+        }
+        CHECK(stray == 0);
     }
 } // namespace
 #endif
@@ -255,19 +333,6 @@ TEST_CASE("ImageWarper output_rgba expands grayscale and sets alpha on covered p
     checkWarpedGradient(res, 1, true);
 }
 
-TEST_CASE("smart_warp splitRangeAtCuts covers the range without gaps or overlaps", "[projection][warp][smart_warp]")
-{
-    using Ranges = std::vector<std::pair<int, int>>;
-    using satdump::warp::splitRangeAtCuts;
-
-    REQUIRE(splitRangeAtCuts(0, 100, {}) == Ranges{{0, 100}});
-    REQUIRE(splitRangeAtCuts(0, 100, {40}) == Ranges{{0, 40}, {40, 100}});
-    // Issue #216: the range between the first two cuts was missing,
-    // and middle ranges ran to y_end instead of the next cut
-    REQUIRE(splitRangeAtCuts(0, 100, {30, 60}) == Ranges{{0, 30}, {30, 60}, {60, 100}});
-    REQUIRE(splitRangeAtCuts(10, 100, {20, 50, 70}) == Ranges{{10, 20}, {20, 50}, {50, 70}, {70, 100}});
-}
-
 TEST_CASE("performSmartWarp matches the single-segment ImageWarper result", "[projection][warp][smart_warp]")
 {
     CpuOnlyWarpGuard cpu_only;
@@ -286,6 +351,28 @@ TEST_CASE("performSmartWarp matches the single-segment ImageWarper result", "[pr
     CHECK(res.output_image.width() == 22);
     CHECK(res.output_image.height() == 12);
     checkWarpedGradient(res, 3, true);
+}
+
+// Issue #216: with two cuts the rows between them were never warped, and with three or more
+// the middle segments ran to the end of the image and drew over the later blocks
+TEST_CASE("performSmartWarp warps every segment between cuts", "[projection][warp][smart_warp]")
+{
+    CpuOnlyWarpGuard cpu_only;
+
+    for (int nblocks : {2, 3, 4})
+    {
+        INFO(nblocks - 1 << " cuts");
+        satdump::image::Image img = gradientImage(IW, IH * nblocks, 1);
+        satdump::warp::WarpOperation op;
+        op.input_image = &img;
+        op.ground_control_points = blockGcps(nblocks);
+        op.output_width = 720;
+        op.output_height = 360;
+        op.output_rgba = true;
+        float progress = 0;
+        auto res = satdump::warp::performSmartWarp(op, &progress);
+        checkWarpedBlocks(res, nblocks);
+    }
 }
 
 #endif
