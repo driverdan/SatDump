@@ -121,11 +121,7 @@ namespace meteor
 
             DintSampleReader file_reader;
 
-            file_reader.input_function = [this](int8_t *buf, size_t len) -> int
-            {
-                read_data((uint8_t *)buf, len);
-                return should_run();
-            };
+            file_reader.input_function = [this](int8_t *buf, size_t len) -> int { return read_data((uint8_t *)buf, len); };
 
             while (should_run())
             {

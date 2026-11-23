@@ -53,7 +53,8 @@ namespace satdump
                 nlohmann::json getModuleStats();
 
             protected:
-                void read_data(uint8_t *buffer, size_t size);
+                // Returns true if a full buffer of size bytes was read
+                bool read_data(uint8_t *buffer, size_t size);
 
                 void write_data(uint8_t *buffer, size_t size);
 
