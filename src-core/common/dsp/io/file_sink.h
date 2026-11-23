@@ -21,7 +21,7 @@ namespace dsp
         BasebandType d_sample_format;
         void work();
 
-        bool should_work = false;
+        std::atomic<bool> should_work{false}; // Also read by work() outside of the lock
 
         std::ofstream output_file;
 
@@ -60,10 +60,12 @@ namespace dsp
 
         void stop_recording()
         {
-            if (d_sample_format == WAV_16)
-                wav_writer->finish_header(get_written());
-
+            // The header is finished under the lock: work() writes to the same std::ofstream
+            // from the block's thread, and concurrent use of it corrupts the file or crashes
             rec_mutex.lock();
+            if (d_sample_format == WAV_16)
+                wav_writer->finish_header(current_size_out);
+
             should_work = false;
             current_size_out = 0;
             current_size_out_raw = 0;

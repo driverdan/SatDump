@@ -256,6 +256,8 @@ int main_record(int argc, char *argv[])
 
     // Stop cleanly
     source_ptr->stop();
+    if (decimation > 1)
+        decim->stop();
     if (parameters.contains("fft_enable"))
     {
         splitter->stop();
