@@ -136,6 +136,112 @@ TEST_CASE("main_record needs a baseband format", "[cli][legacy][record]")
     CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
 }
 
+// An invalid format used to be rejected only once the source was started, by an exception
+// thrown with the source running. It is now rejected with the other flags.
+TEST_CASE("main_record rejects an invalid baseband format before starting anything", "[cli][legacy][record]")
+{
+    RecordEnv env;
+    std::vector<std::string> flags = {"--source", "file", "--file_path", env.input, "--samplerate", "48000", "--frequency", "100e6", "--decimation", "4", "--fft_enable"};
+    std::string error;
+
+    SECTION("unknown format")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format", "bogus"})) == 1);
+        error = "Invalid baseband_format! Unknown baseband type bogus";
+    }
+
+    SECTION("flag without a value, last")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format"})) == 1);
+        error = "Invalid baseband_format!";
+    }
+
+    SECTION("flag without a value, followed by another flag")
+    {
+        CHECK(env.run(plus({"--baseband_format"}, flags)) == 1);
+        error = "Invalid baseband_format!";
+    }
+
+    SECTION("number")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format", "8"})) == 1);
+        error = "Invalid baseband_format!";
+    }
+
+    SECTION("cu8, which the file sink can not write")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format", "cu8"})) == 1);
+        error = "Invalid baseband_format! cu8 can not be recorded";
+    }
+
+#ifdef BUILD_ZIQ
+    SECTION("ZIQ depth that is not a number")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format", "ziq", "--ziq_depth", "deep"})) == 1);
+        error = "Invalid ziq_depth!";
+        CHECK_FALSE(env.log.contains("Invalid baseband_format!"));
+    }
+
+    SECTION("ZIQ depth the ZIQ writer can not write")
+    {
+        CHECK(env.run(plus(flags, {"--baseband_format", "ziq", "--ziq_depth", "12"})) == 1);
+        error = "Invalid ziq_depth 12! It must be 8, 16 or 32";
+    }
+#endif
+
+    INFO(env.log.dump());
+    CHECK(env.log.contains(error, slog::LOG_ERROR));
+
+    // Checked before anything is created or started: no source is listed, no resampler is set
+    // up, and the output directory is not created
+    CHECK_FALSE(env.log.contains("Device File Source"));
+    CHECK_FALSE(env.log.contains("Setting up resampler..."));
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
+}
+
+TEST_CASE("main_record rejects invalid FFT and webserver flags before starting anything", "[cli][legacy][record]")
+{
+    RecordEnv env;
+
+    SECTION("FFT size that is not a number") { CHECK(env.run(plus(env.flags(), {"--fft_enable", "--fft_size", "big"})) == 1); }
+
+    SECTION("FFT rate that is not a number") { CHECK(env.run(plus(env.flags(), {"--fft_enable", "--fft_rate", "fast"})) == 1); }
+
+    SECTION("FFT averaging that is not a number") { CHECK(env.run(plus(env.flags(), {"--fft_enable", "--fft_avgn", "many"})) == 1); }
+
+    SECTION("webserver without an address") { CHECK(env.run(plus(env.flags(), {"--http_server"})) == 1); }
+
+    INFO(env.log.dump());
+    CHECK(env.log.contains("Error parsing arguments!", slog::LOG_ERROR));
+    CHECK_FALSE(env.log.contains("Device File Source"));
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "rec"));
+}
+
+#ifdef BUILD_ZIQ
+TEST_CASE("main_record records ZIQ at the requested depth", "[cli][legacy][record]")
+{
+    RecordEnv env;
+    rec_should_exit = true;
+
+    std::vector<std::string> flags = {"--source", "file", "--file_path", env.input, "--samplerate", std::to_string(SAMPLERATE), "--frequency", "100e6", "--baseband_format", "ziq"};
+
+    SECTION("default depth")
+    {
+        CHECK(env.run(flags) == 0);
+        CHECK(env.log.contains("Using ZIQ Depth 8", slog::LOG_INFO));
+    }
+
+    SECTION("given depth")
+    {
+        CHECK(env.run(plus(flags, {"--ziq_depth", "16"})) == 0);
+        CHECK(env.log.contains("Using ZIQ Depth 16", slog::LOG_INFO));
+    }
+
+    INFO(env.log.dump());
+    CHECK(std::filesystem::is_regular_file(env.out + ".ziq"));
+}
+#endif
+
 TEST_CASE("main_record stops as soon as its signal flag is set", "[cli][legacy][record]")
 {
     RecordEnv env;

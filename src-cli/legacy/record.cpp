@@ -8,6 +8,7 @@
 #include "live.h"
 #include "logger.h"
 #include "webserver.h"
+#include <optional>
 #include <signal.h>
 
 // Catch CTRL+C to exit live properly!
@@ -24,7 +25,7 @@ int main_record(int argc, char *argv[])
     {
         logger->error("Usage : %s record [output_baseband (without extension!)] [additional options as required]", argv[0]);
         logger->error("Extra options (examples. Any parameter used in sources can be used here) :");
-        logger->error(" --samplerate [baseband_samplerate] --baseband_format [cf32/cs32/cs16/cs8/cu8/wav16/ziq] --dc_block --iq_swap");
+        logger->error(" --samplerate [baseband_samplerate] --baseband_format [cf32/cs32/cs16/cs8/wav/ziq] --dc_block --iq_swap");
         logger->error(" --source [airspy/rtlsdr/etc] --gain 20 --bias");
         logger->error("As well as --timeout in seconds");
         logger->error("Sample command :");
@@ -43,7 +44,12 @@ int main_record(int argc, char *argv[])
     std::string handler_id;
     std::string hdl_dev_id;
     double decimation = 1;
+    int fft_size = 0;
+    int fft_rate = 30;
+    std::optional<float> fft_avgn;
+    std::string http_addr;
 
+    // Everything is parsed before anything is created or started, as nothing would stop it on return
     try
     {
         samplerate = parameters["samplerate"].get<uint64_t>();
@@ -54,6 +60,15 @@ int main_record(int argc, char *argv[])
             decimation = parameters["decimation"].get<int>();
         if (parameters.contains("source_id"))
             hdl_dev_id = parameters["source_id"].get<std::string>();
+        if (parameters.contains("fft_enable"))
+        {
+            fft_size = parameters.contains("fft_size") ? parameters["fft_size"].get<int>() : 512;
+            fft_rate = parameters.contains("fft_rate") ? parameters["fft_rate"].get<int>() : 30;
+            if (parameters.contains("fft_avgn"))
+                fft_avgn = parameters["fft_avgn"].get<float>();
+        }
+        if (parameters.contains("http_server"))
+            http_addr = parameters["http_server"].get<std::string>();
     }
     catch (std::exception &e)
     {
@@ -61,12 +76,51 @@ int main_record(int argc, char *argv[])
         return 1;
     }
 
-    // Checked before anything is created or started, as nothing would stop it on return
     if (!parameters.contains("baseband_format"))
     {
         logger->error("baseband_format flag is required!");
         return 1;
     }
+
+    dsp::BasebandType baseband_type;
+    try
+    {
+        baseband_type = parameters["baseband_format"].get<std::string>();
+    }
+    catch (std::exception &e)
+    {
+        logger->error("Invalid baseband_format! %s", e.what());
+        return 1;
+    }
+
+#if defined(BUILD_ZIQ) || defined(BUILD_ZIQ2)
+    try
+    {
+        if (parameters.contains("ziq_depth"))
+            baseband_type.ziq_depth = parameters["ziq_depth"].get<int>();
+    }
+    catch (std::exception &e)
+    {
+        logger->error("Invalid ziq_depth! %s", e.what());
+        return 1;
+    }
+#endif
+
+    // The file sink has no writer for cu8, it would only create an empty file
+    if (baseband_type == dsp::CU_8)
+    {
+        logger->error("Invalid baseband_format! cu8 can not be recorded");
+        return 1;
+    }
+
+#ifdef BUILD_ZIQ
+    // The ZIQ writer only writes 8, 16 or 32 bit samples, and nothing for any other depth
+    if (baseband_type == dsp::ZIQ && baseband_type.ziq_depth != 8 && baseband_type.ziq_depth != 16 && baseband_type.ziq_depth != 32)
+    {
+        logger->error("Invalid ziq_depth %d! It must be 8, 16 or 32", baseband_type.ziq_depth);
+        return 1;
+    }
+#endif
 
     // Get the sources of the requested type
     dsp::registerAllSources();
@@ -136,20 +190,16 @@ int main_record(int argc, char *argv[])
     // Optional FFT
     std::shared_ptr<dsp::stream<complex_t>> final_stream = decimation > 1 ? decim->output_stream : source_ptr->output_stream;
 
-    int fft_size = 0;
     if (parameters.contains("fft_enable"))
     {
-        fft_size = parameters.contains("fft_size") ? parameters["fft_size"].get<int>() : 512;
-        int fft_rate = parameters.contains("fft_rate") ? parameters["fft_rate"].get<int>() : 30;
-
         splitter = std::make_unique<dsp::SplitterBlock>(source_ptr->output_stream);
         splitter->add_output("fft");
         splitter->set_enabled("fft", true);
         final_stream = splitter->output_stream;
         fft = std::make_unique<dsp::FFTPanBlock>(splitter->get_output("fft"));
         fft->set_fft_settings(fft_size, samplerate / decimation, fft_rate);
-        if (parameters.contains("fft_avgn"))
-            fft->avg_num = parameters["fft_avgn"].get<float>();
+        if (fft_avgn)
+            fft->avg_num = *fft_avgn;
         splitter->start();
         fft->start();
     }
@@ -172,12 +222,7 @@ int main_record(int argc, char *argv[])
         webserver_already_set = true;
     }
 
-    dsp::BasebandType baseband_type = parameters["baseband_format"].get<std::string>();
-
 #if defined(BUILD_ZIQ) || defined(BUILD_ZIQ2)
-    if (parameters.contains("ziq_depth"))
-        baseband_type.ziq_depth = parameters["ziq_depth"].get<int>();
-
     if (parameters["baseband_format"].get<std::string>() == "ziq")
         logger->info("Using ZIQ Depth %d", baseband_type.ziq_depth);
 #endif
@@ -194,7 +239,6 @@ int main_record(int argc, char *argv[])
     // If requested, boot up webserver
     if (parameters.contains("http_server"))
     {
-        std::string http_addr = parameters["http_server"].get<std::string>();
         if (!webserver_already_set)
             webserver::handle_callback = [&file_sink]()
             {

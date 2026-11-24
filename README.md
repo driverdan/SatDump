@@ -73,7 +73,7 @@ You can find a list of all SDR Options [Here](https://docs.satdump.org/sdr_optio
 ```
 Usage : satdump legacy record [output_baseband (without extension!)] [additional options as required]
 Extra options (examples. Any parameter used in sources can be used here) :
-  --samplerate [baseband_samplerate] --baseband_format [cf32/cs32/cs16/cs8/cu8/w16] --dc_block --iq_swap
+  --samplerate [baseband_samplerate] --baseband_format [cf32/cs32/cs16/cs8/wav/ziq] --dc_block --iq_swap
   --source [airspy/rtlsdr/etc] --gain 20 --bias
 As well as --timeout in seconds
 Sample command :
