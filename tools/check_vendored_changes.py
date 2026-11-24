@@ -54,21 +54,31 @@ def changed_files(root, base, head):
     return sorted(p for p in out.decode("utf-8", errors="surrogateescape").split("\0") if p)
 
 
-def load_entries(root, rev):
-    """Return {id: entry} of the manifest at rev ({} if the file is absent)."""
+def load_entries(root, rev, required):
+    """Return {id: entry} of the manifest at rev.
+
+    Invalid JSON raises ValueError. If the manifest is required (the head),
+    a missing file or 'libraries' list does too; otherwise (the base, e.g.
+    before the PR that adds the manifest) they give {}.
+    """
     try:
         text = git(root, "show", f"{rev}:{MANIFEST}")
     except GitError:
-        # Absent at this revision (e.g. the PR that adds it); any other git
-        # problem was already caught by the diff
+        # Any other git problem was already caught by the diff
+        if required:
+            raise ValueError(f"{MANIFEST} does not exist at {rev}")
         return {}
     try:
         data = json.loads(text)
     except ValueError as e:
         raise ValueError(f"{MANIFEST} at {rev} is not valid JSON: {e}")
     libraries = data.get("libraries") if isinstance(data, dict) else None
+    if not isinstance(libraries, list):
+        if required:
+            raise ValueError(f"{MANIFEST} at {rev} has no 'libraries' list")
+        libraries = []
     entries = {}
-    for lib in libraries if isinstance(libraries, list) else []:
+    for lib in libraries:
         if isinstance(lib, dict) and isinstance(lib.get("id"), str):
             entries[lib["id"]] = lib
     return entries
@@ -122,13 +132,18 @@ def override(event_path):
     return None
 
 
+def esc(text):
+    """Percent-encode %, CR and LF so that text from the manifest or the tree
+    cannot start a new line, and so cannot become a GitHub workflow command."""
+    return str(text).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
 def annotate(message):
     """Print message, as an error annotation when run in GitHub Actions."""
     if os.environ.get("GITHUB_ACTIONS") == "true":
-        escaped = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-        print(f"::error title=Vendored library changed without a manifest update::{escaped}")
+        print(f"::error title=Vendored library changed without a manifest update::{esc(message)}")
     else:
-        print(f"error: {message}")
+        print(f"error: {esc(message)}")
 
 
 def main():
@@ -138,18 +153,22 @@ def main():
     ap.add_argument("--event", default=os.environ.get("GITHUB_EVENT_PATH"), help="GitHub event payload (JSON)")
     ap.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     args = ap.parse_args()
+    # File names that are not UTF-8 are decoded with surrogateescape; print
+    # them as escapes instead of failing with UnicodeEncodeError
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(errors="backslashreplace")
 
     try:
-        merge_base = git(args.repo, "merge-base", args.base, args.head).decode().strip()
+        merge_base = git(args.repo, "merge-base", args.base, args.head).decode(errors="replace").strip()
         files = changed_files(args.repo, merge_base, args.head)
-        old = load_entries(args.repo, merge_base)
-        new = load_entries(args.repo, args.head)
+        old = load_entries(args.repo, merge_base, required=False)
+        new = load_entries(args.repo, args.head, required=True)
     except GitError as e:
-        print(f"error: {e}")
+        print(f"error: {esc(e)}")
         return 2
     except ValueError as e:
         # A broken manifest at the head is reported by check_third_party.py too
-        print(f"error: {e}")
+        print(f"error: {esc(e)}")
         return 1
 
     touched = {}  # id -> changed files of that library
@@ -161,7 +180,7 @@ def main():
     print(f"{len(files)} changed file(s), {len(touched)} vendored librar{'y' if len(touched) == 1 else 'ies'} touched")
     for lib_id in sorted(touched):
         state = "entry not updated" if lib_id in stale else "entry updated"
-        print(f"  {lib_id}: {len(touched[lib_id])} file(s), {state}")
+        print(f"  {esc(lib_id)}: {len(touched[lib_id])} file(s), {state}")
     if not stale:
         return 0
 
