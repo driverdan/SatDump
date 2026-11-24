@@ -175,6 +175,10 @@ jobs:
           path: ${{runner.workspace}}/build/portable/*
 
   build_android:
+    # android-release is a self-hosted runner that only upstream has; elsewhere the job would
+    # queue until GitHub drops it. Repos with such a runner can opt in with the repository
+    # variable ANDROID_SELF_HOSTED=true. Skipping it does not block update_nightly_release.
+    if: ${{ github.repository == 'SatDump/SatDump' || vars.ANDROID_SELF_HOSTED == 'true' }}
     runs-on: android-release
 
     steps:
@@ -323,56 +327,45 @@ jobs:
           path: ${{runner.workspace}}/build/*.deb
 
   build_linux_arm64:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ARM64
+    # GitHub-hosted ARM64 runner (free for public repos), building inside Debian 13 so the
+    # .deb links against the same library versions as Raspberry Pi OS (trixie). A .deb
+    # built on Ubuntu links e.g. libtiff.so.5, which Debian does not ship.
+    runs-on: ubuntu-24.04-arm
+    container: debian:trixie
+
+    env:
+      DEBIAN_FRONTEND: noninteractive
 
     steps:
+      # git first, so actions/checkout makes a real clone rather than downloading a tarball
+      - name: Install git
+        run: apt-get update && apt-get install -y git ca-certificates
+
       - uses: actions/checkout@v4
 
-      - name: Update repositories
-        run: sudo apt update
-
       - name: Install dependencies
-        run: sudo apt install -y libdbus-1-dev libcurl4-openssl-dev libglfw3-dev libfftw3-dev libvolk2-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libtiff-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev libjemalloc-dev portaudio19-dev libhdf5-dev libsqlite3-dev
+        run: apt-get install -y libdbus-1-dev libcurl4-openssl-dev libglfw3-dev libfftw3-dev libvolk-dev build-essential cmake pkgconf libjpeg-dev libpng-dev libtiff-dev libairspy-dev libairspyhf-dev libhackrf-dev librtlsdr-dev libomp-dev libnng-dev libiio-dev libzstd-dev libad9361-dev libbladerf-dev libuhd-dev liblimesuite-dev ocl-icd-opencl-dev libjemalloc-dev portaudio19-dev libhdf5-dev libsqlite3-dev
 
-      - name: Delete build dir
-        run: rm -rf ${{runner.workspace}}/build
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{runner.workspace}}/build
-
+      # In a container job ${{runner.workspace}} is the host path, which does not exist
+      # inside the container, so the build dir lives in the (git-ignored) workspace instead.
       - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
         shell: bash
-        working-directory: ${{runner.workspace}}/build
-        # Note the current convention is to use the -S and -B options here to specify source
-        # and build directories, but this is only available with CMake 3.13 and higher.
-        # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
       - name: Build
-        working-directory: ${{runner.workspace}}/build
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
-        run: make -j4
+        run: cmake --build build -j$(nproc)
 
       - name: Package
-        working-directory: ${{runner.workspace}}/build
+        working-directory: build
         shell: bash
-        # Execute the build.  You can specify a specific target with "--target <NAME>"
         run: make package
 
       - name: Upload ZIP
         uses: actions/upload-artifact@v4
         with:
           name: SatDump-Pi64-Latest
-          path: ${{runner.workspace}}/build/*.deb
+          path: build/*.deb
 
   build_macos_intel:
     runs-on: macos-15-intel
@@ -387,7 +380,7 @@ jobs:
         # These are preinstalled in the GitHub runners, cause needless warnings to appear
         # Add these back if these ever become missing for some reason
         # sqlite3 libtool autoconf libjpeg-turbo libtiff libusb libpng zstd
-        run: brew install cpptrace gettext dylibbundler automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw3 fftw libxml2 portaudio jemalloc nng armadillo hdf5 
+        run: brew install cpptrace gettext dylibbundler automake meson orc libxml2 zlib portaudio boost volk libomp glfw fftw libxml2 portaudio jemalloc armadillo hdf5 
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
@@ -450,7 +443,7 @@ jobs:
         # These are preinstalled in the GitHub runners, cause needless warnings to appear
         # Add these back if these ever become missing for some reason
         # sqlite3 zstd libpng libtiff libjpeg-turbo libusb
-        run: brew install cpptrace gettext dylibbundler libtool autoconf automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw3 fftw libxml2 portaudio jemalloc nng armadillo hdf5 
+        run: brew install cpptrace gettext dylibbundler libtool autoconf automake meson orc libxml2 zlib portaudio boost volk libomp glfw fftw libxml2 portaudio jemalloc armadillo hdf5 
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
@@ -513,7 +506,9 @@ jobs:
         "build_linux_arm64",
         "build_android"]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    # Run when a build was skipped (e.g. build_android where its runner is unavailable),
+    # but not when one failed or the run was cancelled.
+    if: ${{ !cancelled() && !failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
 
     steps:
       - name: Download Artifacts
@@ -523,7 +518,7 @@ jobs:
         run: sudo apt install -y unzip
 
       - name: Copy files
-        run: mkdir satdump_out && cp SatDump-Ubuntu-22.04/satdump*.deb satdump_out/satdump_ubuntu_22.04_amd64.deb && cp SatDump-Ubuntu-24.04/satdump*.deb satdump_out/satdump_ubuntu_24.04_amd64.deb && cp SatDump-macOS-Intel/SatDump-macOS-Intel.dmg satdump_out/SatDump-macOS-Intel.dmg && cp SatDump-macOS-Silicon/SatDump-macOS-Silicon.dmg satdump_out/SatDump-macOS-Silicon.dmg && (cd SatDump-Windows_x64_Portable && zip -r ../satdump_out/SatDump-Windows_x64_Portable.zip *) && cp SatDump-Windows_x64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_x64_Installer.exe && cp SatDump-Pi64-Latest/satdump*.deb satdump_out/satdump_rpi64_latest_arm64.deb && cp SatDump-release.apk/app-release.apk satdump_out/SatDump-Android.apk && cp SatDump-AppImage/*.AppImage satdump_out/SatDump.AppImage && (cd SatDump-Windows_arm64_Portable && zip -r ../satdump_out/SatDump-Windows_arm64_Portable.zip *) && cp SatDump-Windows_arm64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_arm64_Installer.exe
+        run: mkdir satdump_out && cp SatDump-Ubuntu-22.04/satdump*.deb satdump_out/satdump_ubuntu_22.04_amd64.deb && cp SatDump-Ubuntu-24.04/satdump*.deb satdump_out/satdump_ubuntu_24.04_amd64.deb && cp SatDump-macOS-Intel/SatDump-macOS-Intel.dmg satdump_out/SatDump-macOS-Intel.dmg && cp SatDump-macOS-Silicon/SatDump-macOS-Silicon.dmg satdump_out/SatDump-macOS-Silicon.dmg && (cd SatDump-Windows_x64_Portable && zip -r ../satdump_out/SatDump-Windows_x64_Portable.zip *) && cp SatDump-Windows_x64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_x64_Installer.exe && cp SatDump-Pi64-Latest/satdump*.deb satdump_out/satdump_rpi64_latest_arm64.deb && { [ ! -f SatDump-release.apk/app-release.apk ] || cp SatDump-release.apk/app-release.apk satdump_out/SatDump-Android.apk; } &&cp SatDump-AppImage/*.AppImage satdump_out/SatDump.AppImage && (cd SatDump-Windows_arm64_Portable && zip -r ../satdump_out/SatDump-Windows_arm64_Portable.zip *) && cp SatDump-Windows_arm64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_arm64_Installer.exe
 
       - name: Update Nightly
         run: gh release upload nightly satdump_out/* -R ${{github.repository}} --clobber

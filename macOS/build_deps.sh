@@ -176,11 +176,31 @@ make install
 cd ../../..
 rm -rf uhd
 
+echo "Building NNG..."
+# Pinned to 1.x: Homebrew's nng is now 2.x, which removed the per-protocol headers
+# (nng/protocol/pubsub0/pub.h, ...) and changed the API that SatDump uses.
+git clone https://github.com/nanomsg/nng --depth 1 -b v1.12.5
+cd nng
+mkdir build && cd build
+cmake $build_args -DBUILD_SHARED_LIBS=ON -DNNG_TESTS=OFF -DNNG_TOOLS=OFF -DNNG_ENABLE_NNGCAT=OFF ..
+make -j$(sysctl -n hw.logicalcpu)
+make install
+cd ../..
+rm -rf nng
+
 echo "Adding SDRPlay Library..."
-curl -LJ --output sdrplay-macos.zip https://www.satdump.org/sdrplay-macos.zip
-unzip sdrplay-macos.zip
-cp sdrplay-macos/lib/* $output_dir/lib
-cp sdrplay-macos/include/* $output_dir/include
+# Official SDRplay API installer, linked from https://www.sdrplay.com/hardware-api/
+# (the URL redirects to SDRplay's own file host). The checksum catches SDRplay
+# replacing the file; update the version and checksum together when that happens.
+SDRPLAY_API_VERSION="3.15.1"
+SDRPLAY_API_PKG_SHA256="5d148ceda1fae775d2d2df5b3fcf46dee27b6222e2535c4c063c2f2ea2f7acc3"
+curl -fL --retry 3 --output sdrplay-macos.pkg "https://sdrplay.com/download/hardware-api-macos/?wpdmdl=1907"
+echo "$SDRPLAY_API_PKG_SHA256  sdrplay-macos.pkg" | shasum -a 256 -c -
+pkgutil --expand-full sdrplay-macos.pkg sdrplay-macos
+sdrplay_dir="sdrplay-macos/SDRplayAPI.pkg/Payload/Library/SDRplayAPI/$SDRPLAY_API_VERSION"
+# SDRplay ships the macOS library with a .so name; SatDump dlopen()s libsdrplay_api.dylib
+cp "$sdrplay_dir/lib/libsdrplay_api.so.3.15" $output_dir/lib/libsdrplay_api.3.15.dylib
+cp "$sdrplay_dir"/include/* $output_dir/include
 cd $output_dir/lib
 ln -s libsdrplay_api.3.15.dylib libsdrplay_api.dylib
 cd -
