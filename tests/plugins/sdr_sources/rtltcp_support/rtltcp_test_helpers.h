@@ -128,10 +128,15 @@ namespace rtltcp_test
                     break;
                 }
 
-                // Not ahead of the samplerate
+                // Not ahead of the samplerate: only what is due is sent, in pieces of at least
+                // 5 ms of samples rather than a few bytes at a time
                 bool may_send = !iq_done;
+                double due = 0;
                 if (may_send && bytes_per_second > 0)
-                    may_send = total < std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() * bytes_per_second;
+                {
+                    due = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count() * bytes_per_second - total;
+                    may_send = due >= std::max(1.0, bytes_per_second * 0.005);
+                }
 
                 pollfd p{fd, (short)(may_send ? POLLIN | POLLOUT : POLLIN), 0};
                 if (poll(&p, 1, may_send ? 20 : 1) <= 0)
@@ -160,6 +165,8 @@ namespace rtltcp_test
                 {
                     const uint8_t *from = pos < data.size() ? &data[pos] : &silence[silence_pos];
                     size_t len = pos < data.size() ? std::min<size_t>(data.size() - pos, 65536) : silence.size() - silence_pos;
+                    if (bytes_per_second > 0)
+                        len = std::min<size_t>(len, std::max<size_t>(1, (size_t)due));
                     ssize_t n = send(fd, from, len, MSG_DONTWAIT | MSG_NOSIGNAL);
                     if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
                         break;

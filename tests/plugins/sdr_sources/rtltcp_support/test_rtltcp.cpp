@@ -353,9 +353,10 @@ TEST_CASE("RTLTCPSource settings have defaults and are read back", "[plugins][sd
         CHECK(s["lna_agc"] == false);
         CHECK(s["tuner_agc"] == true);
 
+        source->set_settings({{"lna_agc", true}});
         source->set_settings({{"agc", false}, {"tuner_agc", true}});
         s = source->get_settings();
-        CHECK(s["lna_agc"] == false);
+        CHECK(s["lna_agc"] == false); // Set by agc
         CHECK(s["tuner_agc"] == true);
         CHECK_FALSE(s.contains("agc"));
     }
@@ -677,8 +678,8 @@ TEST_CASE("RTLTCPClient encodes the commands as rtl_tcp expects them", "[plugins
     CHECK(client.setFrequency(4294967295.0)); // The largest one
     CHECK(client.setSampleRate(2400000));
     CHECK(client.setGainMode(1));
-    CHECK(client.setGain(49.6 * 10)); // Truncated
-    CHECK(client.setPPM(-3));         // Two's complement
+    CHECK(client.setGain(496.7)); // Truncated
+    CHECK(client.setPPM(-3));     // Two's complement
     CHECK(client.setAGCMode(1));
     CHECK(client.setDirectSampling(2)); // Q branch
     CHECK(client.setOffsetTuning(true));
@@ -710,11 +711,13 @@ TEST_CASE("RTLTCPClient receiveData fills the whole buffer", "[plugins][sdr_sour
     std::vector<uint8_t> iq(20000);
     for (size_t i = 0; i < iq.size(); i++)
         iq[i] = (i * 7) & 0xFF;
-    // Paced, so that the data comes in many pieces (about 100 ms in all)
+    // Paced, so that the data comes in many pieces over about 100 ms
     FakeRtlTcp server(iq, true, 100000, AfterIQ::Close);
     RTLTCPClient client;
     REQUIRE(client.connectToRTL((char *)"127.0.0.1", server.port()));
 
+    // Without keep_going, the reads are only bounded by the server, which closes the
+    // connection once it sent everything
     auto receive = [&](uint8_t *buf, size_t count)
     {
         if (with_keep_going)
@@ -725,7 +728,11 @@ TEST_CASE("RTLTCPClient receiveData fills the whole buffer", "[plugins][sdr_sour
     std::vector<uint8_t> expected = dongleInfo();
     expected.insert(expected.end(), iq.begin(), iq.end());
     std::vector<uint8_t> got(expected.size());
+    auto t = std::chrono::steady_clock::now();
     REQUIRE(receive(got.data(), got.size()));
+    // The first piece is there at once, so taking this long means the buffer was filled by
+    // several reads
+    CHECK(secondsSince(t) > 0.05);
     CHECK(test_helpers::bytesDiff(got, expected) == "");
 
     // Then the server leaves
@@ -746,7 +753,7 @@ TEST_CASE("RTLTCPClient receiveData reads nothing once cancelled", "[plugins][sd
     CHECK_FALSE(client.receiveData(buf, sizeof(buf), []() { return false; }));
     CHECK(client.receiveError() == "cancelled");
 
-    // What the server sent is still there
+    // What the server sent is still there (it never stops sending, so this does not block)
     REQUIRE(client.receiveData(buf, sizeof(buf)));
     CHECK(std::vector<uint8_t>(buf, buf + sizeof(buf)) == dongleInfo());
     client.disconnect();
