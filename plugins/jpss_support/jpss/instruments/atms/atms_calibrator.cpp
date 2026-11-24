@@ -15,6 +15,10 @@ namespace jpss
     {
         const double BEAM_COUNTS2DEG = 360.0 / (2 << 15);
 
+        // The nonlinearity coefficients are fitted to radiances in W m-2 sr-1 Hz-1 (ATMS SDR
+        // ATBD, eq. 16). Ours are in mW m-2 sr-1 (cm-1)-1, which is c (cm/s) * 1e3 times more.
+        const double RADIANCE_HZ_TO_CM = 299792458.0 * 100 * 1e3;
+
         double JpssATMSCalibrator::compute(int channel, int pos_x, int pos_y, uint32_t px_val)
         {
             int scnt = px_val;                                             // Scene counts
@@ -145,9 +149,11 @@ namespace jpss
             if (angle_sc < -180.0 || angle_sc > 180.0)
                 logger->trace("ATMS Calibratior : Invalid Earth beam angle %f", angle_sc);
             else
-                angle_sc += angle_sc * DEG_TO_RAD;
+                angle_sc *= DEG_TO_RAD;
 
-            double degc = base_plate_temp;
+            // The nonlinearity coefficients are a function of the receiver temperature in C
+            // (ATBD eq. 48 and 103). base_plate_temp is in K, or -1 if no shelf PRT was usable.
+            double degc = base_plate_temp == -1 ? -999.9 : base_plate_temp - 273.15;
 
             // Use of the quadratic term can be enabled or disabled in the
             // ancillary data file.
@@ -155,13 +161,13 @@ namespace jpss
             if (atmsSdrCoeffsPtr.useQuadraticTerm != 0)
             {
                 int rc_num = engData.data[72] & 0b111;
-                int mapped_rc = atmsSdrCoeffsPtr.mapRc[rc_num];
+                int mapped_rc = atmsSdrCoeffsPtr.mapRc[rc_num] - 1; // mapRc is 1-based
 
                 double quadratic_factor = 0;
 
                 // normalize scene counts to 0~1
                 double cnorm = (scnt - cc) / (cw - cc);
-                if (degc <= -999.9 + 0.001)
+                if (degc <= -999.9 + 0.001 || mapped_rc < 0 || mapped_rc >= NUM_REDUNDANCY_CONFIGS)
                 {
                     quadratic_factor = 0;
                 }
@@ -171,16 +177,18 @@ namespace jpss
                     double mupar = atmsSdrCoeffsPtr.quadraticRc[0][mapped_rc][ich] * pow(degc, 2) +
                                    atmsSdrCoeffsPtr.quadraticRc[1][mapped_rc][ich] * degc +
                                    atmsSdrCoeffsPtr.quadraticRc[2][mapped_rc][ich];
+                    mupar /= RADIANCE_HZ_TO_CM;
                     // calculate Tnlmax from mu
                     quadratic_factor = 0.25 * mupar * pow((tw_rad - tc_rad), 2);
                 }
 
                 // get nonlinearity in Tb
                 double qterm = quadratic_factor * (4 * pow((cnorm - 0.5), 2) - 1);
-                double tk_rad = tk_rad + qterm;
+                tk_rad = tk_rad + qterm;
 
-                // Antenna reflector emission correction for scene
-                tk_rad = Calculate_Sa_scene(ich, angle_sc, tk_rad, prt_vshelf_rad);
+                // Antenna reflector emission correction for scene, which needs the shelf temperature
+                if (base_plate_temp != -1)
+                    tk_rad = Calculate_Sa_scene(ich, angle_sc, tk_rad, prt_vshelf_rad);
             }
 
             // Earth scene antenna pattern correction in radiance
@@ -196,7 +204,7 @@ namespace jpss
             double eps = atmsSdrCoeffsPtr.reflectorEmissivity[ich]; // emissivity
             double TwistAngle = 0.0;                                // twistangle
 
-            if (ich == 1 || ich == 2 || ich == 16)
+            if (ich == 0 || ich == 1 || ich == 15) // QV channels 1, 2 and 16 (ich is 0-based)
             {
                 double sin2theta = pow((sin(ang_rad + TwistAngle)), 2);
                 return eps * (reflectorRadiance - PRTtargetRadiance) + (1 - eps) * eps * (reflectorRadiance - PRTtargetRadiance) * sin2theta;
@@ -219,7 +227,7 @@ namespace jpss
             double eh = eps;
             double sin2theta = pow((sin(ang_rad + TwistAngle)), 2);
             double cos2theta = pow((cos(ang_rad + TwistAngle)), 2);
-            if (ich == 1 || ich == 2 || ich == 16)
+            if (ich == 0 || ich == 1 || ich == 15) // QV channels 1, 2 and 16 (ich is 0-based)
             {
                 var1 = (1 - eh) * (1 - eh * sin2theta);
                 var2 = eh * (1 + (1 - eh) * sin2theta);
