@@ -22,8 +22,15 @@ namespace satdump
         template <typename T>
         void RationalResamplerBlock<T>::init()
         {
-            d_interpolation = p_interpolation;
-            d_decimation = p_decimation;
+            std::vector<float> taps;
+            {
+                std::lock_guard<std::mutex> lock(cfg_mtx);
+                d_interpolation = p_interpolation;
+                d_decimation = p_decimation;
+                taps = p_taps;
+                // Cleared with the parameters copied : a change made after this is applied by the next process()
+                needs_reinit = false;
+            }
 
             // Start by reducing the interp and decim by their GCD
             int gcd = std::gcd(d_interpolation, d_decimation);
@@ -31,7 +38,7 @@ namespace satdump
             d_decimation /= gcd;
 
             // Generate taps
-            std::vector<float> rtaps = p_taps.size() > 0 ? p_taps : dsp::firdes::design_resampler_filter_float(d_interpolation, d_decimation, 0.4); // 0.4 = Fractional BW
+            std::vector<float> rtaps = taps.size() > 0 ? taps : dsp::firdes::design_resampler_filter_float(d_interpolation, d_decimation, 0.4); // 0.4 = Fractional BW
             pfb.init(rtaps, d_interpolation);
 
             // Reset stuff
@@ -54,7 +61,6 @@ namespace satdump
         {
             if (needs_reinit)
             {
-                needs_reinit = false;
                 float alloc_ratio = BlockSimple<T, T>::output_buffer_size_ratio;
                 init();
 

@@ -4,6 +4,9 @@
 #include "common/dsp/resamp/polyphase_bank.h"
 #include "dsp/block.h"
 #include "dsp/block_simple.h"
+#include <atomic>
+#include <mutex>
+#include <optional>
 #include <volk/volk_alloc.hh>
 
 namespace satdump
@@ -13,12 +16,16 @@ namespace satdump
         template <typename T>
         class RationalResamplerBlock : public BlockSimple<T, T>
         {
-        public:
+        private:
+            // Parameters, set from other threads (eg, the UI) while the block runs : always
+            // access them with cfg_mtx held. init() applies them all together
+            std::mutex cfg_mtx;
             float p_interpolation = 1;
             float p_decimation = 2;
             std::vector<float> p_taps = {};
 
-            bool needs_reinit = false;
+        public:
+            std::atomic<bool> needs_reinit = false;
 
         private:
             // Buffer
@@ -55,6 +62,7 @@ namespace satdump
 
             nlohmann::json get_cfg(std::string key)
             {
+                std::lock_guard<std::mutex> lock(cfg_mtx);
                 if (key == "interpolation")
                     return p_interpolation;
                 else if (key == "decimation")
@@ -68,22 +76,39 @@ namespace satdump
             Block::cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "interpolation")
-                {
-                    p_interpolation = v;
-                    needs_reinit = true;
-                }
+                    return set_params(v.get<float>(), std::nullopt, std::nullopt);
                 else if (key == "decimation")
-                {
-                    p_decimation = v;
-                    needs_reinit = true;
-                }
+                    return set_params(std::nullopt, v.get<float>(), std::nullopt);
                 else if (key == "taps")
-                {
-                    p_taps = v.get<std::vector<float>>();
-                    needs_reinit = true;
-                }
+                    return set_params(std::nullopt, std::nullopt, v.get<std::vector<float>>());
                 else
                     throw satdump_exception(key);
+            }
+
+            /**
+             * @brief Sets the interpolation and decimation (and the taps) at once, so a running
+             * block never applies a ratio made of an old and a new value
+             */
+            Block::cfg_res_t set_ratio(float interpolation, float decimation) { return set_params(interpolation, decimation, std::nullopt); }
+            Block::cfg_res_t set_ratio(float interpolation, float decimation, std::vector<float> taps) { return set_params(interpolation, decimation, std::move(taps)); }
+
+        private:
+            // Interpolation and decimation must be integers of at least 1 (they are truncated)
+            static bool valid_rate(float v) { return v >= 1 && v < 2147483648.0f; }
+
+            Block::cfg_res_t set_params(std::optional<float> interpolation, std::optional<float> decimation, std::optional<std::vector<float>> taps)
+            {
+                if ((interpolation && !valid_rate(*interpolation)) || (decimation && !valid_rate(*decimation)))
+                    return Block::RES_ERR;
+
+                std::lock_guard<std::mutex> lock(cfg_mtx);
+                if (interpolation)
+                    p_interpolation = *interpolation;
+                if (decimation)
+                    p_decimation = *decimation;
+                if (taps)
+                    p_taps = std::move(*taps);
+                needs_reinit = true;
                 return Block::RES_OK;
             }
         };

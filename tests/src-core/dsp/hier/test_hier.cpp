@@ -225,6 +225,9 @@ TEST_CASE("ndsp GFSKModHierBlock configuration", "[dsp][hier]")
     CHECK(got["alpha"].get<float>() == Approx(0.5));
     CHECK(got["ntaps"] == 21);
     CHECK(got["interpolation"] == 4);
+    CHECK(mod.set_cfg("interpolation", 0) == Block::RES_ERR);
+    CHECK(mod.set_cfg("interpolation", -2) == Block::RES_ERR);
+    CHECK(mod.get_cfg("interpolation") == 4);
     CHECK(mod.set_cfg("nope", 1) == Block::RES_ERR);
     CHECK(mod.get_cfg("nope").is_null());
     CHECK(mod.get_inputs()[0].type == DSP_SAMPLE_TYPE_F32);
@@ -362,6 +365,11 @@ TEST_CASE("ndsp AudioDemodHierBlock configuration", "[dsp][hier]")
     CHECK(d.get_cfg("mode") == "nfm");
     CHECK(d.set_cfg("samplerate", 96000) == Block::RES_OK);
     CHECK(d.set_cfg("audio_samplerate", 8000) == Block::RES_OK);
+    CHECK(d.get_cfg("samplerate") == 96000);
+    CHECK(d.get_cfg("audio_samplerate") == 8000);
+    // Rates the resamplers reject are not kept
+    CHECK(d.set_cfg("samplerate", 0) == Block::RES_ERR);
+    CHECK(d.set_cfg("audio_samplerate", 0.5) == Block::RES_ERR);
     CHECK(d.get_cfg("samplerate") == 96000);
     CHECK(d.get_cfg("audio_samplerate") == 8000);
     CHECK(d.set_cfg("other", 1) == Block::RES_ERR);
