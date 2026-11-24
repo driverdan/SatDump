@@ -169,3 +169,26 @@ TEST_CASE("HDLCDeframer outputs nothing for flags only or an unterminated frame"
     CHECK(def.work(bits.data(), bits.size()).empty());
     CHECK(def.work(bits.data(), 0).empty());
 }
+
+TEST_CASE("HDLCDeframer with a minimum length below the FCS size ignores flags closing 0 or 1 byte", "[common][codings][deframing][hdlc]")
+{
+    // Back to back flags close 0 bytes, and a lone byte between flags closes 1:
+    // neither holds a FCS, which used to be read from before the buffer (#130)
+    std::vector<uint8_t> data = randomBytes(10, 14);
+    std::vector<uint8_t> bits;
+    appendFlag(bits);
+    appendFlag(bits);
+    for (int i = 0; i < 8; i++)
+        bits.push_back((0x55 >> i) & 1);
+    appendFlag(bits);
+    appendFrame(bits, data);
+    appendFlag(bits);
+
+    for (int len_min : {0, 1})
+    {
+        ax25::HDLCDeframer def(len_min, 100);
+        auto frames = def.work(bits.data(), bits.size());
+        REQUIRE(frames.size() == 1);
+        CHECK(frames[0] == data);
+    }
+}

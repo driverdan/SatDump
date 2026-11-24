@@ -42,7 +42,8 @@ namespace ax25
             {
                 if (bit)
                 {
-                    if (pos_in_pkt >= (int)d_len_min)
+                    // At least the 2 FCS bytes are needed, whatever the minimum length
+                    if (pos_in_pkt >= 2 && pos_in_pkt >= (int)d_len_min)
                     {
                         // CRC Check
                         uint16_t crc = wip_pkt[pos_in_pkt - 1] << 8 | wip_pkt[pos_in_pkt - 2];
