@@ -48,6 +48,7 @@ namespace webhook_app
          * @return true if the server accepted it
          */
         static bool send_webhook(const std::string &url, const std::string &payload_key, const std::string &message);
+
         static void test(const WebhookConfig &config);
     };
 }

@@ -67,14 +67,12 @@ namespace webhook_app
         std::string json = payload.dump();
         logger->debug("Sending webhook: \"%s\"", json.c_str());
 
-        // The URL is not logged, as it holds the webhook's token
+        // Neither the URL nor the response is logged: the URL holds the webhook's token, and
+        // servers may echo it back. perform_http_request_post() already logged the status.
         std::string response;
         if (satdump::perform_http_request_post(url, response, json, "Content-Type: application/json") != 0)
         {
-            if (response.empty())
-                logger->error("Failed to send webhook");
-            else
-                logger->error("Failed to send webhook: %s", response.substr(0, 512).c_str());
+            logger->error("Failed to send webhook");
             return false;
         }
 
