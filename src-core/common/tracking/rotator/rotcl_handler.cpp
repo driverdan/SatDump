@@ -2,6 +2,8 @@
 #include "imgui/imgui.h"
 #include "core/style.h"
 #include "logger.h"
+#include <algorithm>
+#include <cstring>
 
 namespace rotator
 {
@@ -73,7 +75,10 @@ namespace rotator
     void RotctlHandler::set_settings(nlohmann::json settings)
     {
         std::string vaddress = getValueOrDefault(settings["address"], std::string(input_address));
-        memcpy(input_address, vaddress.data(), vaddress.size());
+        // Truncate to fit, and always terminate so a shorter address doesn't keep the old tail
+        size_t len = std::min(vaddress.size(), sizeof(input_address) - 1);
+        memcpy(input_address, vaddress.data(), len);
+        input_address[len] = '\0';
         input_port = getValueOrDefault(settings["port"], input_port);
     }
 
@@ -148,7 +153,7 @@ namespace rotator
     {
         if (client != nullptr)
             style::beginDisabled();
-        ImGui::InputText("Address##rotctladdress", input_address, 100);
+        ImGui::InputText("Address##rotctladdress", input_address, sizeof(input_address));
         ImGui::InputInt("Port##rotctlport", &input_port);
         if (client != nullptr)
             style::endDisabled();
