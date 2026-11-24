@@ -142,12 +142,19 @@ TEST_CASE("ndsp ChannelModelSimpleBlock configuration getters", "[dsp][channel_m
     CHECK_THROWS(blk.set_cfg("x", 1));
 }
 
-// Bug: channel_model_simple.h:43 declares the parameter as "d_alpha" in get_cfg_list(),
-// while get_cfg() / set_cfg() only know "alpha", so getting all the parameters throws.
-TEST_CASE("ndsp ChannelModelSimpleBlock get_cfg returns every listed parameter", "[dsp][channel_model][!shouldfail]")
+// Regression (#244): get_cfg_list() named alpha "d_alpha", while get_cfg() / set_cfg() only know "alpha"
+TEST_CASE("ndsp ChannelModelSimpleBlock get_cfg returns every listed parameter", "[dsp][channel_model]")
 {
     ChannelModelSimpleBlock blk;
     nlohmann::json all;
     REQUIRE_NOTHROW(all = ndsp_sig_test::getAll(blk));
     CHECK(all.size() == blk.get_cfg_list().size());
+    CHECK(all["alpha"].get<float>() == Approx(0.1));
+
+    // Every listed parameter can also be set back
+    for (auto &[key, val] : blk.get_cfg_list().items())
+    {
+        INFO("key " << key);
+        CHECK(blk.set_cfg(key, all[key]) == Block::RES_OK);
+    }
 }
