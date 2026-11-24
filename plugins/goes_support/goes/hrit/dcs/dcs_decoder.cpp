@@ -557,6 +557,7 @@ namespace goes
                     dcp_mtx.unlock();
 
                     dcs_message->header.corrected_address = hex_stream.str();
+                    hex_stream.str(""); // clear() alone only resets the error flags
                     hex_stream.clear();
 
                     //Start time, end time, and signal strength
@@ -652,6 +653,7 @@ namespace goes
                     }
 
                     dcs_message->data_raw = hex_stream.str();
+                    hex_stream.str("");
                     hex_stream.clear();
 
                     // Parse known message types
@@ -1117,6 +1119,7 @@ namespace goes
                     dcp_mtx.unlock();
 
                     missed_message->header.platform_address = hex_stream.str();
+                    hex_stream.str("");
                     hex_stream.clear();
 
                     // Window start and end
