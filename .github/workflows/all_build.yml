@@ -175,6 +175,10 @@ jobs:
           path: ${{runner.workspace}}/build/portable/*
 
   build_android:
+    # android-release is a self-hosted runner that only upstream has; elsewhere the job would
+    # queue until GitHub drops it. Repos with such a runner can opt in with the repository
+    # variable ANDROID_SELF_HOSTED=true. Skipping it does not block update_nightly_release.
+    if: ${{ github.repository == 'SatDump/SatDump' || vars.ANDROID_SELF_HOSTED == 'true' }}
     runs-on: android-release
 
     steps:
