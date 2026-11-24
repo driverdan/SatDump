@@ -327,7 +327,9 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ARM64
+    # GitHub-hosted ARM64 runner (free for public repos). 22.04 rather than 24.04 keeps
+    # glibc (2.35) old enough for the .deb to install on Raspberry Pi OS (Debian 12).
+    runs-on: ubuntu-22.04-arm
 
     steps:
       - uses: actions/checkout@v4
@@ -387,7 +389,7 @@ jobs:
         # These are preinstalled in the GitHub runners, cause needless warnings to appear
         # Add these back if these ever become missing for some reason
         # sqlite3 libtool autoconf libjpeg-turbo libtiff libusb libpng zstd
-        run: brew install cpptrace gettext dylibbundler automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw3 fftw libxml2 portaudio jemalloc nng armadillo hdf5 
+        run: brew install cpptrace gettext dylibbundler automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw fftw libxml2 portaudio jemalloc nng armadillo hdf5 
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
@@ -450,7 +452,7 @@ jobs:
         # These are preinstalled in the GitHub runners, cause needless warnings to appear
         # Add these back if these ever become missing for some reason
         # sqlite3 zstd libpng libtiff libjpeg-turbo libusb
-        run: brew install cpptrace gettext dylibbundler libtool autoconf automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw3 fftw libxml2 portaudio jemalloc nng armadillo hdf5 
+        run: brew install cpptrace gettext dylibbundler libtool autoconf automake meson orc libxml2 zlib portaudio boost nng volk libomp glfw fftw libxml2 portaudio jemalloc nng armadillo hdf5 
 
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
@@ -513,7 +515,9 @@ jobs:
         "build_linux_arm64",
         "build_android"]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    # Run when a build was skipped (e.g. build_android where its runner is unavailable),
+    # but not when one failed or the run was cancelled.
+    if: ${{ !cancelled() && !failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
 
     steps:
       - name: Download Artifacts
@@ -523,7 +527,7 @@ jobs:
         run: sudo apt install -y unzip
 
       - name: Copy files
-        run: mkdir satdump_out && cp SatDump-Ubuntu-22.04/satdump*.deb satdump_out/satdump_ubuntu_22.04_amd64.deb && cp SatDump-Ubuntu-24.04/satdump*.deb satdump_out/satdump_ubuntu_24.04_amd64.deb && cp SatDump-macOS-Intel/SatDump-macOS-Intel.dmg satdump_out/SatDump-macOS-Intel.dmg && cp SatDump-macOS-Silicon/SatDump-macOS-Silicon.dmg satdump_out/SatDump-macOS-Silicon.dmg && (cd SatDump-Windows_x64_Portable && zip -r ../satdump_out/SatDump-Windows_x64_Portable.zip *) && cp SatDump-Windows_x64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_x64_Installer.exe && cp SatDump-Pi64-Latest/satdump*.deb satdump_out/satdump_rpi64_latest_arm64.deb && cp SatDump-release.apk/app-release.apk satdump_out/SatDump-Android.apk && cp SatDump-AppImage/*.AppImage satdump_out/SatDump.AppImage && (cd SatDump-Windows_arm64_Portable && zip -r ../satdump_out/SatDump-Windows_arm64_Portable.zip *) && cp SatDump-Windows_arm64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_arm64_Installer.exe
+        run: mkdir satdump_out && cp SatDump-Ubuntu-22.04/satdump*.deb satdump_out/satdump_ubuntu_22.04_amd64.deb && cp SatDump-Ubuntu-24.04/satdump*.deb satdump_out/satdump_ubuntu_24.04_amd64.deb && cp SatDump-macOS-Intel/SatDump-macOS-Intel.dmg satdump_out/SatDump-macOS-Intel.dmg && cp SatDump-macOS-Silicon/SatDump-macOS-Silicon.dmg satdump_out/SatDump-macOS-Silicon.dmg && (cd SatDump-Windows_x64_Portable && zip -r ../satdump_out/SatDump-Windows_x64_Portable.zip *) && cp SatDump-Windows_x64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_x64_Installer.exe && cp SatDump-Pi64-Latest/satdump*.deb satdump_out/satdump_rpi64_latest_arm64.deb && { [ ! -f SatDump-release.apk/app-release.apk ] || cp SatDump-release.apk/app-release.apk satdump_out/SatDump-Android.apk; } &&cp SatDump-AppImage/*.AppImage satdump_out/SatDump.AppImage && (cd SatDump-Windows_arm64_Portable && zip -r ../satdump_out/SatDump-Windows_arm64_Portable.zip *) && cp SatDump-Windows_arm64_Installer/SatDump-*.exe satdump_out/SatDump-Windows_arm64_Installer.exe
 
       - name: Update Nightly
         run: gh release upload nightly satdump_out/* -R ${{github.repository}} --clobber
