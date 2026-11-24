@@ -75,8 +75,7 @@ namespace satdump
                 nfm_res.link(&nfm_qua, 0, 0, 4);
 
                 nfm_qua.set_cfg("gain", 20);
-                nfm_res.set_cfg("decimation", samplerate);
-                nfm_res.set_cfg("interpolation", audio_samplerate);
+                nfm_res.set_ratio(audio_samplerate, samplerate);
 
                 am_agc.set_input(main_switch.get_output(1, 4), 0);
                 am_mag.link(&am_agc, 0, 0, 4);
@@ -84,8 +83,7 @@ namespace satdump
 
                 am_agc.set_cfg("reference", 0.1);
                 am_agc.set_cfg("rate", 0.05);
-                am_res.set_cfg("decimation", samplerate);
-                am_res.set_cfg("interpolation", audio_samplerate);
+                am_res.set_ratio(audio_samplerate, samplerate);
 
                 usb_flt.set_input(main_switch.get_output(2, 4), 0);
                 usb_agc.link(&usb_flt, 0, 0, 4);
@@ -95,8 +93,7 @@ namespace satdump
                 usb_flt.set_cfg("taps", dsp::firdes::complex_band_pass(1, samplerate, 0, samplerate / 2., 100));
                 usb_agc.set_cfg("reference", 0.2);
                 usb_agc.set_cfg("rate", 0.1);
-                usb_res.set_cfg("decimation", samplerate);
-                usb_res.set_cfg("interpolation", audio_samplerate);
+                usb_res.set_ratio(audio_samplerate, samplerate);
 
                 lsb_flt.set_input(main_switch.get_output(3, 4), 0);
                 lsb_agc.link(&lsb_flt, 0, 0, 4);
@@ -106,8 +103,7 @@ namespace satdump
                 lsb_flt.set_cfg("taps", dsp::firdes::complex_band_pass(1, samplerate, -samplerate / 2., 0, 100));
                 lsb_agc.set_cfg("reference", 0.2);
                 lsb_agc.set_cfg("rate", 0.1);
-                lsb_res.set_cfg("decimation", samplerate);
-                lsb_res.set_cfg("interpolation", audio_samplerate);
+                lsb_res.set_ratio(audio_samplerate, samplerate);
 
                 main_selector.link(&nfm_res, 0, 0, 4);
                 main_selector.link(&am_res, 0, 1, 4);
@@ -199,24 +195,22 @@ namespace satdump
             {
                 if (key == "samplerate" || key == "audio_samplerate")
                 {
-                    if (key == "samplerate")
-                        samplerate = v;
-                    if (key == "audio_samplerate")
-                        audio_samplerate = v;
+                    double new_samplerate = key == "samplerate" ? v.get<double>() : samplerate;
+                    double new_audio_samplerate = key == "audio_samplerate" ? v.get<double>() : audio_samplerate;
 
+                    // Both rates at once, so a running resampler never applies a mix of old and new.
+                    // All resamplers check the rates the same way, so they all apply them or none does
                     cfg_res_t res = RES_OK;
+                    res = std::max(nfm_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = std::max(am_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = std::max(usb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = std::max(lsb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
 
-                    res = std::max(nfm_res.set_cfg("decimation", samplerate), res);
-                    res = std::max(nfm_res.set_cfg("interpolation", audio_samplerate), res);
-
-                    res = std::max(am_res.set_cfg("decimation", samplerate), res);
-                    res = std::max(am_res.set_cfg("interpolation", audio_samplerate), res);
-
-                    res = std::max(usb_res.set_cfg("decimation", samplerate), res);
-                    res = std::max(usb_res.set_cfg("interpolation", audio_samplerate), res);
-
-                    res = std::max(lsb_res.set_cfg("decimation", samplerate), res);
-                    res = std::max(lsb_res.set_cfg("interpolation", audio_samplerate), res);
+                    if (res != RES_ERR)
+                    {
+                        samplerate = new_samplerate;
+                        audio_samplerate = new_audio_samplerate;
+                    }
 
                     return res;
                 }

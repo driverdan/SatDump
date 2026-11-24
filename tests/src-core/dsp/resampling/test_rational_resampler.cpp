@@ -1,9 +1,11 @@
 #include "dsp/ndsp_sig_test_helpers.h"
 #include "dsp/ndsp_test_helpers.h"
 #include "dsp/resampling/rational_resampler.h"
+#include <atomic>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <thread>
 
 using Catch::Approx;
 using namespace satdump::ndsp;
@@ -280,4 +282,96 @@ TEST_CASE("ndsp RationalResamplerBlock configuration round-trip", "[dsp][resampl
     CHECK(r.get_cfg("taps").get<std::vector<float>>() == t);
     CHECK_THROWS(r.set_cfg("x", 1));
     CHECK_THROWS(r.get_cfg("x"));
+}
+
+TEST_CASE("ndsp RationalResamplerBlock rejects an interpolation or decimation below 1", "[dsp][resampling]")
+{
+    RationalResamplerBlock<float> r;
+    REQUIRE(ndsp_sig_test::setAll(r, {{"interpolation", 3}, {"decimation", 7}}) == Block::RES_OK);
+    // Values init() would truncate to 0 (a division by zero), or that do not fit an int
+    for (double bad : {0.0, 0.5, 0.999, -1.0, -48000.0, 3e9, (double)NAN, (double)INFINITY})
+    {
+        INFO("value " << bad);
+        CHECK(r.set_cfg("interpolation", bad) == Block::RES_ERR);
+        CHECK(r.set_cfg("decimation", bad) == Block::RES_ERR);
+        CHECK(r.set_ratio(bad, 2) == Block::RES_ERR);
+        CHECK(r.set_ratio(2, bad, {1.0f}) == Block::RES_ERR);
+    }
+    // Nothing was applied, not even the valid parts of a rejected set_ratio
+    CHECK(ndsp_sig_test::getAll(r) == nlohmann::json({{"interpolation", 3.0}, {"decimation", 7.0}}));
+    CHECK(r.get_cfg("taps").get<std::vector<float>>().empty());
+
+    CHECK(r.set_cfg("interpolation", 1) == Block::RES_OK);
+    CHECK(r.set_cfg("decimation", 1.5) == Block::RES_OK);
+    CHECK(r.set_ratio(5, 2, {0.5f}) == Block::RES_OK);
+    CHECK(ndsp_sig_test::getAll(r) == nlohmann::json({{"interpolation", 5.0}, {"decimation", 2.0}}));
+    CHECK(r.get_cfg("taps").get<std::vector<float>>() == std::vector<float>{0.5f});
+    CHECK(r.set_ratio(4, 3) == Block::RES_OK); // Keeps the taps
+    CHECK(ndsp_sig_test::getAll(r) == nlohmann::json({{"interpolation", 4.0}, {"decimation", 3.0}}));
+    CHECK(r.get_cfg("taps").get<std::vector<float>>() == std::vector<float>{0.5f});
+}
+
+TEST_CASE("ndsp RationalResamplerBlock keeps running at its rate after a rejected change", "[dsp][resampling]")
+{
+    LiveResampler r(2, taps2);
+    r.push(ramp(0, 100));
+    r.waitFor(198);
+
+    // These used to make init() divide by zero
+    CHECK(r.blk->set_cfg("interpolation", 0) == Block::RES_ERR);
+    CHECK(r.blk->set_cfg("decimation", 0.5) == Block::RES_ERR);
+    r.push(ramp(100, 100));
+    r.waitFor(198 + 200);
+
+    r.finish(rampHeld(0, 199));
+}
+
+TEST_CASE("ndsp RationalResamplerBlock applies set_ratio while running", "[dsp][resampling]")
+{
+    LiveResampler r(1, taps1);
+    r.push(ramp(0, 100));
+    r.waitFor(99);
+
+    CHECK(r.blk->set_ratio(2, 1, taps2) == Block::RES_OK);
+    r.push(ramp(100, 100)); // Dropped
+    r.push(ramp(200, 100));
+    r.waitFor(99 + 198);
+
+    auto expected = ramp(0, 99);
+    append(expected, rampHeld(200, 99));
+    r.finish(expected);
+}
+
+TEST_CASE("ndsp RationalResamplerBlock survives rate changes from another thread while running", "[dsp][resampling]")
+{
+    LiveResampler r(1, taps1);
+    std::atomic<bool> done = false;
+    std::atomic<int> bad_results = 0;
+    // Catch2 assertions are not thread safe : the other thread only counts
+    std::thread changer(
+        [&]()
+        {
+            for (int i = 0; !done; i++)
+            {
+                if (r.blk->set_ratio(1 + i % 3, 1 + i % 2, i % 2 ? taps2 : taps1) != Block::RES_OK)
+                    bad_results++;
+                if (r.blk->set_cfg("interpolation", 0) != Block::RES_ERR)
+                    bad_results++;
+                std::this_thread::yield();
+            }
+        });
+    for (int i = 0; i < 2000; i++)
+        r.push(ramp(0, 1 + i % 50));
+    ndsp_test::pushTerminator(*r.in);
+    CHECK(ndsp_test::stopBlock(r.blk));
+    done = true;
+    changer.join();
+    r.col->finish();
+    CHECK(bad_results == 0);
+
+    // The output depends on the timing, but no output buffer may have been overrun
+    auto sizes = r.col->sizes();
+    auto max_sizes = r.col->maxSizes();
+    for (size_t i = 0; i < sizes.size(); i++)
+        CHECK(sizes[i] <= max_sizes[i]);
 }

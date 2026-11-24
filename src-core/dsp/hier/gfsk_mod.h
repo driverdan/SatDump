@@ -35,9 +35,7 @@ namespace satdump
             void init()
             {
                 auto taps = dsp::firdes::convolve(dsp::firdes::gaussian(1, interpolation, alpha, ntaps), {1, 1});
-                fir_blk.set_cfg("taps", taps);
-                fir_blk.set_cfg("interpolation", interpolation);
-                fir_blk.set_cfg("decimation", 1);
+                fir_blk.set_ratio(interpolation, 1, taps);
 
                 vco_blk.set_cfg("k", sensitivity);
                 vco_blk.set_cfg("amp", 1.0);
@@ -100,7 +98,11 @@ namespace satdump
                     if (key == "ntaps")
                         ntaps = v;
                     if (key == "interpolation")
+                    {
+                        if (v.get<int>() < 1)
+                            return RES_ERR;
                         interpolation = v;
+                    }
                     init();
                     return RES_OK;
                 }
