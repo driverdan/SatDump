@@ -8,10 +8,12 @@
 #include "init.h"
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cstdio>
 #include <filesystem>
 #include <future>
+#include <optional>
 #include <thread>
 
 // processDCS() is given a DCS file holding one DCP message, and writes what it decoded of it
@@ -99,8 +101,8 @@ namespace
         return file;
     }
 
-    // The message the decoder wrote for this body, from a DCP with these physical elements
-    nlohmann::json decode(const std::vector<std::string> &physical_elements, const std::string &body)
+    // The first block the decoder wrote for this file, from a DCP with these physical elements
+    nlohmann::json decodeFile(const std::vector<std::string> &physical_elements, const std::vector<uint8_t> &file)
     {
         cli_test::LogCapture log;
         TempDir tmp("goes_dcs");
@@ -108,13 +110,16 @@ namespace
 
         auto decoder = std::make_shared<DCSDecoder>(tmp.str());
         decoder->addDCP(physical_elements);
-        bool parsed = DCSDecoder::processBounded(decoder, dcsFile(body));
+        bool parsed = DCSDecoder::processBounded(decoder, file);
         REQUIRE(parsed);
 
         nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
         REQUIRE(out["blocks"].size() == 1);
         return out["blocks"][0];
     }
+
+    // The message the decoder wrote for this body, from a DCP with these physical elements
+    nlohmann::json decode(const std::vector<std::string> &physical_elements, const std::string &body) { return decodeFile(physical_elements, dcsFile(body)); }
 } // namespace
 
 // loadDCPs() reads the PDT list (PDTS_COMPRESSED.txt, fixed width lines) and the HADS list
@@ -628,5 +633,102 @@ TEST_CASE("DCS Pseudobinary C messages are decoded by sensor", "[plugins][goes_s
         CHECK(msg["data_type"] == "Pseudobinary C");
         REQUIRE(msg["data_values"].size() == 1);
         CHECK(msg["data_values"][0]["name"] == "Sensor 1");
+    }
+}
+
+namespace
+{
+    // A DCS time: 7 BCD bytes of the year of the century, day of the year, hour, minute, second
+    // and millisecond, the last digit first
+    std::vector<uint8_t> bcdTime(int year, int day, int hour, int minute, int second, int ms)
+    {
+        char digits[15];
+        snprintf(digits, sizeof(digits), "%02d%03d%02d%02d%02d%03d", year, day, hour, minute, second, ms);
+        std::vector<uint8_t> bytes(7);
+        for (int i = 0; i < 7; i++)
+            bytes[6 - i] = (digits[2 * i] - '0') << 4 | (digits[2 * i + 1] - '0');
+        return bytes;
+    }
+
+    // Puts this time in the block that starts at offset of this file
+    void setTime(std::vector<uint8_t> &file, size_t offset, const std::vector<uint8_t> &time) { std::copy(time.begin(), time.end(), file.begin() + offset); }
+
+    // Sets the time zone of the process, restoring the previous one afterwards
+    struct TimeZoneGuard
+    {
+        std::optional<std::string> old;
+        TimeZoneGuard(const char *tz)
+        {
+            const char *o = getenv("TZ");
+            if (o)
+                old = o;
+            set(tz);
+        }
+        ~TimeZoneGuard() { set(old ? old->c_str() : nullptr); }
+        static void set(const char *tz)
+        {
+#ifdef _WIN32
+            _putenv_s("TZ", tz ? tz : "");
+            _tzset();
+#else
+            if (tz)
+                setenv("TZ", tz, 1);
+            else
+                unsetenv("TZ");
+            tzset();
+#endif
+        }
+    };
+} // namespace
+
+// #101: the times were normalised by mktime() as local time, with an uninitialised tm_isdst, so
+// they could be an hour off depending on the time zone and on what was on the stack
+TEST_CASE("DCS times are UTC, whatever the local time zone", "[plugins][goes_support][goes_dcs]")
+{
+    // Zones with and without summer time. Day 70 of 2024 (10 March) at 02:30 is a local time that
+    // does not exist in New York, and day 308 (3 November) at 01:30 one that exists twice.
+    const char *zone = GENERATE("UTC", "America/New_York", "EST5EDT,M3.2.0,M11.1.0", "Europe/London");
+    TimeZoneGuard tz(zone);
+    CAPTURE(zone);
+
+    SECTION("a DCP message")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        setTime(file, 64 + 12, bcdTime(24, 70, 2, 30, 5, 123));
+        setTime(file, 64 + 19, bcdTime(24, 308, 1, 30, 59, 7));
+        nlohmann::json msg = decodeFile({}, file);
+        CHECK(msg["header"]["carrier_start"] == "2024-03-10 02:30:05.123");
+        CHECK(msg["header"]["message_end"] == "2024-11-03 01:30:59.7");
+    }
+
+    SECTION("the last day of a leap year and the first of the next")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        setTime(file, 64 + 12, bcdTime(24, 366, 23, 59, 59, 999));
+        setTime(file, 64 + 19, bcdTime(25, 1, 0, 0, 0, 0));
+        nlohmann::json msg = decodeFile({}, file);
+        CHECK(msg["header"]["carrier_start"] == "2024-12-31 23:59:59.999");
+        CHECK(msg["header"]["message_end"] == "2025-01-01 00:00:00.0");
+    }
+
+    SECTION("a day after February in a leap year and in a common year, in summer time")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        setTime(file, 64 + 12, bcdTime(24, 60, 12, 0, 0, 0));
+        setTime(file, 64 + 19, bcdTime(25, 182, 16, 24, 30, 500));
+        nlohmann::json msg = decodeFile({}, file);
+        CHECK(msg["header"]["carrier_start"] == "2024-02-29 12:00:00.0");
+        CHECK(msg["header"]["message_end"] == "2025-07-01 16:24:30.500");
+    }
+
+    SECTION("a missed message")
+    {
+        std::vector<uint8_t> block = dcsBlock(2, 29);
+        setTime(block, 11, bcdTime(24, 70, 2, 0, 0, 0));
+        setTime(block, 18, bcdTime(24, 308, 1, 59, 59, 999));
+        nlohmann::json msg = decodeFile({}, dcsFileOf(block));
+        CHECK(msg["type"] == "Missed Message");
+        CHECK(msg["header"]["window_start"] == "2024-03-10 02:00:00.0");
+        CHECK(msg["header"]["window_end"] == "2024-11-03 01:59:59.999");
     }
 }

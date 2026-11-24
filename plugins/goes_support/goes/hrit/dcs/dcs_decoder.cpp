@@ -22,9 +22,13 @@ namespace goes
 {
     namespace hrit
     {
+        // A BCD UTC time of 7 bytes: year of the century, day of the year, hour, minute, second
+        // and millisecond, the last digit first
         inline std::string bcdDateToString(uint8_t *data)
         {
-            struct tm timestruct;
+            // The day of the year goes in tm_mday, and is turned into a date by timegm(). The time
+            // is UTC: mktime() would take it as local time, and read tm_isdst.
+            struct tm timestruct = {};
             timestruct.tm_year = ((data[6] & 0xf0) >> 4) * 10 + (data[6] & 0x0f) + 100;
             timestruct.tm_mon = 0;
             timestruct.tm_mday = ((data[5] & 0xf0) >> 4) * 100 + (data[5] & 0x0f) * 10 + ((data[4] & 0xf0) >> 4);
@@ -34,7 +38,12 @@ namespace goes
             int ms = (data[1] & 0x0f) * 100 + ((data[0] & 0xf0) >> 4) * 10 + (data[0] & 0x0f);
 
             char return_buffer[20];
-            mktime(&timestruct);
+            time_t timevalue = timegm(&timestruct);
+#ifdef _WIN32
+            gmtime_s(&timestruct, &timevalue);
+#else
+            gmtime_r(&timevalue, &timestruct);
+#endif
             strftime(return_buffer, 20, "%Y-%m-%d %H:%M:%S", &timestruct);
             return std::string(return_buffer) + "." + std::to_string(ms);
         }
