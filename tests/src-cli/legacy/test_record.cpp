@@ -178,7 +178,8 @@ TEST_CASE("main_record rejects an invalid baseband format before starting anythi
     SECTION("ZIQ depth that is not a number")
     {
         CHECK(env.run(plus(flags, {"--baseband_format", "ziq", "--ziq_depth", "deep"})) == 1);
-        error = "Invalid baseband_format!";
+        error = "Invalid ziq_depth!";
+        CHECK_FALSE(env.log.contains("Invalid baseband_format!"));
     }
 
     SECTION("ZIQ depth the ZIQ writer can not write")

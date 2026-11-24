@@ -86,16 +86,25 @@ int main_record(int argc, char *argv[])
     try
     {
         baseband_type = parameters["baseband_format"].get<std::string>();
-#if defined(BUILD_ZIQ) || defined(BUILD_ZIQ2)
-        if (parameters.contains("ziq_depth"))
-            baseband_type.ziq_depth = parameters["ziq_depth"].get<int>();
-#endif
     }
     catch (std::exception &e)
     {
         logger->error("Invalid baseband_format! %s", e.what());
         return 1;
     }
+
+#if defined(BUILD_ZIQ) || defined(BUILD_ZIQ2)
+    try
+    {
+        if (parameters.contains("ziq_depth"))
+            baseband_type.ziq_depth = parameters["ziq_depth"].get<int>();
+    }
+    catch (std::exception &e)
+    {
+        logger->error("Invalid ziq_depth! %s", e.what());
+        return 1;
+    }
+#endif
 
     // The file sink has no writer for cu8, it would only create an empty file
     if (baseband_type == dsp::CU_8)
