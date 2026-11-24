@@ -9,7 +9,8 @@ namespace satdump
         template <typename T>
         class AGCBlock : public BlockSimple<T, T>
         {
-        public:
+        private:
+            // Parameters, see Block::set_param()
             float p_rate = 1e-4;
             float p_reference = 1.0;
             float p_gain = 1.0;
@@ -30,10 +31,14 @@ namespace satdump
 
             void init()
             {
-                rate = p_rate;
-                reference = p_reference;
-                gain = p_gain;
-                max_gain = p_max_gain;
+                this->apply_params(
+                    [&]()
+                    {
+                        rate = p_rate;
+                        reference = p_reference;
+                        gain = p_gain;
+                        max_gain = p_max_gain;
+                    });
             }
 
             nlohmann::ordered_json get_cfg_list()
@@ -49,13 +54,13 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "rate")
-                    return p_rate;
+                    return this->get_param(p_rate);
                 else if (key == "reference")
-                    return p_reference;
+                    return this->get_param(p_reference);
                 else if (key == "gain")
-                    return p_gain;
+                    return this->get_param(p_gain);
                 else if (key == "max_gain")
-                    return p_max_gain;
+                    return this->get_param(p_max_gain);
                 else
                     throw satdump_exception(key);
             }
@@ -63,16 +68,15 @@ namespace satdump
             Block::cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "rate")
-                    p_rate = v;
+                    this->set_param(p_rate, v.get<float>());
                 else if (key == "reference")
-                    p_reference = v;
+                    this->set_param(p_reference, v.get<float>());
                 else if (key == "gain")
-                    p_gain = v;
+                    this->set_param(p_gain, v.get<float>());
                 else if (key == "max_gain")
-                    p_max_gain = v;
+                    this->set_param(p_max_gain, v.get<float>());
                 else
                     throw satdump_exception(key);
-                init();
                 return Block::RES_OK;
             }
         };

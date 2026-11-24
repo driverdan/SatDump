@@ -10,6 +10,7 @@
 #include "dsp/base/stream.h"
 #include "logger.h"
 #include "nlohmann/json.hpp"
+#include <atomic>
 #include <cstdlib>
 #include <exception>
 #include <mutex>
@@ -351,6 +352,78 @@ namespace satdump
              * may also be called manually by the block as needed.
              */
             virtual void init() {}
+
+            /**
+             * @brief Guards the parameters (usually p_ members) that set_cfg
+             * can change from another thread (eg, the UI) while the block
+             * runs. Use set_param(), get_param() and apply_params() rather
+             * than locking it directly.
+             */
+            std::mutex params_mtx;
+
+            /**
+             * @brief Sets a parameter with params_mtx held, and marks the
+             * block so the running thread applies it with init().
+             * Convert the JSON value before calling this, so a bad value
+             * throws without changing anything.
+             * @param p parameter to set
+             * @param v value to set it to
+             */
+            template <typename T, typename V>
+            void set_param(T &p, V &&v)
+            {
+                std::lock_guard<std::mutex> lock(params_mtx);
+                p = std::forward<V>(v);
+                needs_reinit = true;
+            }
+
+            /**
+             * @brief Returns a copy of a parameter, read with params_mtx held.
+             * @param p parameter to read
+             */
+            template <typename T>
+            T get_param(const T &p)
+            {
+                std::lock_guard<std::mutex> lock(params_mtx);
+                return p;
+            }
+
+            /**
+             * @brief To be called in init(), to copy the parameters into
+             * the copies the processing uses. Runs f with params_mtx held,
+             * and clears needs_reinit with the parameters copied, so a change
+             * made after this is applied by the next reinit_if_needed().
+             * Keep f short (just copies) : set_cfg waits for it.
+             * @param f function copying the parameters
+             */
+            template <typename F>
+            void apply_params(F f)
+            {
+                std::lock_guard<std::mutex> lock(params_mtx);
+                needs_reinit = false;
+                f();
+            }
+
+            /**
+             * @brief To be called by the running thread (in work() or
+             * process()) before using the parameters' copies : calls init()
+             * if a parameter was changed since the last one.
+             * @return true if init() was called
+             */
+            bool reinit_if_needed()
+            {
+                if (!needs_reinit)
+                    return false;
+                init();
+                return true;
+            }
+
+        public:
+            /**
+             * @brief Set when a parameter changed and init() has not applied
+             * it yet. Set and cleared by set_param() and apply_params().
+             */
+            std::atomic<bool> needs_reinit = false;
 
         public:
             /**

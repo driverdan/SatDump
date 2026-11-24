@@ -21,6 +21,8 @@ namespace satdump
         template <typename T>
         uint32_t AGCFastBlock<T>::process(T *in, uint32_t nsamples, T *out)
         {
+            this->reinit_if_needed();
+
             // Automatically resize
             if (nsamples > mag_buf_size)
             {

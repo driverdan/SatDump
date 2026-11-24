@@ -14,9 +14,10 @@ namespace satdump
         template <typename T, typename TT = float>
         class DecimatingFIRBlock : public BlockSimple<T, T>
         {
-        public:
-            bool needs_reinit = false;
+        private:
+            // Parameters, see Block::set_param()
             std::vector<TT> p_taps;
+            int p_decimation = 1;
 
         private:
             int buffer_size = 0;
@@ -43,9 +44,9 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "taps")
-                    return p_taps;
+                    return this->get_param(p_taps);
                 else if (key == "decimation")
-                    return decimation;
+                    return this->get_param(p_decimation);
                 else
                     throw satdump_exception(key);
             }
@@ -53,16 +54,9 @@ namespace satdump
             Block::cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "taps")
-                {
-                    p_taps = v.get<std::vector<TT>>();
-                    needs_reinit = true;
-                }
+                    this->set_param(p_taps, v.get<std::vector<TT>>());
                 else if (key == "decimation")
-                {
-                    decimation = v;
-                    if (decimation < 1)
-                        decimation = 1;
-                }
+                    this->set_param(p_decimation, std::max(v.get<int>(), 1));
                 else
                     throw satdump_exception(key);
                 return Block::RES_OK;

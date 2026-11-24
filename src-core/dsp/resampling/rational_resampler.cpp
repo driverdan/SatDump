@@ -23,14 +23,13 @@ namespace satdump
         void RationalResamplerBlock<T>::init()
         {
             std::vector<float> taps;
-            {
-                std::lock_guard<std::mutex> lock(cfg_mtx);
-                d_interpolation = p_interpolation;
-                d_decimation = p_decimation;
-                taps = p_taps;
-                // Cleared with the parameters copied : a change made after this is applied by the next process()
-                needs_reinit = false;
-            }
+            this->apply_params(
+                [&]()
+                {
+                    d_interpolation = p_interpolation;
+                    d_decimation = p_decimation;
+                    taps = p_taps;
+                });
 
             // Start by reducing the interp and decim by their GCD
             int gcd = std::gcd(d_interpolation, d_decimation);
@@ -59,11 +58,9 @@ namespace satdump
         template <typename T>
         uint32_t RationalResamplerBlock<T>::process(T *input, uint32_t nsamples, T *output)
         {
-            if (needs_reinit)
+            float alloc_ratio = BlockSimple<T, T>::output_buffer_size_ratio;
+            if (this->reinit_if_needed())
             {
-                float alloc_ratio = BlockSimple<T, T>::output_buffer_size_ratio;
-                init();
-
                 // The output buffer of this call was sized for the old ratio. If the new
                 // ratio needs a bigger one, drop this input : the next call gets an output
                 // buffer sized for the new ratio, and starts with an empty internal buffer

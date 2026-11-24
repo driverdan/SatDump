@@ -15,8 +15,6 @@ namespace satdump
         class FFTDDCBlock : public Block
         {
         public:
-            bool needs_reinit = false;
-
             int p_noutputs = 0;
             double frequency = 100e6;
             double samplerate = 6e6;

@@ -379,3 +379,91 @@ TEST_CASE("ndsp Block force stop exits a looping work function", "[dsp][block]")
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
     CHECK(s->spins == spins);
 }
+
+namespace
+{
+    // Block using the parameter helpers : p_taps is applied by init(), into d_taps
+    class ParamBlock : public Block
+    {
+    private:
+        std::vector<float> p_taps = {1};
+
+    public:
+        std::vector<float> d_taps;
+        int init_count = 0;
+        // Whether params_mtx was held while apply_params() ran its function
+        bool locked_in_apply = false;
+
+        ParamBlock() : Block("param", {}, {}) {}
+
+        void init() override
+        {
+            init_count++;
+            apply_params(
+                [&]()
+                {
+                    // Tried from another thread : try_lock() by the owner is undefined
+                    locked_in_apply = !std::async(std::launch::async,
+                                                  [&]()
+                                                  {
+                                                      bool got = params_mtx.try_lock();
+                                                      if (got)
+                                                          params_mtx.unlock();
+                                                      return got;
+                                                  })
+                                           .get();
+                    d_taps = p_taps;
+                });
+        }
+
+        bool work() override { return true; }
+
+        nlohmann::json get_cfg(std::string key) override
+        {
+            if (key == "taps")
+                return get_param(p_taps);
+            throw satdump_exception(key);
+        }
+
+        cfg_res_t set_cfg(std::string key, nlohmann::json v) override
+        {
+            if (key == "taps")
+                set_param(p_taps, v.get<std::vector<float>>());
+            else
+                throw satdump_exception(key);
+            return RES_OK;
+        }
+
+        bool callReinitIfNeeded() { return reinit_if_needed(); }
+    };
+} // namespace
+
+TEST_CASE("ndsp Block parameter helpers set, read and apply parameters", "[dsp][block]")
+{
+    ParamBlock b;
+    CHECK_FALSE(b.needs_reinit);
+    CHECK(b.get_cfg("taps") == nlohmann::json({1.0}));
+
+    // Nothing to apply
+    CHECK_FALSE(b.callReinitIfNeeded());
+    CHECK(b.init_count == 0);
+
+    CHECK(b.set_cfg("taps", std::vector<float>{1, 2, 3}) == Block::RES_OK);
+    CHECK(b.needs_reinit);
+    CHECK(b.get_cfg("taps") == nlohmann::json({1.0, 2.0, 3.0}));
+    CHECK(b.d_taps.empty()); // Not applied yet
+
+    CHECK(b.callReinitIfNeeded());
+    CHECK(b.init_count == 1);
+    CHECK(b.locked_in_apply);
+    CHECK_FALSE(b.needs_reinit);
+    CHECK(b.d_taps == std::vector<float>{1, 2, 3});
+
+    CHECK_FALSE(b.callReinitIfNeeded());
+    CHECK(b.init_count == 1);
+
+    // A value of the wrong type throws and changes nothing
+    CHECK_THROWS(b.set_cfg("taps", "nope"));
+    CHECK_FALSE(b.needs_reinit);
+    CHECK(b.get_cfg("taps") == nlohmann::json({1.0, 2.0, 3.0}));
+}

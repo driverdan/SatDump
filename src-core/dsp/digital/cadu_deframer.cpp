@@ -6,7 +6,11 @@ namespace satdump
     {
         CADUDeframerBlock::CADUDeframerBlock() : Block("cadu_deframer_hh", {{"in", DSP_SAMPLE_TYPE_S8}}, {{"out", DSP_SAMPLE_TYPE_S8}}) {}
 
-        void CADUDeframerBlock::init() { def = std::make_shared<deframing::BPSK_CCSDS_Deframer>(cadu_size); }
+        void CADUDeframerBlock::init()
+        {
+            apply_params([&]() { cadu_size = p_cadu_size; });
+            def = std::make_shared<deframing::BPSK_CCSDS_Deframer>(cadu_size);
+        }
 
         CADUDeframerBlock::~CADUDeframerBlock() {}
 
@@ -22,11 +26,7 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             DSPBuffer oblk = outputs[0].fifo->newBufferSamples(std::max<int>(iblk.max_size * 2, cadu_size * 10), sizeof(int8_t));
             uint8_t *ibuf = iblk.getSamples<uint8_t>();

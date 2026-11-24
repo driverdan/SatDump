@@ -37,7 +37,10 @@ namespace satdump
         template <typename T, typename TT>
         void FFTFilterBlock<T, TT>::init()
         {
-            d_ntaps = p_taps.size();
+            std::vector<TT> new_taps;
+            apply_params([&]() { new_taps = p_taps; });
+
+            d_ntaps = new_taps.size();
             d_fftsize = (int)(2 * pow(2.0, ceil(log(double(d_ntaps)) / log(2.0)))) * 100;
             d_nsamples = d_fftsize - d_ntaps + 1;
 
@@ -70,9 +73,9 @@ namespace satdump
             for (int i = 0; i < d_ntaps; i++)
             {
                 if constexpr (std::is_same_v<TT, float>)
-                    ((complex_t *)fft_fwd_in)[i] = complex_t(p_taps[i] * scale, 0.0f);
+                    ((complex_t *)fft_fwd_in)[i] = complex_t(new_taps[i] * scale, 0.0f);
                 if constexpr (std::is_same_v<TT, complex_t>)
-                    ((complex_t *)fft_fwd_in)[i] = p_taps[i] * scale;
+                    ((complex_t *)fft_fwd_in)[i] = new_taps[i] * scale;
             }
             for (int i = d_ntaps; i < d_fftsize; i++)
                 ((complex_t *)fft_fwd_in)[i] = complex_t(0.0f, 0.0f);
@@ -99,11 +102,7 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             int nsamples = iblk.size;
 

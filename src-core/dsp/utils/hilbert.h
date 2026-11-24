@@ -13,11 +13,12 @@ namespace satdump
         class HilbertBlock : public Block
         {
         private:
-            bool needs_reinit = false;
+            // Parameters, see Block::set_param()
             int p_ntaps = 65;
             int p_buffer_size = 8192 * 8;
 
         private:
+            int d_ntaps = 0;
             int buffer_size = 0;
             float *buffer = nullptr;
             float *taps = nullptr;
@@ -39,18 +40,25 @@ namespace satdump
                 if (buffer != nullptr)
                     volk_free(buffer);
 
+                int ntaps;
+                apply_params(
+                    [&]()
+                    {
+                        ntaps = p_ntaps;
+                        buffer_size = p_buffer_size;
+                    });
+
                 // Init buffer
-                buffer = dsp::create_volk_buffer<float>(p_buffer_size); // TODOREWORK How to handle this from the initial buffer size?
-                buffer_size = p_buffer_size;
+                buffer = dsp::create_volk_buffer<float>(buffer_size); // TODOREWORK How to handle this from the initial buffer size?
 
                 // Init taps
-                auto p_taps = dsp::firdes::hilbert(p_ntaps, dsp::fft::window::WIN_HAMMING, 6.76);
+                auto new_taps = dsp::firdes::hilbert(ntaps, dsp::fft::window::WIN_HAMMING, 6.76);
 
                 // Init taps
-                p_ntaps = p_taps.size();
-                taps = (float *)volk_malloc(p_ntaps * sizeof(float), volk_get_alignment());
-                for (int j = 0; j < p_ntaps; j++)
-                    taps[j] = p_taps[(p_ntaps - 1) - j]; // Reverse taps
+                d_ntaps = new_taps.size();
+                taps = (float *)volk_malloc(d_ntaps * sizeof(float), volk_get_alignment());
+                for (int j = 0; j < d_ntaps; j++)
+                    taps[j] = new_taps[(d_ntaps - 1) - j]; // Reverse taps
             }
 
             nlohmann::ordered_json get_cfg_list()
@@ -63,9 +71,9 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "ntaps")
-                    return p_ntaps;
+                    return get_param(p_ntaps);
                 else if (key == "buffer_size")
-                    return p_buffer_size;
+                    return get_param(p_buffer_size);
                 else
                     throw satdump_exception(key);
             }
@@ -73,12 +81,9 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "ntaps")
-                {
-                    p_ntaps = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_ntaps, v.get<int>());
                 else if (key == "buffer_size")
-                    p_buffer_size = v;
+                    set_param(p_buffer_size, v.get<int>());
                 else
                     throw satdump_exception(key);
                 return RES_OK;

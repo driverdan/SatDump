@@ -13,8 +13,11 @@ namespace satdump
         class ThrottleBlock : public BlockSimple<T, T>
         {
         private:
-            bool needs_reinit = true;
+            // Parameter, see Block::set_param()
             double samplerate = 1e6;
+
+            double d_samplerate = 1e6;
+            bool restart = true; // Restart the timing on the next buffer
 
             std::chrono::steady_clock::time_point start_time_point;
             std::chrono::duration<double> sample_time_period;
@@ -26,7 +29,11 @@ namespace satdump
 
             uint32_t process(T *input, uint32_t nsamples, T *output);
 
-            void init() {}
+            void init()
+            {
+                this->apply_params([&]() { d_samplerate = samplerate; });
+                restart = true;
+            }
 
             nlohmann::ordered_json get_cfg_list()
             {
@@ -38,7 +45,7 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "samplerate")
-                    return samplerate;
+                    return this->get_param(samplerate);
                 else
                     throw satdump_exception(key);
             }
@@ -46,10 +53,7 @@ namespace satdump
             Block::cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "samplerate")
-                {
-                    samplerate = v;
-                    needs_reinit = true;
-                }
+                    this->set_param(samplerate, v.get<double>());
                 else
                     throw satdump_exception(key);
                 return Block::RES_OK;

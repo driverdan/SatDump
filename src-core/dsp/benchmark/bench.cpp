@@ -106,19 +106,19 @@ namespace satdump
 
                 {
                     auto p = std::make_shared<satdump::ndsp::AGCBlock<complex_t>>();
-                    p->p_rate = 0.01;
-                    p->p_reference = 1.0;
-                    p->p_gain = 1.0;
-                    p->p_max_gain = 65535;
+                    p->set_cfg("rate", 0.01);
+                    p->set_cfg("reference", 1.0);
+                    p->set_cfg("gain", 1.0);
+                    p->set_cfg("max_gain", 65535);
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "AGC, New");
                     res.push_back(r);
                 }
                 {
                     auto p = std::make_shared<satdump::ndsp::AGCFastBlock<complex_t>>();
-                    p->p_rate = 0.01;
-                    p->p_reference = 1.0;
-                    p->p_gain = 1.0;
-                    p->p_max_gain = 65535;
+                    p->set_cfg("rate", 0.01);
+                    p->set_cfg("reference", 1.0);
+                    p->set_cfg("gain", 1.0);
+                    p->set_cfg("max_gain", 65535);
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "AGC Fast, New");
                     res.push_back(r);
                 }
@@ -161,26 +161,26 @@ namespace satdump
 
                 {
                     auto p = std::make_shared<satdump::ndsp::FIRBlock<complex_t>>();
-                    p->p_taps = dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 31);
+                    p->set_cfg("taps", dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 31));
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "FIR New RRC, 31 taps, omega 2.0");
                     res.push_back(r);
                 }
                 {
                     auto p = std::make_shared<satdump::ndsp::FIRBlock<complex_t>>();
-                    p->p_taps = dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 361);
+                    p->set_cfg("taps", dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 361));
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "FIR New RRC, 361 taps, omega 2.0");
                     res.push_back(r);
                 }
 
                 {
                     auto p = std::make_shared<satdump::ndsp::FFTFilterBlock<complex_t>>();
-                    p->p_taps = dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 31);
+                    p->set_cfg("taps", dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 31));
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "FFT New RRC, 31 taps, omega 2.0");
                     res.push_back(r);
                 }
                 {
                     auto p = std::make_shared<satdump::ndsp::FFTFilterBlock<complex_t>>();
-                    p->p_taps = dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 361);
+                    p->set_cfg("taps", dsp::firdes::root_raised_cosine(1.0, 2, 1, 0.35, 361));
                     auto r = benchmarkNDSPBlock<complex_t>(p, 10, "FFT New RRC, 361 taps, omega 2.0");
                     res.push_back(r);
                 }

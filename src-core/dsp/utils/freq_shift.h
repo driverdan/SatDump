@@ -17,7 +17,6 @@ namespace satdump
          * This is a implementation of the old block
          * using the new NDSP system. TODOREWORK
          *
-         * @param needs_reinit handles live changes
          * @param raw_shift if true, allows for manual frequency shift
          * @param freq_shift frequency shift value
          * @param samplerate stream sample rate
@@ -25,7 +24,7 @@ namespace satdump
         class FreqShiftBlock : public BlockSimple<complex_t, complex_t>
         {
         private:
-            bool needs_reinit = false;
+            // Parameters, see Block::set_param()
             bool raw_shift = false;
             double freq_shift = 0;
             double samplerate = 6e6;
@@ -42,6 +41,16 @@ namespace satdump
 
             void init()
             {
+                bool raw_shift;
+                double freq_shift, samplerate;
+                apply_params(
+                    [&]()
+                    {
+                        raw_shift = this->raw_shift;
+                        freq_shift = this->freq_shift;
+                        samplerate = this->samplerate;
+                    });
+
                 if (raw_shift == false)
                 {
                     phase = complex_t(1, 0);
@@ -65,11 +74,11 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "raw_shift")
-                    return raw_shift;
+                    return get_param(raw_shift);
                 else if (key == "freq_shift")
-                    return freq_shift;
+                    return get_param(freq_shift);
                 else if (key == "samplerate")
-                    return samplerate;
+                    return get_param(samplerate);
                 else
                     throw satdump_exception(key);
             }
@@ -77,20 +86,11 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "raw_shift")
-                {
-                    raw_shift = v;
-                    needs_reinit = true;
-                }
+                    set_param(raw_shift, v.get<bool>());
                 else if (key == "freq_shift")
-                {
-                    freq_shift = v;
-                    needs_reinit = true;
-                }
+                    set_param(freq_shift, v.get<double>());
                 else if (key == "samplerate")
-                {
-                    samplerate = v;
-                    needs_reinit = true;
-                }
+                    set_param(samplerate, v.get<double>());
                 else
                     throw satdump_exception(key);
                 return RES_OK;

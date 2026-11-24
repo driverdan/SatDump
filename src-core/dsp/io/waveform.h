@@ -12,15 +12,14 @@ namespace satdump
         template <typename T>
         class WaveformBlock : public Block
         {
-        public:
+        private:
+            // Parameters, see Block::set_param()
             std::string p_waveform = "cosine";
             float p_samprate = 48000;
             float p_freq = 10000;
             float p_amp = 1.0;
             float p_phase = 0.0;
             int p_buffer_size = 8192;
-
-            bool needs_reinit = false;
 
         private:
             std::string d_waveform;
@@ -58,17 +57,17 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "waveform")
-                    return p_waveform;
+                    return get_param(p_waveform);
                 else if (key == "samprate")
-                    return p_samprate;
+                    return get_param(p_samprate);
                 else if (key == "freq")
-                    return p_freq;
+                    return get_param(p_freq);
                 else if (key == "amp")
-                    return p_amp;
+                    return get_param(p_amp);
                 else if (key == "phase")
-                    return p_phase;
+                    return get_param(p_phase);
                 else if (key == "bufs")
-                    return p_buffer_size;
+                    return get_param(p_buffer_size);
                 else
                     throw satdump_exception(key);
             }
@@ -76,32 +75,19 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "waveform")
-                {
-                    p_waveform = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_waveform, v.get<std::string>());
                 else if (key == "samprate")
-                {
-                    p_samprate = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_samprate, v.get<float>());
                 else if (key == "freq")
-                {
-                    p_freq = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_freq, v.get<float>());
                 else if (key == "amp")
-                {
-                    p_amp = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_amp, v.get<float>());
                 else if (key == "phase")
-                {
-                    p_phase = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_phase, v.get<float>());
                 else if (key == "bufs")
                 {
+                    // Only used by the constructor TODOREWORK
+                    std::lock_guard<std::mutex> lock(params_mtx);
                     p_buffer_size = v;
                 }
                 else

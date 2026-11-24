@@ -12,12 +12,13 @@ namespace satdump
         class CADUDeframerBlock : public Block
         {
         private:
+            // Parameter, see Block::set_param()
+            int p_cadu_size = 8192;
+
             int cadu_size = 8192;
             std::shared_ptr<deframing::BPSK_CCSDS_Deframer> def;
 
-            int def_state = 0;
-
-            bool needs_reinit = false;
+            std::atomic<int> def_state = 0; // Read by get_cfg(), from other threads
 
         private:
             bool work();
@@ -39,9 +40,9 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "cadu_size")
-                    return cadu_size;
+                    return get_param(p_cadu_size);
                 else if (key == "state")
-                    return def_state;
+                    return def_state.load();
                 else
                     throw satdump_exception(key);
             }
@@ -49,10 +50,7 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "cadu_size")
-                {
-                    cadu_size = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_cadu_size, v.get<int>());
                 else if (key == "state")
                     ;
                 else

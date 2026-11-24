@@ -25,11 +25,18 @@ namespace satdump
         template <typename T>
         void GardnerClockRecoveryBlock<T>::init()
         {
-            mu = p_mu;
-            omega = p_omega;
-            omega_gain = p_omegaGain;
-            mu_gain = p_muGain;
-            omega_relative_limit = p_omegaLimit;
+            int nfilt, ntaps;
+            apply_params(
+                [&]()
+                {
+                    mu = p_mu;
+                    omega = p_omega;
+                    omega_gain = p_omegaGain;
+                    mu_gain = p_muGain;
+                    omega_relative_limit = p_omegaLimit;
+                    nfilt = p_nfilt;
+                    ntaps = p_ntaps;
+                });
             sample = 0;
             zc_sample = 0;
             last_sample = 0;
@@ -44,8 +51,8 @@ namespace satdump
             omega_limit = omega_relative_limit * omega;
 
             // Init interpolator
-            pfb.init(dsp::windowed_sinc(p_nfilt * p_ntaps, hz_to_rad(0.5 / (double)p_nfilt, 1.0), dsp::window::nuttall, p_nfilt),
-                     p_nfilt); // TODOREWORK do this in main loop? TODODSP
+            pfb.init(dsp::windowed_sinc(nfilt * ntaps, hz_to_rad(0.5 / (double)nfilt, 1.0), dsp::window::nuttall, nfilt),
+                     nfilt); // TODOREWORK do this in main loop? TODODSP
 
             bufs = 20;
         }
@@ -70,11 +77,7 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size, sizeof(T));
             T *ibuf = iblk.getSamples<T>();

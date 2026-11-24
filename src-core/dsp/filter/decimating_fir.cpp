@@ -26,6 +26,15 @@ namespace satdump
         template <typename T, typename TT>
         void DecimatingFIRBlock<T, TT>::init()
         {
+            std::vector<TT> new_taps;
+            this->apply_params(
+                [&]()
+                {
+                    new_taps = p_taps;
+                    decimation = p_decimation;
+                });
+            decim_pos = 1;
+
             // Free if needed
             if (taps != nullptr)
             {
@@ -44,7 +53,7 @@ namespace satdump
             aligned_tap_count = std::max<int>(1, align / sizeof(T));
 
             // Set taps
-            ntaps = p_taps.size();
+            ntaps = new_taps.size();
 
             // Init taps
             this->taps = (TT **)volk_malloc(aligned_tap_count * sizeof(TT *), align);
@@ -54,18 +63,14 @@ namespace satdump
                 for (int y = 0; y < ntaps + aligned_tap_count - 1; y++)
                     this->taps[i][y] = 0;
                 for (int j = 0; j < ntaps; j++)
-                    this->taps[i][i + j] = p_taps[(ntaps - 1) - j]; // Reverse taps
+                    this->taps[i][i + j] = new_taps[(ntaps - 1) - j]; // Reverse taps
             }
         }
 
         template <typename T, typename TT>
         uint32_t DecimatingFIRBlock<T, TT>::process(T *input, uint32_t nsamples, T *output)
         {
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            this->reinit_if_needed();
 
             // Automatically grow buffer
             if (buffer_size < in_buffer + nsamples)

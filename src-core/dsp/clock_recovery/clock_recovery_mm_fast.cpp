@@ -28,11 +28,15 @@ namespace satdump
         template <typename T>
         void MMClockRecoveryFastBlock<T>::init()
         {
-            mu = p_mu;
-            omega = p_omega;
-            omega_gain = p_omegaGain;
-            mu_gain = p_muGain;
-            omega_relative_limit = p_omegaLimit;
+            apply_params(
+                [&]()
+                {
+                    mu = p_mu;
+                    omega = p_omega;
+                    omega_gain = p_omegaGain;
+                    mu_gain = p_muGain;
+                    omega_relative_limit = p_omegaLimit;
+                });
             p_2T = 0;
             p_1T = 0;
             p_0T = 0;
@@ -70,11 +74,7 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size, sizeof(T));
             T *ibuf = iblk.getSamples<T>();
