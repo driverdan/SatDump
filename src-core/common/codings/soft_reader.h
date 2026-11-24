@@ -12,7 +12,8 @@ namespace satdump
         pipeline::ModuleDataType &input_data_type;
         bool convert_from_hard = false;
 
-        int tmp_hard_buff_pos = 0;
+        // Starts at the end of the (still empty) buffer so the first read fills it
+        int tmp_hard_buff_pos = 1024 * 8;
         uint8_t *tmp_hard_buff;
 
         void readMore()
@@ -47,11 +48,11 @@ namespace satdump
             {
                 for (int i = 0; i < length; i++)
                 {
+                    if (tmp_hard_buff_pos == 1024 * 8)
+                        readMore();
                     uint8_t bit = (tmp_hard_buff[tmp_hard_buff_pos / 8] >> (7 - (tmp_hard_buff_pos % 8))) & 1;
                     buffer[i] = bit ? 70 : -70;
                     tmp_hard_buff_pos++;
-                    if (tmp_hard_buff_pos == 1024 * 8)
-                        readMore();
                 }
             }
             else

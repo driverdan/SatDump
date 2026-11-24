@@ -1,4 +1,5 @@
 #include "common/codings/soft_reader.h"
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <memory>
@@ -86,4 +87,77 @@ TEST_CASE("SoftSymbolReader reads soft symbols from a ring buffer in stream mode
     reader.readSoftSymbols(buf.data(), 200);
     for (int i = 0; i < 200; i++)
         REQUIRE(buf[i] == (int8_t)content[300 + i]);
+}
+
+namespace
+{
+    // The soft symbol hard_symbols mode should give for bit `bit` (MSB first) of `bytes`
+    int8_t expectedHardSymbol(const std::string &bytes, size_t bit)
+    {
+        return (((uint8_t)bytes[bit / 8] >> (7 - (bit % 8))) & 1) ? 70 : -70;
+    }
+
+    // Every 1024 byte block differs, so data left over from another block can't match by chance
+    std::string makeHardBytes(int count)
+    {
+        std::string s(count, '\0');
+        for (int i = 0; i < count; i++)
+            s[i] = (char)(uint8_t)((i * 37 + 11) ^ ((i / 1024 + 1) * 73));
+        return s;
+    }
+} // namespace
+
+TEST_CASE("SoftSymbolReader converts hard symbols from a file stream, starting with the first byte", "[common][codings][soft_reader]")
+{
+    // 3 blocks' worth (the reader works in 1024 byte blocks)
+    std::string content = makeHardBytes(3 * 1024);
+    std::istringstream in(content);
+    std::shared_ptr<dsp::RingBuffer<uint8_t>> fifo;
+    satdump::pipeline::ModuleDataType type = satdump::pipeline::DATA_FILE;
+    nlohmann::json params = {{"hard_symbols", true}};
+
+    satdump::SoftSymbolReader reader(in, fifo, type, params);
+
+    // Read in odd-sized chunks so reads straddle the 1024 byte block boundaries
+    const size_t total = content.size() * 8;
+    const size_t chunk = 1000;
+    std::vector<int8_t> buf(chunk);
+    size_t pos = 0, mismatches = 0, first = 0;
+    while (pos < total)
+    {
+        size_t len = std::min(chunk, total - pos);
+        reader.readSoftSymbols(buf.data(), (int)len);
+        for (size_t i = 0; i < len; i++)
+            if (!(buf[i] == expectedHardSymbol(content, pos + i)) && mismatches++ == 0)
+                first = pos + i;
+        pos += len;
+    }
+    INFO("first mismatch at symbol " << first);
+    REQUIRE(mismatches == 0);
+    // Nothing was read ahead of what was asked for
+    CHECK(in.tellg() == (std::streampos)content.size());
+}
+
+TEST_CASE("SoftSymbolReader converts hard symbols from a ring buffer in stream mode", "[common][codings][soft_reader]")
+{
+    std::string content = makeHardBytes(2 * 1024);
+    std::istringstream in; // unused in stream mode
+    auto fifo = std::make_shared<dsp::RingBuffer<uint8_t>>(1000000);
+    satdump::pipeline::ModuleDataType type = satdump::pipeline::DATA_STREAM;
+    nlohmann::json params = {{"hard_symbols", true}};
+
+    fifo->write((uint8_t *)content.data(), content.size());
+
+    satdump::SoftSymbolReader reader(in, fifo, type, params);
+
+    // Reading exactly all of the data must not block waiting for a further block
+    const size_t total = content.size() * 8;
+    std::vector<int8_t> buf(total);
+    reader.readSoftSymbols(buf.data(), (int)total);
+    size_t mismatches = 0, first = 0;
+    for (size_t i = 0; i < total; i++)
+        if (!(buf[i] == expectedHardSymbol(content, i)) && mismatches++ == 0)
+            first = i;
+    INFO("first mismatch at symbol " << first);
+    REQUIRE(mismatches == 0);
 }
