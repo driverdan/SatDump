@@ -14,7 +14,8 @@ namespace goes
             uint16_t temp_detect[11 * 4];
 
         public:
-            int frames;
+            // Frames pushed since the last clear()
+            int frames = 0;
             SounderReader();
             ~SounderReader();
 

@@ -589,7 +589,7 @@ namespace goes
         GVARImageDecoderModule::GVARImageDecoderModule(std::string input_file, std::string output_file_hint, nlohmann::json parameters)
             : satdump::pipeline::base::FileStreamToFileStreamModule(input_file, output_file_hint, parameters)
         {
-            frame = new uint8_t[FRAME_SIZE];
+            frame = new uint8_t[FRAME_SIZE]();
             isImageInProgress = false;
             isSavingInProgress = false;
             approx_progess = 0;
@@ -694,8 +694,10 @@ namespace goes
 
             while (should_run())
             {
-                // Read a buffer
-                read_data((uint8_t *)frame, FRAME_SIZE);
+                // Read a buffer. Skip it if it was not filled: the stream stopped or the file ended
+                // part way through a frame
+                if (!read_data((uint8_t *)frame, FRAME_SIZE))
+                    continue;
 
                 PrimaryBlockHeader block_header = get_header(frame);
 

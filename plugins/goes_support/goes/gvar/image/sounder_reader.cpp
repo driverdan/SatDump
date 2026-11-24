@@ -13,7 +13,7 @@ namespace goes
         SounderReader::SounderReader()
         {
             for (int i = 0; i < 19; i++)
-                channels[i] = new uint16_t[HEIGHT * WIDTH];
+                channels[i] = new uint16_t[HEIGHT * WIDTH]();
         }
 
         SounderReader::~SounderReader()
@@ -26,10 +26,13 @@ namespace goes
         {
             for (int i = 0; i < 19; i++)
                 memset(channels[i], 0, HEIGHT * WIDTH * sizeof(uint16_t));
+            frames = 0;
         }
 
         void SounderReader::pushFrame(uint8_t *data, int /*counter*/)
         {
+            frames++;
+
             int y_pos[4];
             for (int i = 0; i < 4; i++)
                 y_pos[i] = data[6112 + i * 2] << 8 | data[6113 + i * 2];
