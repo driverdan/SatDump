@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cctype>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <cerrno>
@@ -46,6 +47,19 @@ namespace goes
 #endif
             strftime(return_buffer, 20, "%Y-%m-%d %H:%M:%S", &timestruct);
             return std::string(return_buffer) + "." + std::to_string(ms);
+        }
+
+        // These bytes as text if they are all printable ASCII, otherwise in hex, so that a damaged
+        // field does not put bytes that are not UTF-8 in the JSON
+        static std::string printableOrHex(const uint8_t *data, size_t size)
+        {
+            if (std::all_of(data, data + size, [](uint8_t c) { return c >= 0x20 && c < 0x7f; }))
+                return std::string(data, data + size);
+            std::stringstream hex_stream;
+            hex_stream << std::hex << std::setfill('0');
+            for (size_t i = 0; i < size; i++)
+                hex_stream << std::setw(2) << +data[i];
+            return hex_stream.str();
         }
 
         // The first line of a file, without its line ending
@@ -636,7 +650,7 @@ namespace goes
                     else if (source_id == "OW")
                         dcs_message->header.drgs_source = "USACE NOW - Omaha, NE";
                     else
-                        dcs_message->header.drgs_source = "Unknown - " + source_id;
+                        dcs_message->header.drgs_source = "Unknown - " + printableOrHex(&block_ptr[35], 2);
 
                     //std::string source_secondary = std::string(&block_ptr[37], &block_ptr[39]);
 
@@ -1166,10 +1180,14 @@ namespace goes
             {
                 logger->info("Writing file %s/DCS/%s.json...", directory.c_str(), dcs_file.name.c_str());
                 nlohmann::ordered_json export_json = dcs_file;
+                // The file name, source and type are bytes of the file header: one that is not
+                // UTF-8 must not lose the whole file. Dumped before the file is opened, so
+                // that a failure does not leave it empty.
+                std::string json_text = export_json.dump(4, ' ', false, nlohmann::ordered_json::error_handler_t::replace);
                 std::ofstream json_writer(directory + "/DCS/" + dcs_file.name + ".json");
                 if (!json_writer)
                     throw std::runtime_error("cannot open " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
-                json_writer << export_json.dump(4);
+                json_writer << json_text;
                 json_writer.close();
                 if (!json_writer)
                     throw std::runtime_error("cannot write " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
