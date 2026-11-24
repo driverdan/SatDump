@@ -176,6 +176,18 @@ make install
 cd ../../..
 rm -rf uhd
 
+echo "Building NNG..."
+# Pinned to 1.x: Homebrew's nng is now 2.x, which removed the per-protocol headers
+# (nng/protocol/pubsub0/pub.h, ...) and changed the API that SatDump uses.
+git clone https://github.com/nanomsg/nng --depth 1 -b v1.12.5
+cd nng
+mkdir build && cd build
+cmake $build_args -DBUILD_SHARED_LIBS=ON -DNNG_TESTS=OFF -DNNG_TOOLS=OFF -DNNG_ENABLE_NNGCAT=OFF ..
+make -j$(sysctl -n hw.logicalcpu)
+make install
+cd ../..
+rm -rf nng
+
 echo "Adding SDRPlay Library..."
 # Official SDRplay API installer, linked from https://www.sdrplay.com/hardware-api/
 # (the URL redirects to SDRplay's own file host). The checksum catches SDRplay
