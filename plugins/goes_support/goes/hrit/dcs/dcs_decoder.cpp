@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
@@ -94,6 +95,17 @@ namespace goes
             std::string line = firstLine(data);
             size_t fields = std::count(line.begin(), line.end(), '|') + 1;
             return fields >= 10 && isHexAddress(line.substr(0, line.find('|')));
+        }
+
+        std::string safeDCSFileName(const std::string &name)
+        {
+            std::string safe = name;
+            for (char &c : safe)
+                if (!(std::isalnum((unsigned char)c) && (unsigned char)c < 0x80) && c != '-' && c != '_' && c != '.')
+                    c = '_';
+            if (!safe.empty() && safe[0] == '.')
+                safe[0] = '_';
+            return safe;
         }
 
         void GOESLRITDataDecoderModule::updateDCPs(DCPUpdateEvent)
@@ -1178,19 +1190,31 @@ namespace goes
             // Do not save if filtering and all blocks are filtered out
             if (filtered_dcps.empty() || dcs_file.blocks.size() > 0)
             {
-                logger->info("Writing file %s/DCS/%s.json...", directory.c_str(), dcs_file.name.c_str());
+                // The name comes from the received header: a damaged one must not write outside
+                // DCS/, and files without a name must not overwrite each other
+                std::string file_name = safeDCSFileName(dcs_file.name);
+                if (file_name.empty())
+                {
+                    int n = 1;
+                    do
+                        file_name = "unnamed_" + std::to_string(n++);
+                    while (std::filesystem::exists(directory + "/DCS/" + file_name + ".json"));
+                }
+                std::string path = directory + "/DCS/" + file_name + ".json";
+
+                logger->info("Writing file %s...", path.c_str());
                 nlohmann::ordered_json export_json = dcs_file;
                 // The file name, source and type are bytes of the file header: one that is not
                 // UTF-8 must not lose the whole file. Dumped before the file is opened, so
                 // that a failure does not leave it empty.
                 std::string json_text = export_json.dump(4, ' ', false, nlohmann::ordered_json::error_handler_t::replace);
-                std::ofstream json_writer(directory + "/DCS/" + dcs_file.name + ".json");
+                std::ofstream json_writer(path);
                 if (!json_writer)
-                    throw std::runtime_error("cannot open " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
+                    throw std::runtime_error("cannot open " + path + ": " + strerror(errno));
                 json_writer << json_text;
                 json_writer.close();
                 if (!json_writer)
-                    throw std::runtime_error("cannot write " + directory + "/DCS/" + dcs_file.name + ".json: " + strerror(errno));
+                    throw std::runtime_error("cannot write " + path + ": " + strerror(errno));
             }
 
             // Remove old messages from UI

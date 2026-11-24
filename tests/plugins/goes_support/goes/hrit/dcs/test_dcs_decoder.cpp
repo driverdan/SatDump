@@ -792,3 +792,57 @@ TEST_CASE("DCS files with bytes that are not UTF-8 are still written", "[plugins
         CHECK(out["blocks"].size() == 1);
     }
 }
+
+TEST_CASE("DCS file names are made safe to write to", "[plugins][goes_support][goes_dcs]")
+{
+    CHECK(goes::hrit::safeDCSFileName(FILE_NAME) == FILE_NAME);
+    CHECK(goes::hrit::safeDCSFileName("a_b.c-D9") == "a_b.c-D9");
+    CHECK(goes::hrit::safeDCSFileName("../../etc/passwd") == "_._.._etc_passwd");
+    CHECK(goes::hrit::safeDCSFileName("..") == "_.");
+    CHECK(goes::hrit::safeDCSFileName(".hidden") == "_hidden");
+    CHECK(goes::hrit::safeDCSFileName("a\\b:c d") == "a_b_c_d");
+    CHECK(goes::hrit::safeDCSFileName(std::string("a\0b\n\x7f\xc3\xa9", 7)) == "a_b____");
+    CHECK(goes::hrit::safeDCSFileName("") == "");
+}
+
+// The JSON was written to DCS/<the file name of the header>.json, whatever that name held (#371)
+TEST_CASE("DCS files are written in DCS/ whatever the file name of their header", "[plugins][goes_support][goes_dcs]")
+{
+    cli_test::LogCapture log;
+    TempDir tmp("goes_dcs");
+    std::filesystem::create_directories(tmp.file("DCS"));
+    auto decoder = std::make_shared<DCSDecoder>(tmp.str());
+
+    // A file with this name in its header
+    auto withName = [](const std::string &name)
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        std::string padded = name + std::string(32 - name.size(), ' ');
+        std::copy(padded.begin(), padded.end(), file.begin());
+        return file;
+    };
+
+    SECTION("a name that leads out of DCS/")
+    {
+        REQUIRE(DCSDecoder::processBounded(decoder, withName("../escaped")));
+        CHECK_FALSE(std::filesystem::exists(tmp.file("escaped.json")));
+        nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/_._escaped.json")));
+        CHECK(out["name"] == "../escaped");
+        CHECK(out["blocks"].size() == 1);
+    }
+
+    SECTION("a name with a directory that does not exist")
+    {
+        REQUIRE(DCSDecoder::processBounded(decoder, withName("sub/name")));
+        CHECK(std::filesystem::exists(tmp.file("DCS/sub_name.json")));
+    }
+
+    SECTION("names that are empty or all spaces do not overwrite each other")
+    {
+        REQUIRE(DCSDecoder::processBounded(decoder, withName("")));
+        REQUIRE(DCSDecoder::processBounded(decoder, withName("")));
+        CHECK_FALSE(std::filesystem::exists(tmp.file("DCS/.json")));
+        CHECK(std::filesystem::exists(tmp.file("DCS/unnamed_1.json")));
+        CHECK(std::filesystem::exists(tmp.file("DCS/unnamed_2.json")));
+    }
+}

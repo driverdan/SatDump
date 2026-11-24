@@ -124,6 +124,11 @@ namespace goes
         bool isPdtFile(const std::string &data);
         bool isHadsFile(const std::string &data);
 
+        // The file name of a DCS file header, made safe to use as the name of the file it is
+        // written to: every character but alphanumerics, '-', '_' and '.' is replaced by '_', as
+        // is a leading '.'. Empty if the name is.
+        std::string safeDCSFileName(const std::string &name);
+
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(PEInfo, name, record_interval, read_to_transmit_offset, base_elevation, correction);
         NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DCP, pe_info, agency, state, manufacturer, model, nmc_descriptor, description, transmit_interval,
             transmit_window, lat, lon, data_format);
