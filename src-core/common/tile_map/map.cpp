@@ -72,7 +72,12 @@ image::Image downloadTileMap(std::string url_source, double lat0, double lon0, d
             {
                 logger->debug("Downloading tile from: %s", url.c_str());
 
-                satdump::perform_http_request(url, res);
+                // perform_http_request() logs the reason. An error page is not a tile, so leave it blank
+                if (satdump::perform_http_request(url, res) != 0)
+                {
+                    logger->error("Could not download tile from: %s", url.c_str());
+                    continue;
+                }
 
                 image::Image tile;
                 image::load_img(tile, (uint8_t *)res.data(), res.size());
