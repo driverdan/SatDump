@@ -18,7 +18,6 @@ First time here? See the reference documents below to get started using SatDump.
 - [libjpeg](https://ijg.org/), from the Independent JPEG Group
 - [libOpenCL-loader](https://github.com/robertwgh/libOpenCL-loader), for OpenCL on Android
 - [libpredict](https://github.com/la1k/libpredict), used for orbit prediction
-- [Lua](https://www.lua.org/), used for complex image composites
 - [miniz](https://github.com/richgel999/miniz), used to decompress ZIP files in some decoders
 - [MuParser](https://github.com/beltoforion/muparser), for expression parsing (such as in composites)
 - [Nlhohmann's JSON](https://github.com/nlohmann/json), for JSON and CBOR encoding/parsing
@@ -27,7 +26,6 @@ First time here? See the reference documents below to get started using SatDump.
 - [Portable File Dialogs](https://github.com/samhocevar/portable-file-dialogs), for native files dialogs
 - [QOI](https://github.com/phoboslab/qoi), for qoi image support
 - [RapidXML](http://rapidxml.sourceforge.net/), for XML Parsing
-- [sol2](https://github.com/ThePhD/sol2), C++ Bindings for LUA
 - [UTF-8 CPP](https://utfcpp.sourceforge.net/), for UTF-8 handling
 - [xdsopl's LDPC](https://github.com/xdsopl/LDPC), utilized for LDPC codes encoding/decoding
 

@@ -1637,6 +1637,6 @@
     "docs/res is a git submodule (SatDump Resources).",
     "Small fragments inside SatDump's own files are not listed individually: GNU Radio (convolutional coding, src-core/common/dsp/filter/firdes.h, src-core/common/codings/lfsr.h, ...; see also gnuradio-viterbi-k7), SDR++ (the DSP stream implementation, src-core/common/dsp/resamp/power_decim/plans.h, src-core/common/wav.cpp), LeanDVB (plugins/dvb_support/codings/dvb-s2/s2_scrambling.*) and Scytale-C (https://bitbucket.org/scytalec/scytalec; the STD-C syncword in plugins/inmarsat_support/stdc/decode_utils.cpp and the STD-C packet formats).",
     "cmake/FindAVX.cmake, FindNEON.cmake and FindSSE41.cmake carry no origin or license.",
-    "resources/credits.md also credits Lua and sol2, which are no longer in the tree, and libraries that are linked from the system rather than vendored (curl, fftw3, hdf5, jemalloc, libpng, nng, PortAudio, VOLK, zlib, glfw3, OpenGL ES/EGL and the SDR vendor libraries); those need no entry."
+    "resources/credits.md also credits libraries that are linked from the system rather than vendored (curl, fftw3, hdf5, jemalloc, libpng, nng, PortAudio, VOLK, zlib, glfw3, OpenGL ES/EGL and the SDR vendor libraries); those need no entry."
   ]
 }

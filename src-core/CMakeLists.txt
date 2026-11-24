@@ -22,7 +22,6 @@ file(GLOB_RECURSE SatDump_core_CPPS *.cpp
     libs/predict/*.c
     libs/bzlib/*.c
     libs/miniz/*.c
-    libs/libtom/*.c
     libs/jpeg/*.c
     libs/jpeg12/*.c
     libs/dlfcn/dlfcn.c
@@ -30,8 +29,6 @@ file(GLOB_RECURSE SatDump_core_CPPS *.cpp
     libs/correct/*.c
     libs/openjp2/*.c
     libs/deepspace-turbo/*.c
-    libs/bzlib/*.c
-    libs/tiny-regex-c/*.c
     libs/supernovas/*.c
     libs/calceph/*.c
     libs/bpe/*.c
@@ -191,7 +188,6 @@ if(MSVC)
         target_compile_definitions(satdump_core PUBLIC BUILD_ZIQ="1")
     endif()
 
-    target_include_directories(satdump_core PUBLIC libs/lua)
     target_link_libraries(satdump_core PUBLIC ws2_32 pthreadVC3)
 elseif(ANDROID)
     # Jemalloc
@@ -222,8 +218,6 @@ elseif(ANDROID)
 
     # Tiff
     target_link_libraries(satdump_core PUBLIC tiff)
-
-    target_include_directories(satdump_core PUBLIC libs/lua)
 else()
     if(NOT APPLE)
         target_link_libraries(satdump_core PUBLIC stdc++fs)
@@ -271,9 +265,6 @@ else()
         target_link_libraries(satdump_core PUBLIC ${ZSTD_LIBRARY})
         target_compile_definitions(satdump_core PUBLIC BUILD_ZIQ="1")
     endif()
-
-    # Lua
-    target_include_directories(satdump_core PUBLIC libs/lua)
 
     # Curl
     find_package(CURL REQUIRED)
