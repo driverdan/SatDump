@@ -39,6 +39,9 @@ namespace satdump
                     volk_free(taps);
                 if (buffer != nullptr)
                     volk_free(buffer);
+                // Not freed again if firdes::hilbert() throws below
+                taps = nullptr;
+                buffer = nullptr;
 
                 int ntaps;
                 apply_params(
@@ -48,14 +51,14 @@ namespace satdump
                         buffer_size = p_buffer_size;
                     });
 
-                // Init buffer
-                buffer = dsp::create_volk_buffer<float>(buffer_size); // TODOREWORK How to handle this from the initial buffer size?
-
                 // Init taps
                 auto new_taps = dsp::firdes::hilbert(ntaps, dsp::fft::window::WIN_HAMMING, 6.76);
+                d_ntaps = new_taps.size();
+
+                // Init buffer : the history of d_ntaps samples, then up to buffer_size new ones
+                buffer = dsp::create_volk_buffer<float>(buffer_size + d_ntaps); // TODOREWORK How to handle this from the initial buffer size?
 
                 // Init taps
-                d_ntaps = new_taps.size();
                 taps = (float *)volk_malloc(d_ntaps * sizeof(float), volk_get_alignment());
                 for (int j = 0; j < d_ntaps; j++)
                     taps[j] = new_taps[(d_ntaps - 1) - j]; // Reverse taps
@@ -83,7 +86,13 @@ namespace satdump
                 if (key == "ntaps")
                     set_param(p_ntaps, v.get<int>());
                 else if (key == "buffer_size")
-                    set_param(p_buffer_size, v.get<int>());
+                {
+                    // work() processes the input buffer_size samples at a time
+                    int bs = v.get<int>();
+                    if (bs < 1)
+                        return RES_ERR;
+                    set_param(p_buffer_size, bs);
+                }
                 else
                     throw satdump_exception(key);
                 return RES_OK;

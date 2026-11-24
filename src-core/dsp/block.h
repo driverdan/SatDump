@@ -356,8 +356,11 @@ namespace satdump
             /**
              * @brief Guards the parameters (usually p_ members) that set_cfg
              * can change from another thread (eg, the UI) while the block
-             * runs. Use set_param(), get_param() and apply_params() rather
-             * than locking it directly.
+             * runs. Prefer set_param(), get_param() and apply_params().
+             * Lock it directly only for what they do not cover : several
+             * parameters set at once (RationalResamplerBlock), or one that
+             * must not trigger a reinit (WaveformBlock "bufs"). Whoever sets
+             * a parameter that init() applies must also set needs_reinit.
              */
             std::mutex params_mtx;
 
@@ -394,6 +397,9 @@ namespace satdump
              * and clears needs_reinit with the parameters copied, so a change
              * made after this is applied by the next reinit_if_needed().
              * Keep f short (just copies) : set_cfg waits for it.
+             * A block using set_param() must call this in init() : only
+             * this clears needs_reinit, so without it init() would run
+             * again on every buffer.
              * @param f function copying the parameters
              */
             template <typename F>

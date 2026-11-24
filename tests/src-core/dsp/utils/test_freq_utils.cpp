@@ -177,6 +177,81 @@ TEST_CASE("ndsp HilbertBlock with fewer taps changes the delay", "[dsp][utils][h
         REQUIRE(r.out()[n].real == in[n - 16]);
 }
 
+TEST_CASE("ndsp HilbertBlock output does not depend on buffer_size", "[dsp][utils][hilbert]")
+{
+    // Inputs longer than buffer_size are processed in several parts. These used to write
+    // ntaps samples past the end of the buffer, and read past the end of the last part (#161)
+    auto in = ndsp_test::randomFloats(9000, 24);
+    auto ref = std::make_shared<HilbertBlock>();
+    auto r_ref = ndsp_test::runSimple<float, complex_t>(ref, in, 9000);
+    REQUIRE(r_ref.completed);
+
+    for (int bs : {1, 64, 1000})
+    {
+        INFO("buffer_size = " << bs);
+        auto b = std::make_shared<HilbertBlock>();
+        REQUIRE(b->set_cfg("buffer_size", bs) == Block::RES_OK);
+        for (size_t chunk : {(size_t)2000, (size_t)2500})
+        {
+            INFO("chunk = " << chunk);
+            auto r = ndsp_test::runSimple<float, complex_t>(b, in, chunk);
+            REQUIRE(r.completed);
+            REQUIRE(r.out().size() == in.size());
+            CHECK(ndsp_test::maxAbsDiff(r.out(), r_ref.out()) < 1e-6);
+            for (auto s : r.outputs.at(0).sizes)
+                CHECK(s <= (uint32_t)bs);
+        }
+    }
+}
+
+TEST_CASE("ndsp HilbertBlock rejects a buffer_size below 1", "[dsp][utils][hilbert]")
+{
+    // work() would never get through an input
+    HilbertBlock b;
+    CHECK(b.set_cfg("buffer_size", 0) == Block::RES_ERR);
+    CHECK(b.set_cfg("buffer_size", -5) == Block::RES_ERR);
+    CHECK(b.get_cfg("buffer_size") == 8192 * 8);
+    CHECK_FALSE(b.needs_reinit);
+}
+
+TEST_CASE("ndsp HilbertBlock applies buffer_size set while running", "[dsp][utils][hilbert]")
+{
+    auto in1 = ndsp_test::randomFloats(2000, 25);
+    auto in2 = ndsp_test::randomFloats(2500, 26);
+
+    auto b = std::make_shared<HilbertBlock>();
+    auto in = std::make_shared<DSPStream>(4);
+    b->set_input({"in", DSP_SAMPLE_TYPE_F32, in}, 0);
+    ndsp_test::Collector<complex_t> col(b->get_output(0, 4).fifo);
+    b->start();
+
+    ndsp_test::pushSamples(*in, in1);
+    CHECK(col.waitFor(in1.size()));
+    REQUIRE(b->set_cfg("buffer_size", 300) == Block::RES_OK);
+    // Bigger than the new buffer_size
+    ndsp_test::pushSamples(*in, in2);
+    CHECK(col.waitFor(in1.size() + in2.size()));
+    ndsp_test::pushTerminator(*in);
+    CHECK(ndsp_test::stopBlock(b));
+    col.finish();
+
+    // The change starts over with an empty history, like a new block with that buffer_size
+    auto ref = std::make_shared<HilbertBlock>();
+    REQUIRE(ref->set_cfg("buffer_size", 300) == Block::RES_OK);
+    auto r_ref = ndsp_test::runSimple<float, complex_t>(ref, in2, in2.size());
+    REQUIRE(r_ref.completed);
+
+    auto out = col.data();
+    REQUIRE(out.size() == in1.size() + in2.size());
+    std::vector<complex_t> out2(out.begin() + in1.size(), out.end());
+    CHECK(ndsp_test::maxAbsDiff(out2, r_ref.out()) < 1e-6);
+    auto sizes = col.sizes();
+    REQUIRE(sizes.size() >= 2);
+    CHECK(sizes[0] == in1.size());
+    for (size_t i = 1; i < sizes.size(); i++)
+        CHECK(sizes[i] <= 300);
+}
+
 TEST_CASE("ndsp HilbertBlock rejects an even number of taps on start", "[dsp][utils][hilbert]")
 {
     // firdes::hilbert only accepts odd tap counts. This is the first init() of

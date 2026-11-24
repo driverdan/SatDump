@@ -33,11 +33,13 @@ namespace satdump
 
             float *ibuf = iblk.getSamples<float>();
 
-            lbuf_size = iblk.size > buffer_size ? buffer_size : iblk.size;
             lbuf_offset = 0;
 
             while (lbuf_offset < iblk.size)
             {
+                // At most buffer_size samples at a time, and no more than are left
+                lbuf_size = std::min<size_t>(buffer_size, iblk.size - lbuf_offset);
+
                 DSPBuffer oblk = outputs[0].fifo->newBufferSamples(lbuf_size, sizeof(complex_t));
                 complex_t *obuf = oblk.getSamples<complex_t>();
 

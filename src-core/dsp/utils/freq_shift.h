@@ -41,24 +41,24 @@ namespace satdump
 
             void init()
             {
-                bool raw_shift;
-                double freq_shift, samplerate;
+                bool d_raw_shift;
+                double d_freq_shift, d_samplerate;
                 apply_params(
                     [&]()
                     {
-                        raw_shift = this->raw_shift;
-                        freq_shift = this->freq_shift;
-                        samplerate = this->samplerate;
+                        d_raw_shift = raw_shift;
+                        d_freq_shift = freq_shift;
+                        d_samplerate = samplerate;
                     });
 
-                if (raw_shift == false)
+                if (d_raw_shift == false)
                 {
                     phase = complex_t(1, 0);
-                    phase_delta = complex_t(cos(2.0 * M_PI * (freq_shift / samplerate)), sin(2.0 * M_PI * (freq_shift / samplerate)));
+                    phase_delta = complex_t(cos(2.0 * M_PI * (d_freq_shift / d_samplerate)), sin(2.0 * M_PI * (d_freq_shift / d_samplerate)));
                 }
-                else if (raw_shift == true)
+                else if (d_raw_shift == true)
                 {
-                    phase_delta = complex_t(cosf(freq_shift), sinf(freq_shift));
+                    phase_delta = complex_t(cosf(d_freq_shift), sinf(d_freq_shift));
                 }
             }
 
