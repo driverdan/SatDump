@@ -68,7 +68,7 @@ TEST_CASE("satdump run reports a script that fails (#87)", "[core][cli][angelscr
     CHECK(runCommand({bad.str()}));
     CHECK(runCommand({throws.str()}));
 
-    // Linting only prints the diagnostics, whatever they are
+    // Linting does not report an error, even when the script fails to build
     CHECK_FALSE(runCommand({good.str(), "--lint"}));
     CHECK_FALSE(runCommand({bad.str(), "--lint"}));
 }

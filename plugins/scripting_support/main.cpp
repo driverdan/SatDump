@@ -38,7 +38,10 @@ void pipeline_done_processing_callback(const satdump::pipeline::events::Pipeline
                 return;
 
             if (!satdump::script::runVoidMainFromModule(engine, "script"))
+            {
+                engine->ShutDownAndRelease();
                 return;
+            }
 
             engine->ShutDownAndRelease();
         }
