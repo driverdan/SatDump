@@ -31,7 +31,6 @@ namespace webhook_app
         WebhookEvents events;
 
         static std::string get_payload_key(const std::string &url);
-        static void send_webhook(const std::string &url, const std::string &payload_key, const std::string &message);
 
         void handle_event(const satdump::SatDumpStartedEvent &evt);
         void handle_event(const satdump::pipeline::events::PipelineDoneProcessingEvent &evt);
@@ -43,6 +42,13 @@ namespace webhook_app
         WebhookSender(const WebhookConfig &config);
 
         static bool is_valid_url(const std::string &url);
+
+        /**
+         * @brief POST a message to a webhook, logging an error if it is not delivered
+         * @return true if the server accepted it
+         */
+        static bool send_webhook(const std::string &url, const std::string &payload_key, const std::string &message);
+
         static void test(const WebhookConfig &config);
     };
 }

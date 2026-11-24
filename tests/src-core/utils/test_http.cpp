@@ -248,4 +248,18 @@ TEST_CASE("perform_http_request_post fails on a refused connection", "[utils][ht
     CHECK(satdump::perform_http_request_post("http://127.0.0.1:" + std::to_string(closedPort()) + "/", result, "x=1") == 1);
     CHECK(result.empty());
 }
+
+TEST_CASE("perform_http_request_post fails on an HTTP error status", "[utils][http]")
+{
+    NoProxy np;
+    auto status = GENERATE(as<std::string>{}, "301 Moved Permanently", "404 Not Found", "500 Internal Server Error");
+    OneShotHttpServer server(status, "error page");
+    std::string result;
+    int ret = satdump::perform_http_request_post(server.url("/api"), result, "x=1");
+    server.finish();
+
+    CHECK(ret == 1);
+    CHECK(result == "error page");
+    CHECK(server.request.rfind("POST /api HTTP/1.1\r\n", 0) == 0);
+}
 #endif

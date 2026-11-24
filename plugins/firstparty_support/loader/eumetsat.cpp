@@ -118,11 +118,12 @@ namespace satdump
     {
         std::string final_token = macaron::Base64::Encode(eumetsat_user_consumer_credential + ":" + eumetsat_user_consumer_secret);
 
+        // On failure, the response is an error page, not a token, so it is neither used nor logged.
+        // The token itself is not logged either.
         std::string resp = "";
-        if (satdump::perform_http_request_post("https://api.eumetsat.int/token", resp, "grant_type=client_credentials", "Authorization: Basic " + final_token) != 1)
-            resp = nlohmann::json::parse(resp)["access_token"];
-        logger->trace("Token %s", resp.c_str());
-        return resp;
+        if (satdump::perform_http_request_post("https://api.eumetsat.int/token", resp, "grant_type=client_credentials", "Authorization: Basic " + final_token) != 0)
+            throw std::runtime_error("Could not get an EUMETSAT access token");
+        return nlohmann::json::parse(resp).at("access_token").get<std::string>();
     }
 
     void ArchiveLoader::updateEUMETSAT()

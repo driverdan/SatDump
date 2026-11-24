@@ -59,7 +59,7 @@ namespace webhook_app
                 [this](const satdump::events::TrackingSchedulerLOSEvent &evt) { handle_event(evt); });
     }
 
-    void WebhookSender::send_webhook(const std::string &url, const std::string &payload_key, const std::string &message)
+    bool WebhookSender::send_webhook(const std::string &url, const std::string &payload_key, const std::string &message)
     {
         nlohmann::json payload;
         payload[payload_key] = message;
@@ -67,8 +67,16 @@ namespace webhook_app
         std::string json = payload.dump();
         logger->debug("Sending webhook: \"%s\"", json.c_str());
 
+        // Neither the URL nor the response is logged: the URL holds the webhook's token, and
+        // servers may echo it back. perform_http_request_post() already logged the status.
         std::string response;
-        satdump::perform_http_request_post(url, response, json, "Content-Type: application/json");
+        if (satdump::perform_http_request_post(url, response, json, "Content-Type: application/json") != 0)
+        {
+            logger->error("Failed to send webhook");
+            return false;
+        }
+
+        return true;
     }
 
     void WebhookSender::test(const WebhookConfig &config)

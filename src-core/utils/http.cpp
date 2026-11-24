@@ -151,7 +151,16 @@ namespace satdump
                     logger->error("curl_easy_perform() failed: %s", curl_easy_strerror(res));
             }
             else
-                ret = 0;
+            {
+                // An error page is not a successful POST. Redirects are not followed here.
+                // The URL is not logged, as it can hold a secret (e.g. a webhook token).
+                long response_code = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
+                if (response_code >= 300)
+                    logger->error("HTTP POST request failed with status %ld", response_code);
+                else
+                    ret = 0;
+            }
 
             curl_easy_cleanup(curl);
 
