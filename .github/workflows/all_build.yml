@@ -1,10 +1,10 @@
 name: Build All
 
-# Only master is built automatically (it updates the nightly release). Other
-# branches can be built from the Actions tab.
+# Master is built automatically once a day at 04:00 UTC (it updates the nightly
+# release). Other branches can be built from the Actions tab.
 on:
-  push:
-    branches: [master]
+  schedule:
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 env:
@@ -508,7 +508,7 @@ jobs:
     runs-on: ubuntu-latest
     # Run when a build was skipped (e.g. build_android where its runner is unavailable),
     # but not when one failed or the run was cancelled.
-    if: ${{ !cancelled() && !failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    if: ${{ !cancelled() && !failure() && github.event_name == 'schedule' && github.ref == 'refs/heads/master' }}
 
     steps:
       - name: Download Artifacts

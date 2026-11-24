@@ -106,14 +106,22 @@ TEST_CASE("LegacyCmdHandler plugs into the CommandHandler like the satdump execu
         CHECK(h.has_command());
     }
 
-    SECTION("legacy -h parses, but the command is then not run")
+    SECTION("legacy -h is a plain argument")
     {
-        // CommandHandler::run() does nothing once -h / --help is anywhere on the command line,
-        // so main_old() never gets to print the legacy help for "satdump legacy -h" (only
-        // "satdump legacy help" does). If it did run, this would exit the test executable.
+        // -h is handed to the legacy command, so CommandHandler::run() would run it (#228).
+        // LegacyCmdHandler::run() ends with exit(), so run() must not be called here: that
+        // -h reaches a prefix command is tested in test_cli.cpp with a test-only command.
         Argv a({"satdump", "legacy", "-h"});
         CHECK(h.parse(a.argc(), a.argv()) == 0);
         CHECK(h.has_command());
+    }
+
+    SECTION("--help-all after legacy is handled by CLI11, and the command is then not run")
+    {
+        // --help-all belongs to the top-level app, so CLI11 prints the help and run() does
+        // nothing. If it did run the command, this would exit the test executable.
+        Argv a({"satdump", "legacy", "--help-all"});
+        CHECK(h.parse(a.argc(), a.argv()) == 0);
         CHECK_FALSE(h.run());
     }
 }

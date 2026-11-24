@@ -599,8 +599,8 @@ TEST_CASE("DCS blocks of the smallest length are parsed", "[plugins][goes_suppor
     CHECK(out["blocks"][1]["type"] == "DCS Message");
     CHECK(out["blocks"][1]["header"]["type_id"] == 0);
     CHECK(out["blocks"][1]["data_ascii"] == "");
-    // Only the address digits that #100 leaves at its start, not the CRC byte 7f
-    CHECK(out["blocks"][1]["data_raw"] == "00000000");
+    // Not the CRC byte 7f
+    CHECK(out["blocks"][1]["data_raw"] == "");
     CHECK(out["blocks"][2]["type"] == "Missed Message");
     CHECK(out["blocks"][3]["type"] == "DCS Message");
 }
@@ -731,4 +731,13 @@ TEST_CASE("DCS times are UTC, whatever the local time zone", "[plugins][goes_sup
         CHECK(msg["header"]["window_start"] == "2024-03-10 02:00:00.0");
         CHECK(msg["header"]["window_end"] == "2024-11-03 01:59:59.999");
     }
+}
+
+// #100: data_raw began with the address, which was left in the stream it was read from
+TEST_CASE("DCS messages keep their address out of their raw data", "[plugins][goes_support][goes_dcs]")
+{
+    // The first data byte is block byte 39, then the body
+    nlohmann::json msg = decode({"Stage"}, "B1A@A@L");
+    CHECK(msg["header"]["corrected_address"] == "5a5a0037");
+    CHECK(msg["data_raw"] == "004231414041404c"); // 00, then "B1A@A@L"
 }
