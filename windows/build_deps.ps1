@@ -147,8 +147,11 @@ ninja install
 cd ../..
 
 # Libairspy
-git clone https://github.com/airspy/airspyone_host libairspy --depth 1 -b v1.0.10
+# Pinned to a master commit rather than v1.0.10 (2021, the latest tag). v1.0.10's airspy_close() frees
+# its transfers after libusb_exit(), which crashes on Windows when stopping the SDR.
+git clone https://github.com/airspy/airspyone_host libairspy
 cd libairspy
+git checkout fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0
 mkdir build
 cd build
 cmake $cmake_params ..  -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5" -DLIBUSB_INCLUDE_DIR="$output_folder/include/libusb-1.0" -DTHREADS_PTHREADS_WIN32_LIBRARY="$output_folder/lib/pthreadVC3.lib"
