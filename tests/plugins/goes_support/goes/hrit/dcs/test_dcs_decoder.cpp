@@ -741,3 +741,54 @@ TEST_CASE("DCS messages keep their address out of their raw data", "[plugins][go
     CHECK(msg["header"]["corrected_address"] == "5a5a0037");
     CHECK(msg["data_raw"] == "004231414041404c"); // 00, then "B1A@A@L"
 }
+
+// #112: the dump of the JSON threw on bytes that are not UTF-8, so that the whole file was lost,
+// and an empty JSON file was left behind
+TEST_CASE("DCS files with bytes that are not UTF-8 are still written", "[plugins][goes_support][goes_dcs]")
+{
+    SECTION("an unknown source ID that is not printable is written in hex")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        file[64 + 35] = 0xff;
+        file[64 + 36] = 0x01;
+        nlohmann::json msg = decodeFile({}, file);
+        CHECK(msg["header"]["drgs_source"] == "Unknown - ff01");
+        CHECK(msg["data_ascii"] == "ABC");
+    }
+
+    SECTION("an unknown printable source ID is written as it is")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        file[64 + 35] = 'Z';
+        file[64 + 36] = 'Q';
+        nlohmann::json msg = decodeFile({}, file);
+        CHECK(msg["header"]["drgs_source"] == "Unknown - ZQ");
+    }
+
+    SECTION("a DCP message block that is all 0xff after its ID and length")
+    {
+        std::vector<uint8_t> block = dcsBlock(1, 50);
+        std::fill(block.begin() + 3, block.end(), 0xff);
+        nlohmann::json msg = decodeFile({}, dcsFileOf(block));
+        CHECK(msg["type"] == "DCS Message");
+        CHECK(msg["header"]["drgs_source"] == "Unknown - ffff");
+    }
+
+    SECTION("a file source and type that are not UTF-8: their bad bytes are replaced")
+    {
+        std::vector<uint8_t> file = dcsFile("ABC");
+        file[40] = 0xff; // "SRC " -> "\xffRC "
+        file[47] = 0xc3; // "DCSH" -> "DCS\xc3", a sequence cut short
+        cli_test::LogCapture log;
+        TempDir tmp("goes_dcs");
+        std::filesystem::create_directories(tmp.file("DCS"));
+        bool parsed = DCSDecoder::processBounded(std::make_shared<DCSDecoder>(tmp.str()), file);
+        REQUIRE(parsed);
+
+        nlohmann::json out = nlohmann::json::parse(readFile(tmp.file("DCS/" + FILE_NAME + ".json")));
+        CHECK(out["source"] == "\xEF\xBF\xBD"
+                               "RC");
+        CHECK(out["type"] == "DCS\xEF\xBF\xBD");
+        CHECK(out["blocks"].size() == 1);
+    }
+}
