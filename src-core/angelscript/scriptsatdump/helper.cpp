@@ -75,7 +75,7 @@ namespace satdump
             // Clean up
             ctx->Release();
 
-            return true;
+            return r == asEXECUTION_FINISHED;
         }
     } // namespace script
 } // namespace satdump
