@@ -234,6 +234,31 @@ TEST_CASE("ndsp Block set_cfg with JSON returns the highest status", "[dsp][bloc
     CHECK(b.set_cfg(nlohmann::json::object()) == Block::RES_OK);
 }
 
+TEST_CASE("ndsp Block set_cfg_io reports an IO change separately from errors", "[dsp][block][cfg]")
+{
+    PassBlock pb;
+    Block &b = pb;
+    bool io = true;
+
+    CHECK(b.set_cfg_io(nlohmann::json{{"gain", 2.0}, {"ival", 5}}, io) == Block::RES_LISTUPD);
+    CHECK_FALSE(io);
+
+    CHECK(b.set_cfg_io(nlohmann::json{{"io", 0}}, io) == Block::RES_IOUPD);
+    CHECK(io);
+
+    // A rejected value is not an IO change
+    CHECK(b.set_cfg_io(nlohmann::json{{"bad", 0}}, io) == Block::RES_ERR);
+    CHECK_FALSE(io);
+    CHECK(b.set_cfg_io(nlohmann::json{{"unknown", 1}}, io) == Block::RES_ERR);
+    CHECK_FALSE(io);
+
+    // An IO change is still reported when another key fails
+    CHECK(b.set_cfg_io(nlohmann::json{{"bad", 0}, {"io", 0}}, io) == Block::RES_ERR);
+    CHECK(io);
+    CHECK(b.set_cfg_io(nlohmann::json{{"io", 0}, {"unknown", 1}}, io) == Block::RES_ERR);
+    CHECK(io);
+}
+
 TEST_CASE("ndsp Block get_cfg returns every listed parameter", "[dsp][block][cfg]")
 {
     PassBlock b;
