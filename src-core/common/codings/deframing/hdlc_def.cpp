@@ -5,7 +5,9 @@ namespace ax25
     HDLCDeframer::HDLCDeframer(int length_min, int length_max)
         : d_len_min(length_min), d_len_max(length_max)
     {
-        wip_pkt = new uint8_t[d_len_max];
+        // One spare byte: work() writes up to wip_pkt[d_len_max], which holds the
+        // first bits of the closing flag after a frame of exactly d_len_max bytes
+        wip_pkt = new uint8_t[d_len_max + 1];
     }
 
     HDLCDeframer::~HDLCDeframer()
