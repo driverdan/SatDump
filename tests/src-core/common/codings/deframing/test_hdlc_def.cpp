@@ -138,7 +138,28 @@ TEST_CASE("HDLCDeframer drops frames shorter than the minimum length", "[common]
     CHECK(frames[0] == okFrame);
 }
 
-TEST_CASE("HDLCDeframer keeps state across calls, even one bit at a time", "[common][codings][deframing][hdlc]")
+TEST_CASE("HDLCDeframer keeps frames of exactly the maximum length and drops longer ones", "[common][codings][deframing][hdlc]")
+{
+    // The maximum length counts the 2 FCS bytes. Filling the buffer to the end
+    // used to write one byte past it (#129).
+    std::vector<uint8_t> maxFrame = randomBytes(30, 11), longFrame = randomBytes(31, 12), okFrame = randomBytes(20, 13);
+    std::vector<uint8_t> bits;
+    appendFlag(bits);
+    appendFrame(bits, maxFrame);
+    appendFlag(bits);
+    appendFrame(bits, longFrame);
+    appendFlag(bits);
+    appendFrame(bits, okFrame);
+    appendFlag(bits);
+
+    ax25::HDLCDeframer def(4, 32);
+    auto frames = def.work(bits.data(), bits.size());
+    REQUIRE(frames.size() == 2);
+    CHECK(frames[0] == maxFrame);
+    CHECK(frames[1] == okFrame);
+}
+
+TEST_CASE("HDLCDeframer keeps state across calls, even one bit at a time","[common][codings][deframing][hdlc]")
 {
     std::vector<std::vector<uint8_t>> sent;
     std::vector<uint8_t> bits;
