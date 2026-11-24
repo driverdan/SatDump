@@ -13,8 +13,6 @@ namespace satdump
         class ChannelModelSimpleBlock : public BlockSimple<complex_t, complex_t>
         {
         private:
-            bool needs_reinit = true;
-
             double samplerate = 1e6;
             double noise_level = -150;
             double signal_level = -120;
@@ -40,7 +38,7 @@ namespace satdump
                 add_param_simple(p, "noise_level", "float", "Noise Level (dBm)");
                 add_param_simple(p, "signal_level", "float", "Signal Level (dBm)");
                 add_param_simple(p, "freq_shift", "float", "Frequency Shift");
-                add_param_simple(p, "d_alpha", "float", "Alpha");
+                add_param_simple(p, "alpha", "float", "Alpha");
                 return p;
             }
 
@@ -65,7 +63,6 @@ namespace satdump
                 if (key == "samplerate")
                 {
                     samplerate = v;
-                    needs_reinit = true;
                 }
                 else if (key == "noise_level")
                 {
