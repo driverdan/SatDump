@@ -38,16 +38,36 @@ TEST_CASE("RotctlHandler keeps current settings for missing or invalid fields", 
     CHECK(h.get_settings()["port"] == 4533);
 }
 
-// Bug: rotcl_handler.cpp:76 memcpy's the new address over the old one without copying the
-// terminating NUL, so an address shorter than the previous one keeps the old tail
-// ("127.0.0.1" -> "10.0.0.1" becomes "10.0.0.11").
-TEST_CASE("RotctlHandler accepts an address shorter than the previous one", "[common][tracking][rotator][!shouldfail]")
+TEST_CASE("RotctlHandler accepts an address shorter than the previous one", "[common][tracking][rotator]")
 {
+    // The old tail must not survive ("127.0.0.1" -> "10.0.0.1" must not become "10.0.0.11")
     rotator::RotctlHandler h;
     nlohmann::json in;
     in["address"] = "10.0.0.1";
     h.set_settings(in);
     CHECK(h.get_settings()["address"] == "10.0.0.1");
+}
+
+TEST_CASE("RotctlHandler truncates an address too long for its buffer", "[common][tracking][rotator]")
+{
+    rotator::RotctlHandler h;
+    std::string long_address(500, 'a');
+    nlohmann::json in;
+    in["address"] = long_address;
+    in["port"] = 1234;
+    h.set_settings(in);
+    nlohmann::json out = h.get_settings();
+    // The buffer holds 100 bytes including the terminator
+    CHECK(out["address"] == std::string(99, 'a'));
+    CHECK(out["port"] == 1234);
+
+    // An address of exactly 99 characters fits, and a shorter one afterwards replaces it fully
+    in["address"] = std::string(99, 'b');
+    h.set_settings(in);
+    CHECK(h.get_settings()["address"] == std::string(99, 'b'));
+    in["address"] = "localhost";
+    h.set_settings(in);
+    CHECK(h.get_settings()["address"] == "localhost");
 }
 
 TEST_CASE("RotctlHandler commands fail with a connection error when not connected", "[common][tracking][rotator]")
