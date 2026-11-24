@@ -82,6 +82,7 @@ satdump_add_plugin_tests(gk2a_support gk2a_support)
 satdump_add_plugin_tests(fengyun4_support fengyun4_support)
 satdump_add_plugin_tests(elektro_arktika_support elektro_arktika_support)
 satdump_add_plugin_tests(jpss_support jpss_support)
+satdump_add_plugin_tests(webhook_app webhook_app)
 
 # Lets tests load files shipped in the repository (e.g. resources/)
 target_compile_definitions(satdump_tests PRIVATE SATDUMP_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

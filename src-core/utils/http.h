@@ -59,6 +59,7 @@ namespace satdump
      * @param result HTTP response, as a string
      * @param post_req POST payload
      * @param added_header optional additional headers
+     * @return 0 on success, 1 if the request failed or the server answered with a status of 300 or above
      */
     int perform_http_request_post(std::string url_str, std::string &result, std::string post_req, std::string added_header = "");
 } // namespace satdump
