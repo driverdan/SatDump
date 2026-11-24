@@ -315,16 +315,35 @@ namespace satdump
              * Essentially the same as set_cfg(key, v), except
              * this will set any number of them at once.
              * @param v values to set
-             * @return highest error code or status
+             * @return highest error code or status. As RES_ERR is
+             * above RES_IOUPD, an IO change can be hidden by an error
+             * on another key, use set_cfg_io to know about it.
              */
             cfg_res_t set_cfg(nlohmann::json v)
             {
+                bool io_changed;
+                return set_cfg_io(v, io_changed);
+            }
+
+            /**
+             * @brief Same as set_cfg(v), but also reports whether
+             * any of the keys returned RES_IOUPD, even if another one
+             * returned RES_ERR.
+             * @param v values to set
+             * @param io_changed set to true if the IO configuration changed
+             * @return highest error code or status
+             */
+            cfg_res_t set_cfg_io(nlohmann::json v, bool &io_changed)
+            {
                 cfg_res_t r = RES_OK;
+                io_changed = false;
                 for (auto &i : v.items())
                 {
                     try
                     {
                         cfg_res_t r2 = set_cfg(i.key(), i.value());
+                        if (r2 == RES_IOUPD)
+                            io_changed = true;
                         if (r2 > r)
                             r = r2;
                     }

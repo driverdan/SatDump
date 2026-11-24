@@ -34,6 +34,46 @@ namespace
         DeviceInfo info() { return devInfo; }
         device_mode_t mode() { return devMode; }
     };
+
+    // Block whose set_cfg can reject a value or change its IO
+    class CfgResBlock : public Block
+    {
+    public:
+        int nout = 1;
+
+        CfgResBlock() : Block("cfg_res_ff", {}, {{"out", DSP_SAMPLE_TYPE_F32}}) {}
+
+        bool work() override { return true; }
+
+        nlohmann::ordered_json get_cfg_list() override
+        {
+            nlohmann::ordered_json p;
+            add_param_simple(p, "nout", "int");
+            add_param_simple(p, "val", "int");
+            return p;
+        }
+
+        nlohmann::json get_cfg(std::string key) override
+        {
+            if (key == "nout")
+                return nout;
+            return 0;
+        }
+
+        cfg_res_t set_cfg(std::string key, nlohmann::json v) override
+        {
+            if (key == "nout")
+            {
+                if (v.get<int>() < 1)
+                    return RES_ERR;
+                nout = v;
+                return RES_IOUPD;
+            }
+            else if (key == "val")
+                return RES_ERR;
+            return RES_OK;
+        }
+    };
 } // namespace
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -195,4 +235,22 @@ TEST_CASE("ndsp OptDisplayerWarper mirrors a block configuration", "[dsp][device
     w.update();
     w.setShowStats(true);
     CHECK(blk->get_cfg("const") == 4.0);
+}
+
+TEST_CASE("ndsp OptDisplayerWarper only reports a real IO change", "[dsp][device][options_displayer]")
+{
+    auto blk = std::make_shared<CfgResBlock>();
+    OptDisplayerWarper w(blk);
+
+    CHECK(w.apply({{"nout", 3}}));
+    CHECK(blk->nout == 3);
+
+    // Rejected values must not make the flowgraph rebuild the node IO
+    CHECK_FALSE(w.apply({{"nout", 0}}));
+    CHECK(blk->nout == 3);
+    CHECK_FALSE(w.apply({{"val", 1}}));
+
+    // An IO change on one key is not hidden by an error on another
+    CHECK(w.apply({{"nout", 2}, {"val", 1}}));
+    CHECK(blk->nout == 2);
 }
