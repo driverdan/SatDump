@@ -1,6 +1,7 @@
 #include "run_as.h"
 #include "angelscript/scriptsatdump/dump_predef.h"
 #include "angelscript/scriptsatdump/helper.h"
+#include "core/exception.h"
 #include "logger.h"
 
 #include "angelscript/angelscript.h"
@@ -97,7 +98,10 @@ namespace satdump
     void ScriptCmdHandler::run(CLI::App *app, CLI::App *subcom, bool is_gui)
     {
         std::string script = subcom->get_option("script")->as<std::string>();
-        runAngelScript(script, subcom->count("--lint"), subcom->count("--predef"));
+        bool lint = subcom->count("--lint");
+        // Report a failed script, so that satdump exits with an error. Linting only reports diagnostics
+        if (runAngelScript(script, lint, subcom->count("--predef")) != 0 && !lint)
+            throw satdump_exception("Script " + script + " failed");
     }
 
     int ScriptCmdHandler::runAngelScript(std::string file, bool lint, bool predef)
@@ -122,7 +126,10 @@ namespace satdump
             script::GenerateScriptPredefined(engine, "../as.predefined");
 
         if (!script::buildModuleFromFile(engine, "script", file))
+        {
+            engine->ShutDownAndRelease();
             return 1;
+        }
 
         if (lint)
         {
@@ -131,7 +138,10 @@ namespace satdump
         }
 
         if (!script::runVoidMainFromModule(engine, "script"))
+        {
+            engine->ShutDownAndRelease();
             return 1;
+        }
 
         // Clean up
         engine->ShutDownAndRelease();
