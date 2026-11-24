@@ -159,7 +159,7 @@ TEST_CASE("HDLCDeframer keeps frames of exactly the maximum length and drops lon
     CHECK(frames[1] == okFrame);
 }
 
-TEST_CASE("HDLCDeframer keeps state across calls, even one bit at a time","[common][codings][deframing][hdlc]")
+TEST_CASE("HDLCDeframer keeps state across calls, even one bit at a time", "[common][codings][deframing][hdlc]")
 {
     std::vector<std::vector<uint8_t>> sent;
     std::vector<uint8_t> bits;
