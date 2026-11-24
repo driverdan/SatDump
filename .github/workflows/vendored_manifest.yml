@@ -1,0 +1,42 @@
+name: Vendored Libraries
+
+# Checks third_party.json (see CONTRIBUTING.md, "Vendored libraries").
+# This is its own workflow rather than a job in unit_tests.yml because it must
+# rerun when a label is added or the description is edited (the override), and
+# those events must not restart or cancel the unit test build.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vendored-manifest-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vendored_manifest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      # For a pull request this checks out the merge commit of the PR into its
+      # base branch; its first parent is the base, so HEAD^1..HEAD is what the
+      # PR changes
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check the manifest
+        run: python3 tools/check_third_party.py
+
+      - name: Check that changed vendored libraries updated their entry
+        if: github.event_name == 'pull_request'
+        # The label and description are read from the event payload file
+        # ($GITHUB_EVENT_PATH), never put into the command line
+        run: python3 tools/check_vendored_changes.py --base HEAD^1 --head HEAD

@@ -18,6 +18,14 @@ python3 tools/check_third_party.py
 
 It checks that the JSON parses without duplicate keys, that every entry has the fields below with valid values, that every listed path exists, that no path is listed twice or lies inside another listed path, that `satdump_files` are placed as described below, and that everything directly under `src-core/libs/` belongs to an entry.
 
+CI (`.github/workflows/vendored_manifest.yml`) runs this on every pull request and push to master, and on pull requests also runs `tools/check_vendored_changes.py`. That fails if a file inside an entry's `paths` changed (added, modified, deleted or renamed) but the entry itself did not: the entry's JSON is compared between the base and the PR, so editing a different entry, moving the entry or reformatting the file does not count. Files in `satdump_files` are SatDump's own and need no update. Entries with `consumption` `system-first-fetchcontent-fallback` are not checked, since their path only names where the fetched version is set (for Catch2, `tests/CMakeLists.txt`). To run it locally against your branch:
+
+```sh
+python3 tools/check_vendored_changes.py --base origin/master
+```
+
+For a change that needs no manifest update (formatting, a build file), override the check with the `vendored-ok` label on the PR or a line containing only `[skip-vendor-check]` in the PR description. The check reruns when the label or description changes. The override does not apply to `tools/check_third_party.py`.
+
 Paths must not nest: a file inside a directory that some entry lists would count as a change to both libraries, so when two libraries share a directory, list their files individually (as `imgui` and `implot` do for `src-core/imgui`). `satdump_files` are the exception: they may lie inside the entry's own `paths`, but not inside another entry's.
 
 ### Fields
