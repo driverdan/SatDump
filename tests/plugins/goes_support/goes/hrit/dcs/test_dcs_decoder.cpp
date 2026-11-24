@@ -742,7 +742,7 @@ TEST_CASE("DCS messages keep their address out of their raw data", "[plugins][go
     CHECK(msg["data_raw"] == "004231414041404c"); // 00, then "B1A@A@L"
 }
 
-// #112: the dump of the JSON threw on bytes that are not UTF-8, so that the whole file was lost,
+// The dump of the JSON threw on bytes that are not UTF-8, so that the whole file was lost,
 // and an empty JSON file was left behind
 TEST_CASE("DCS files with bytes that are not UTF-8 are still written", "[plugins][goes_support][goes_dcs]")
 {

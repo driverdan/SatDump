@@ -50,7 +50,7 @@ namespace goes
         }
 
         // These bytes as text if they are all printable ASCII, otherwise in hex, so that a damaged
-        // field does not put bytes that are not UTF-8 in the JSON (#112)
+        // field does not put bytes that are not UTF-8 in the JSON
         static std::string printableOrHex(const uint8_t *data, size_t size)
         {
             if (std::all_of(data, data + size, [](uint8_t c) { return c >= 0x20 && c < 0x7f; }))
@@ -1181,7 +1181,7 @@ namespace goes
                 logger->info("Writing file %s/DCS/%s.json...", directory.c_str(), dcs_file.name.c_str());
                 nlohmann::ordered_json export_json = dcs_file;
                 // The file name, source and type are bytes of the file header: one that is not
-                // UTF-8 must not lose the whole file (#112). Dumped before the file is opened, so
+                // UTF-8 must not lose the whole file. Dumped before the file is opened, so
                 // that a failure does not leave it empty.
                 std::string json_text = export_json.dump(4, ' ', false, nlohmann::ordered_json::error_handler_t::replace);
                 std::ofstream json_writer(directory + "/DCS/" + dcs_file.name + ".json");
