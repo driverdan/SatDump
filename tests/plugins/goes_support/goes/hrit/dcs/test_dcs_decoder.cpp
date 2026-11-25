@@ -40,16 +40,16 @@ namespace
 
         ~DCSDecoder() { dcp_list.erase(ADDRESS); }
 
-        bool process(std::vector<uint8_t> &file) { return processDCS(file.data(), file.size()); }
+        bool processFile(std::vector<uint8_t> &file) { return processDCS(file.data(), file.size()); }
 
-        // process() on a thread of its own, so that a parser that never returns fails the test
-        // instead of stalling the run. Only then is the thread left running, with its own
+        // processFile() on a thread of its own, so that a parser that never returns fails the
+        // test instead of stalling the run. Only then is the thread left running, with its own
         // references to the decoder and the file; otherwise it is joined, so that the decoder is
         // destroyed on the test's thread. Call it as a statement of its own, not inside a CHECK,
         // so that a timeout is reported once.
         static bool processBounded(std::shared_ptr<DCSDecoder> decoder, std::vector<uint8_t> file)
         {
-            std::packaged_task<bool()> task([decoder, file]() mutable { return decoder->process(file); });
+            std::packaged_task<bool()> task([decoder, file]() mutable { return decoder->processFile(file); });
             std::future<bool> result = task.get_future();
             std::thread parser(std::move(task));
             if (result.wait_for(test_helpers::kTimeout) != std::future_status::ready)
