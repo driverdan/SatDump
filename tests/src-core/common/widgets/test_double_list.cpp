@@ -1,9 +1,11 @@
 #include "common/widgets/double_list.h"
+#include "imgui/imgui_internal.h"
+#include "imgui/imgui_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 
 using satdump::widgets::DoubleList;
 
-// Only the non-rendering selection logic is tested here
+// render() is tested in a headless ImGui context
 
 TEST_CASE("DoubleList selects from a fixed list", "[common][widgets][double_list]")
 {
@@ -48,4 +50,50 @@ TEST_CASE("DoubleList set_list resets the selection", "[common][widgets][double_
 
     list.set_list({10, 20}, false);
     CHECK(list.get_value() == 10);
+}
+
+TEST_CASE("DoubleList::render selects a listed value in its combo", "[common][widgets][double_list]")
+{
+    imgui_test::HeadlessContext ctx;
+    DoubleList list("Rate");
+    list.set_list({1e6, 2e6, 3e6}, false);
+    ImVec2 combo;
+    bool changed = false;
+    auto draw = [&]()
+    {
+        changed = list.render() || changed;
+        combo = (ImGui::GetItemRectMin() + ImGui::GetItemRectMax()) * 0.5f;
+    };
+    ctx.frame(draw);
+
+    // Open the combo, then click on the third item of its popup
+    ctx.click(combo, draw);
+    ctx.frames(2, draw); // The popup is sized to fit its items
+    ImGuiWindow *popup = ImGui::FindWindowByName("##Combo_00");
+    REQUIRE(popup != nullptr);
+    REQUIRE(popup->Active);
+    const float line = ImGui::GetTextLineHeightWithSpacing();
+    ImVec2 third(popup->Pos.x + popup->Size.x * 0.5f, popup->Pos.y + ImGui::GetStyle().WindowPadding.y + line * 2.5f);
+    ctx.click(third, draw);
+    CHECK(changed);
+    CHECK(list.get_value() == 3e6);
+}
+
+TEST_CASE("DoubleList::render without a list draws the manual input", "[common][widgets][double_list]")
+{
+    imgui_test::HeadlessContext ctx;
+    DoubleList list("Rate");
+    ImVec2 input;
+    bool changed = false;
+    auto draw = [&]()
+    {
+        changed = list.render() || changed;
+        input = (ImGui::GetItemRectMin() + ImGui::GetItemRectMax()) * 0.5f;
+    };
+    ctx.frame(draw);
+    ctx.click(input, draw);
+    ctx.typeText("6M");
+    ctx.pressKey(ImGuiKey_Enter, draw);
+    CHECK(changed);
+    CHECK(list.get_value() == 6e6);
 }

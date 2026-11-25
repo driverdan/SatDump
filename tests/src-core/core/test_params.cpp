@@ -1,9 +1,13 @@
 #include "core/exception.h"
 #include "core/params.h"
+#include "core/style.h"
+#include "helpers/guards.h"
+#include "imgui/imgui_test_helpers.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
 
-// Only construction and value handling are tested; draw() needs an ImGui context.
+// draw() is tested in a headless ImGui context.
 // Note: the EditableParameter constructor calls rand() for its ImGui id.
 
 using nlohmann::json;
@@ -156,4 +160,132 @@ TEST_CASE("EditableParameter to_json and from_json round-trip", "[core][params][
     CHECK(j["type"] == "int");
     EditableParameter back;
     CHECK_NOTHROW(back = j.get<EditableParameter>());
+}
+
+namespace
+{
+    // Draws parameters as the rows of a two column table, like the SatDump UI does
+    struct ParamTable
+    {
+        imgui_test::HeadlessContext ctx;
+        test_helpers::ValueGuard<float> scale_guard{ui_scale, 1.0f};
+        ImVec2 last_item; // Centre of the last item drawn by the last parameter
+
+        void frame(std::vector<EditableParameter *> params)
+        {
+            ctx.frame(
+                [&]()
+                {
+                    if (ImGui::BeginTable("##params", 2))
+                    {
+                        for (auto *p : params)
+                        {
+                            p->draw();
+                            last_item = (ImGui::GetItemRectMin() + ImGui::GetItemRectMax()) * 0.5f;
+                        }
+                        ImGui::EndTable();
+                    }
+                });
+        }
+
+        // Clicks the last item of the only parameter, selects all its text and types
+        void typeInto(EditableParameter &p, const std::string &text)
+        {
+            frame({&p});
+            ctx.mouseMove(last_item);
+            frame({&p});
+            ctx.mouseButton(ImGuiMouseButton_Left, true);
+            frame({&p});
+            ctx.mouseButton(ImGuiMouseButton_Left, false);
+            frame({&p});
+            ctx.key(ImGuiMod_Ctrl, true);
+            ctx.key(ImGuiKey_A, true);
+            frame({&p});
+            ctx.key(ImGuiKey_A, false);
+            ctx.key(ImGuiMod_Ctrl, false);
+            frame({&p});
+            ctx.typeText(text);
+            frame({&p});
+            ctx.key(ImGuiKey_Enter, true);
+            frame({&p});
+            ctx.key(ImGuiKey_Enter, false);
+            frame({&p});
+        }
+    };
+} // namespace
+
+TEST_CASE("EditableParameter::draw draws every parameter type", "[core][params]")
+{
+    json opts = {"low", "mid", "high"};
+    json labeled = json::array({json::array({"k1", "Label One"}), json::array({"k2", "Label Two"})});
+    std::vector<EditableParameter> params = {
+        EditableParameter(json{{"type", "string"}, {"name", "String"}, {"description", "Tooltip"}, {"value", "v"}}),
+        EditableParameter(json{{"type", "password"}, {"name", "Password"}, {"value", "secret"}}),
+        EditableParameter(json{{"type", "int"}, {"name", "Int"}, {"value", 3}}),
+        EditableParameter(json{{"type", "float"}, {"name", "Float"}, {"value", 1.5}}),
+        EditableParameter(json{{"type", "bool"}, {"name", "Bool"}, {"value", true}}),
+        EditableParameter(json{{"type", "options"}, {"name", "Options"}, {"options", opts}, {"value", "mid"}}),
+        EditableParameter(json{{"type", "labeled_options"}, {"name", "Labeled"}, {"options", labeled}, {"manual", true}, {"value", "k2"}}),
+        EditableParameter(json{{"type", "path"}, {"name", "Path"}, {"value", "some_file.bin"}, {"is_directory", false}}),
+        EditableParameter(json{{"type", "timestamp"}, {"name", "Time"}, {"value", 1700000000.0}}),
+        EditableParameter(json{{"type", "notated_int"}, {"name", "Rate"}, {"value", 6000000}, {"units", "sps"}}),
+        EditableParameter(json{{"type", "color"}, {"name", "Color"}, {"value", {0.25, 0.5, 1.0}}}),
+        EditableParameter(json{{"type", "baseband_type"}, {"name", "Format"}, {"value", "cs16"}}),
+    };
+    std::vector<json> before;
+    std::vector<EditableParameter *> ptrs;
+    for (auto &p : params)
+    {
+        before.push_back(p.getValue());
+        ptrs.push_back(&p);
+    }
+
+    ParamTable table;
+    for (int i = 0; i < 3; i++)
+        table.frame(ptrs);
+    CHECK(table.ctx.lastVertexCount() > 0);
+
+    // Drawing changes nothing
+    for (size_t i = 0; i < params.size(); i++)
+    {
+        CAPTURE(i);
+        CHECK(params[i].getValue() == before[i]);
+    }
+}
+
+TEST_CASE("EditableParameter::draw edits string, int and float values", "[core][params]")
+{
+    {
+        EditableParameter s(json{{"type", "string"}, {"name", "Name"}, {"value", "hello"}});
+        ParamTable table;
+        table.typeInto(s, "world");
+        CHECK(s.getValue() == "world");
+    }
+    {
+        EditableParameter i(json{{"type", "int"}, {"name", "Count"}, {"value", 3}});
+        ParamTable table;
+        table.typeInto(i, "-42");
+        CHECK(i.getValue() == -42);
+    }
+    {
+        EditableParameter f(json{{"type", "float"}, {"name", "Gain"}, {"value", 1.5}});
+        ParamTable table;
+        table.typeInto(f, "12.25");
+        CHECK(f.getValue().get<double>() == Catch::Approx(12.25));
+    }
+}
+
+TEST_CASE("EditableParameter::draw toggles bool values", "[core][params]")
+{
+    EditableParameter b(json{{"type", "bool"}, {"name", "Enabled"}, {"value", false}});
+    ParamTable table;
+    table.frame({&b});
+    // The checkbox has no label, so its centre is on the box
+    table.ctx.mouseMove(table.last_item);
+    table.frame({&b});
+    table.ctx.mouseButton(ImGuiMouseButton_Left, true);
+    table.frame({&b});
+    table.ctx.mouseButton(ImGuiMouseButton_Left, false);
+    table.frame({&b});
+    CHECK(b.getValue() == true);
 }
