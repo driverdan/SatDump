@@ -8,8 +8,8 @@
 #include "imgui/imgui_internal.h"
 #include "imgui/imgui_test_helpers.h"
 #include "imgui/implot/implot_internal.h"
-#include <catch2/catch_test_macros.hpp>
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <cstring>
 #include <new>
@@ -203,7 +203,7 @@ TEST_CASE("SNRPlotViewer and ValuePlotViewer start with an empty history", "[com
             min_y = std::min(min_y, p.y);
             max_y = std::max(max_y, p.y);
         }
-        CHECK(max_y - min_y < 5.0f); // Line thickness and anti-aliasing, the old history would step by 20px
+        CHECK(max_y - min_y < 5.0f); // Line thickness and anti-aliasing, the old history stepped by about 24px
     }
 
     snr->~SNRPlotViewer();
