@@ -92,7 +92,7 @@ namespace satdump
                             shapeID = dbf_file[num]["name"];
                     }
 
-                    ImPlot::PlotScatter(shapeID.c_str(), &coordinates.x, &coordinates.y, 1);
+                    ImPlot::PlotScatter(shapeID.c_str(), &coordinates.x, &coordinates.y, 1, ImPlotSpec(ImPlotProp_Marker, ImPlotMarker_Circle));
                 };
 
                 for (shapefile::PolyLineRecord &polylineRecord : file->polyline_records)

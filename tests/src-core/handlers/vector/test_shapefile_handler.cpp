@@ -1,5 +1,7 @@
 #include "db/db_handler.h"
 #include "handlers/vector/shapefile_handler.h"
+#include "imgui/imgui_test_helpers.h"
+#include "imgui/implot/implot_internal.h"
 #include "init.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_approx.hpp>
@@ -105,4 +107,33 @@ TEST_CASE("ShapefileHandler remembers its settings per shapefile", "[handlers][s
     ShapefileHandler again(PLACES);
     CHECK(again.font_size == 44);
     CHECK(again.antialias);
+}
+
+TEST_CASE("ShapefileHandler draws every point with a circle marker", "[handlers][shapefile_handler][imgui]")
+{
+    TempDatabase db;
+    ShapefileHandler h(PLACES);
+    REQUIRE(h.file != nullptr);
+    REQUIRE(h.file->point_records.size() > 1000);
+
+    imgui_test::HeadlessOptions opts;
+    opts.implot = true;
+    imgui_test::HeadlessContext ctx(opts);
+
+    ImPlotPlot *plot = nullptr;
+    ctx.frames(2,
+               [&]()
+               {
+                   h.drawContents(ImVec2(400, 300));
+                   plot = ImPlot::GetCurrentContext()->Plots.GetByKey(ImGui::GetID("##shapefileplot"));
+               });
+    REQUIRE(plot != nullptr);
+    REQUIRE(plot->Items.GetItemCount() > 1000);
+
+    // ImPlot 1.x gives PlotScatter items the next marker of a cycle unless ImPlotSpec sets one
+    int not_circle = 0;
+    for (int i = 0; i < plot->Items.GetItemCount(); i++)
+        if (plot->Items.GetItemByIndex(i)->Marker != ImPlotMarker_Circle)
+            not_circle++;
+    CHECK(not_circle == 0);
 }

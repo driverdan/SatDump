@@ -67,7 +67,7 @@ namespace satdump
         {
             mtx.lock();
 
-            ImPlotHistogramFlags hist_flags = ImPlotHistogramFlags_Density;
+            ImPlotSpec hist_spec(ImPlotProp_Flags, ImPlotHistogramFlags_Density);
             int bins = 200;
 
             double realVal[HIST_SIZE];
@@ -86,9 +86,10 @@ namespace satdump
                 // ImPlot::SetupLegend(loc, leg);
                 ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);
                 ImPlot::SetupAxesLimits(-2.0, 2.0, 0, 2.0);
-                ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
-                ImPlot::PlotHistogram("Real", realVal, HIST_SIZE, bins, 1.0, ImPlotRange(-2.0f, 2.0f), hist_flags);
-                ImPlot::PlotHistogram("Imag", imagVal, HIST_SIZE, bins, 1.0, ImPlotRange(-2.0f, 2.0f), hist_flags);
+                ImPlotSpec real_spec = hist_spec;
+                real_spec.FillAlpha = 0.5f;
+                ImPlot::PlotHistogram("Real", realVal, HIST_SIZE, bins, 1.0, ImPlotRange(-2.0f, 2.0f), real_spec);
+                ImPlot::PlotHistogram("Imag", imagVal, HIST_SIZE, bins, 1.0, ImPlotRange(-2.0f, 2.0f), hist_spec);
                 ImPlot::EndPlot();
             }
             mtx.unlock();
