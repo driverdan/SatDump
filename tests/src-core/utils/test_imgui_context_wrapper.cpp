@@ -163,9 +163,10 @@ TEST_CASE("ContainedContext does not save an imgui.ini", "[utils][imgui_context_
         REQUIRE(cc.getRawContext() != nullptr);
         CHECK(cc.getRawContext()->IO.IniFilename == nullptr);
 
-        // Past io.IniSavingRate, ImGui would save the settings of a moved or resized window
+        // A few frames at 1/60 s stay well under io.IniSavingRate (5 s), so the periodic save
+        // never runs here: only the save in DestroyContext is exercised
         ctx.frames(3, draw);
-    } // Destroying a context saves its settings too
+    } // Destroying a context saves its settings when IniFilename is set
 
     CHECK_FALSE(std::filesystem::exists(env.dir.path / "imgui.ini"));
 }
