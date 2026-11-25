@@ -1,5 +1,7 @@
 #include "reedsolomon.h"
+#include "core/exception.h"
 #include <cstring>
+#include <string>
 
 namespace reedsolomon
 {
@@ -29,6 +31,13 @@ namespace reedsolomon
 
     ReedSolomon::ReedSolomon(RS_TYPE type, int fill_bytes)
     {
+        // A shortened codeword must keep at least one data symbol. Checked before the codec is
+        // created, as the destructor does not run if the constructor throws
+        const int data_symbols = type == RS239 ? 239 : 223;
+        if (fill_bytes >= data_symbols)
+            throw satdump_exception("Reed-Solomon fill bytes (" + std::to_string(fill_bytes) + ") must be less than the " + std::to_string(data_symbols) +
+                                    " data symbols!");
+
         if (type == RS223)
         {
             rs = correct_reed_solomon_create(correct_rs_primitive_polynomial_ccsds, 112, 11, 32);
