@@ -90,34 +90,34 @@ TEST_CASE("ndsp PSKSnrEstimatorBlock id, IO and config", "[dsp][utils][psk_snr_e
 
 namespace
 {
-    // The reshape block has a second thread writing to the output, which is
-    // only safe while the work thread itself is idle. So wait for all expected
-    // output before sending the terminator (see #159).
+    // Feeds the input in chunks, immediately followed by a terminator, without
+    // waiting for the output first : every full buffer must still come out, and
+    // before the terminator (see #159). With a propagating terminator, only
+    // what came out before it is returned.
     template <typename T>
-    std::vector<uint32_t> runReshape(int bufsize, const std::vector<T> &in, size_t chunk, size_t expected_out, std::vector<T> &out)
+    ndsp_test::RunResult<T> runReshape(std::shared_ptr<ReshapeBufferBlock<T>> b, int bufsize, const std::vector<T> &in, size_t chunk, int terminator = 1)
     {
-        auto b = std::make_shared<ReshapeBufferBlock<T>>();
         b->set_cfg("buffer_size", bufsize);
-        auto is = std::make_shared<DSPStream>(4);
-        b->set_input({"in", getTypeSampleType<T>(), is}, 0);
-        ndsp_test::Collector<T> col(b->get_output(0, 4).fifo);
-        // Workaround for the start() race (see #159) : initialize the ring
-        // buffer before start() launches the second thread. start() runs
-        // init() again, leaking the first ring allocation.
-        b->init();
-        b->start();
-        {
-            ndsp_test::Feeder<T> feed(is, in, chunk, 0);
-            REQUIRE(feed.wait());
-        }
-        REQUIRE(col.waitFor(expected_out));
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        ndsp_test::pushTerminator(*is);
-        REQUIRE(col.waitForTerminator());
-        REQUIRE(ndsp_test::stopBlock(b));
-        col.finish();
-        out = col.data();
-        return col.sizes();
+        ndsp_test::RunOptions opt;
+        opt.chunk = chunk;
+        opt.terminator = terminator;
+        opt.until_output_terminator = terminator == 1;
+        return ndsp_test::runBlock<T, T>(b, {in}, opt);
+    }
+
+    template <typename T>
+    ndsp_test::RunResult<T> runReshape(int bufsize, const std::vector<T> &in, size_t chunk, int terminator = 1)
+    {
+        return runReshape<T>(std::make_shared<ReshapeBufferBlock<T>>(), bufsize, in, chunk, terminator);
+    }
+
+    // Exactly one propagating terminator
+    template <typename T>
+    void checkTerminatedOnce(ndsp_test::RunResult<T> &r)
+    {
+        REQUIRE(r.completed);
+        CHECK(r.outputs.at(0).terminators == 1);
+        CHECK(r.outputs.at(0).propagating_terminators == 1);
     }
 } // namespace
 
@@ -126,25 +126,37 @@ TEST_CASE("ndsp ReshapeBufferBlock outputs fixed size buffers", "[dsp][utils][re
     std::vector<float> in(1000);
     for (size_t i = 0; i < in.size(); i++)
         in[i] = (float)i;
-    std::vector<float> out;
-    auto sizes = runReshape<float>(100, in, 37, 1000, out);
-    CHECK(out == in);
-    CHECK(sizes == std::vector<uint32_t>(10, 100));
+    auto r = runReshape<float>(100, in, 37);
+    checkTerminatedOnce(r);
+    CHECK(r.out() == in);
+    CHECK(r.outputs[0].sizes == std::vector<uint32_t>(10, 100));
 }
 
 TEST_CASE("ndsp ReshapeBufferBlock merges small buffers into larger ones", "[dsp][utils][reshape_buffer]")
 {
     auto in = ndsp_test::randomComplex(2048, 33);
-    std::vector<complex_t> out;
-    auto sizes = runReshape<complex_t>(512, in, 16, 2048, out);
-    CHECK(sizes == std::vector<uint32_t>(4, 512));
-    REQUIRE(out.size() == in.size());
+    auto r = runReshape<complex_t>(512, in, 16);
+    checkTerminatedOnce(r);
+    CHECK(r.outputs[0].sizes == std::vector<uint32_t>(4, 512));
+    REQUIRE(r.out().size() == in.size());
     size_t mismatches = 0, first = 0;
     for (size_t i = 0; i < in.size(); i++)
-        if (!ndsp_test::sameBits(out[i], in[i]) && mismatches++ == 0)
+        if (!ndsp_test::sameBits(r.out()[i], in[i]) && mismatches++ == 0)
             first = i;
     INFO("first mismatch at sample " << first);
     REQUIRE(mismatches == 0);
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock splits large buffers into smaller ones", "[dsp][utils][reshape_buffer]")
+{
+    std::vector<float> in(10000);
+    for (size_t i = 0; i < in.size(); i++)
+        in[i] = (float)i;
+    auto r = runReshape<float>(64, in, 4096);
+    checkTerminatedOnce(r);
+    // 10000 = 156 * 64 + 16, the last 16 are never output
+    CHECK(r.outputs[0].sizes == std::vector<uint32_t>(156, 64));
+    CHECK(r.out() == std::vector<float>(in.begin(), in.begin() + 156 * 64));
 }
 
 TEST_CASE("ndsp ReshapeBufferBlock keeps an incomplete last buffer", "[dsp][utils][reshape_buffer]")
@@ -153,10 +165,104 @@ TEST_CASE("ndsp ReshapeBufferBlock keeps an incomplete last buffer", "[dsp][util
     std::vector<int8_t> in(250);
     for (size_t i = 0; i < in.size(); i++)
         in[i] = (int8_t)(i % 100);
-    std::vector<int8_t> out;
-    auto sizes = runReshape<int8_t>(100, in, 64, 200, out);
-    CHECK(sizes == std::vector<uint32_t>{100, 100});
-    CHECK(out == std::vector<int8_t>(in.begin(), in.begin() + 200));
+    auto r = runReshape<int8_t>(100, in, 64);
+    checkTerminatedOnce(r);
+    CHECK(r.outputs[0].sizes == std::vector<uint32_t>{100, 100});
+    CHECK(r.out() == std::vector<int8_t>(in.begin(), in.begin() + 200));
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock does not forward a non-propagating terminator", "[dsp][utils][reshape_buffer]")
+{
+    std::vector<float> in(300, 1.0f);
+    auto r = runReshape<float>(100, in, 50, 2);
+    REQUIRE(r.completed);
+    CHECK(r.outputs[0].terminators == 0);
+    CHECK(r.outputs[0].sizes == std::vector<uint32_t>(3, 100));
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock can be restarted, and does not carry samples over", "[dsp][utils][reshape_buffer]")
+{
+    // Each run leaves 30 samples behind, which must not show up in the next one
+    auto b = std::make_shared<ReshapeBufferBlock<float>>();
+    for (int run = 0; run < 3; run++)
+    {
+        INFO("run " << run);
+        std::vector<float> in(230);
+        for (size_t i = 0; i < in.size(); i++)
+            in[i] = (float)(run * 1000 + i);
+        auto r = runReshape<float>(b, 100, in, 23);
+        checkTerminatedOnce(r);
+        CHECK(r.out() == std::vector<float>(in.begin(), in.begin() + 200));
+    }
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock start then immediate terminator, repeated", "[dsp][utils][reshape_buffer]")
+{
+    // Used to crash (the second thread reading the ring buffer before init()),
+    // or to lose data / send it after the terminator (two threads producing
+    // into the output stream), see #159
+    for (int i = 0; i < 200; i++)
+    {
+        INFO("iteration " << i);
+        auto in = ndsp_test::randomComplex(1024, 100 + i);
+        auto r = runReshape<complex_t>(256, in, 1024);
+        checkTerminatedOnce(r);
+        REQUIRE(r.out().size() == in.size());
+        REQUIRE(r.outputs[0].sizes == std::vector<uint32_t>(4, 256));
+    }
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock does not use uninitialized state on start", "[dsp][utils][reshape_buffer]")
+{
+    // The block is built in memory full of garbage (as reused heap memory can
+    // be), so anything start() uses before initializing it shows up. Its
+    // second thread used to read the ring buffer before init(), see #159
+    for (int i = 0; i < 50; i++)
+    {
+        INFO("iteration " << i);
+        void *mem = ::operator new(sizeof(ReshapeBufferBlock<float>));
+        memset(mem, 0x11, sizeof(ReshapeBufferBlock<float>));
+        std::shared_ptr<ReshapeBufferBlock<float>> b(new (mem) ReshapeBufferBlock<float>(),
+                                                     [](ReshapeBufferBlock<float> *p)
+                                                     {
+                                                         p->~ReshapeBufferBlock<float>();
+                                                         ::operator delete(p);
+                                                     });
+        std::vector<float> in(500, 2.0f);
+        auto r = runReshape<float>(b, 100, in, 100);
+        checkTerminatedOnce(r);
+        CHECK(r.outputs[0].sizes == std::vector<uint32_t>(5, 100));
+    }
+}
+
+TEST_CASE("ndsp ReshapeBufferBlock applies a new buffer_size while running", "[dsp][utils][reshape_buffer]")
+{
+    auto b = std::make_shared<ReshapeBufferBlock<float>>();
+    b->set_cfg("buffer_size", 100);
+    auto is = std::make_shared<DSPStream>(4);
+    b->set_input({"in", getTypeSampleType<float>(), is}, 0);
+    ndsp_test::Collector<float> col(b->get_output(0, 4).fifo);
+    b->start();
+    std::vector<float> in(1000);
+    for (size_t i = 0; i < in.size(); i++)
+        in[i] = (float)i;
+    {
+        ndsp_test::Feeder<float> feed(is, std::vector<float>(in.begin(), in.begin() + 250), 50, 0);
+        REQUIRE(feed.wait());
+    }
+    REQUIRE(col.waitFor(200));
+    b->set_cfg("buffer_size", 300);
+    {
+        ndsp_test::Feeder<float> feed(is, std::vector<float>(in.begin() + 250, in.end()), 50, 1);
+        REQUIRE(feed.wait());
+    }
+    REQUIRE(col.waitForTerminator());
+    REQUIRE(ndsp_test::stopBlock(b));
+    col.finish();
+    // 100, 100, the 50 collected under the old size as one short buffer,
+    // then 2 * 300 out of the 750 left, the last 150 are never output
+    CHECK(col.sizes() == std::vector<uint32_t>{100, 100, 50, 300, 300});
+    CHECK(col.data() == std::vector<float>(in.begin(), in.begin() + 850));
 }
 
 TEST_CASE("ndsp ReshapeBufferBlock ids and config", "[dsp][utils][reshape_buffer]")
@@ -169,6 +275,9 @@ TEST_CASE("ndsp ReshapeBufferBlock ids and config", "[dsp][utils][reshape_buffer
     b.set_cfg("buffer_size", 77);
     CHECK(b.get_cfg("buffer_size") == 77);
     CHECK(b.get_cfg_list()["buffer_size"]["type"] == "int");
+    CHECK_THROWS(b.set_cfg("buffer_size", 0));
+    CHECK_THROWS(b.set_cfg("buffer_size", -5));
+    CHECK(b.get_cfg("buffer_size") == 77);
     CHECK_THROWS(b.get_cfg("x"));
     CHECK_THROWS(b.set_cfg("x", 1));
 }

@@ -1,6 +1,7 @@
 #include "reshape_buffer.h"
 #include "dsp/block_helpers.h"
 #include <complex.h>
+#include <cstring>
 
 namespace satdump
 {
@@ -17,24 +18,25 @@ namespace satdump
         }
 
         template <typename T>
-        void ReshapeBufferBlock<T>::start()
+        void ReshapeBufferBlock<T>::dropPending()
         {
-            work2shouldrun = true;
-            work2Thread = std::thread(&ReshapeBufferBlock::work2, this);
+            if (has_pending)
+                outputs[0].fifo->free(pending);
+            has_pending = false;
+        }
 
-            Block::start();
+        template <typename T>
+        void ReshapeBufferBlock<T>::init()
+        {
+            this->apply_params([&]() { d_buffer_size = buffer_size; });
         }
 
         template <typename T>
         void ReshapeBufferBlock<T>::stop(bool stop_now, bool force)
         {
             Block::stop(stop_now, force);
-
-            work2shouldrun = false;
-            ring_buf.stopWriter();
-            ring_buf.stopReader();
-            if (work2Thread.joinable())
-                work2Thread.join();
+            // The work thread has exited, samples left over are not carried over to the next run
+            dropPending();
         }
 
         template <typename T>
@@ -44,36 +46,48 @@ namespace satdump
 
             if (iblk.isTerminator())
             {
+                // An incomplete last buffer is never output
+                dropPending();
                 if (iblk.terminatorShouldPropagate())
                     outputs[0].fifo->wait_enqueue(outputs[0].fifo->newBufferTerminator());
                 inputs[0].fifo->free(iblk);
                 return true;
             }
 
-            // Put into buffer
-            ring_buf.write(iblk.getSamples<T>(), iblk.size);
+            // On a new buffer size, the samples collected so far go out as they are
+            const int old_size = d_buffer_size;
+            if (reinit_if_needed() && d_buffer_size != old_size && has_pending)
+            {
+                outputs[0].fifo->wait_enqueue(pending);
+                has_pending = false;
+            }
+
+            const T *in = iblk.getSamples<T>();
+            uint32_t consumed = 0;
+            while (consumed < iblk.size)
+            {
+                if (!has_pending)
+                {
+                    pending = outputs[0].fifo->newBufferSamples(d_buffer_size, sizeof(T));
+                    pending.size = 0;
+                    has_pending = true;
+                }
+
+                uint32_t n = std::min<uint32_t>(iblk.size - consumed, d_buffer_size - pending.size);
+                memcpy(pending.getSamples<T>() + pending.size, in + consumed, n * sizeof(T));
+                pending.size += n;
+                consumed += n;
+
+                if (pending.size == (uint32_t)d_buffer_size)
+                {
+                    outputs[0].fifo->wait_enqueue(pending);
+                    has_pending = false;
+                }
+            }
 
             inputs[0].fifo->free(iblk);
 
             return false;
-        }
-
-        template <typename T>
-        void ReshapeBufferBlock<T>::work2()
-        {
-            while (work2shouldrun)
-            {
-                // While we got enough elements in the buffer, output them
-                const int bufsize = buffer_size;
-
-                DSPBuffer oblk = outputs[0].fifo->newBufferSamples(bufsize, sizeof(T));
-                int read = ring_buf.read(oblk.getSamples<T>(), bufsize);
-                oblk.size = read;
-                if (read > 0)
-                    outputs[0].fifo->wait_enqueue(oblk);
-                else
-                    outputs[0].fifo->free(oblk);
-            }
         }
 
         template class ReshapeBufferBlock<int8_t>;

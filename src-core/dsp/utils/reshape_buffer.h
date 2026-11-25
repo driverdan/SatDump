@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/dsp/block.h"
-#include "common/dsp/buffer.h"
 #include "common/dsp/complex.h"
 #include "common/dsp/filter/firdes.h"
 #include "dsp/block.h"
@@ -16,23 +15,27 @@ namespace satdump
         class ReshapeBufferBlock : public Block
         {
         private:
+            // Parameter, see Block::set_param()
             int buffer_size = 1024;
-            dsp::RingBuffer<T> ring_buf;
 
-            bool work2shouldrun;
-            std::thread work2Thread;
+            int d_buffer_size = 1024;
+
+            // Output buffer being filled, only used by the work thread (and
+            // by stop() once it has exited). Only that thread writes to the
+            // output stream, which has a single producer.
+            DSPBuffer pending;
+            bool has_pending = false;
+            void dropPending();
 
             bool work();
-            void work2();
 
         public:
             ReshapeBufferBlock();
             ~ReshapeBufferBlock();
 
-            void start();
             void stop(bool stop_now = false, bool force = false);
 
-            void init() { ring_buf.init(100); }
+            void init();
 
             nlohmann::ordered_json get_cfg_list()
             {
@@ -44,7 +47,7 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "buffer_size")
-                    return buffer_size;
+                    return get_param(buffer_size);
                 else
                     throw satdump_exception(key);
             }
@@ -52,7 +55,12 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "buffer_size")
-                    buffer_size = v;
+                {
+                    int sz = v.get<int>();
+                    if (sz < 1)
+                        throw satdump_exception("buffer_size must be at least 1");
+                    set_param(buffer_size, sz);
+                }
                 else
                     throw satdump_exception(key);
                 return RES_OK;
