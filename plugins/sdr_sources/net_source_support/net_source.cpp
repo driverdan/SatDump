@@ -50,19 +50,53 @@ void NetSource::run_thread()
 {
     while (should_run)
     {
-        if (is_started)
+        if (is_started && !d_ended)
         {
-            if (mode == MODE_UDP)
+            int nsamples = 0;
+
             {
-                int bytes = udp_server->recv((uint8_t *)output_stream->writeBuf, 8192 * sizeof(complex_t));
-                output_stream->swap(bytes / sizeof(complex_t));
+                std::lock_guard<std::mutex> lock(recv_mtx);
+                if (!is_started) // stop() closed the socket meanwhile
+                    continue;
+
+                if (mode == MODE_UDP)
+                {
+                    int bytes;
+                    try
+                    {
+                        bytes = udp_server->recv((uint8_t *)output_stream->writeBuf, 8192 * sizeof(complex_t));
+                    }
+                    catch (std::exception &)
+                    {
+                        continue; // Timed out
+                    }
+
+                    if (bytes > 0) // -1 when interrupted on Windows
+                        nsamples = bytes / sizeof(complex_t);
+                }
+                else if (mode == MODE_NNGSUB)
+                {
+                    size_t buffer_size = dsp::STREAM_BUFFER_SIZE * sizeof(complex_t);
+                    size_t lpkt_size = buffer_size; // Size of the buffer in, size of the message out
+                    int rv = nng_recv(n_sock, output_stream->writeBuf, &lpkt_size, (int)0);
+
+                    if (rv == NNG_ETIMEDOUT)
+                        continue;
+
+                    if (rv != 0)
+                    {
+                        logger->error("Error receiving from tcp://%s:%d : %s", address.c_str(), port, nng_strerror(rv));
+                        d_ended = true;
+                        continue;
+                    }
+
+                    // nng only copies what fits in the buffer, but returns the size of the whole message
+                    nsamples = std::min(lpkt_size, buffer_size) / sizeof(complex_t);
+                }
             }
-            else if (mode == MODE_NNGSUB)
-            {
-                size_t lpkt_size;
-                nng_recv(n_sock, output_stream->writeBuf, &lpkt_size, (int)0);
-                output_stream->swap(lpkt_size / sizeof(complex_t));
-            }
+
+            if (nsamples > 0)
+                output_stream->swap(nsamples);
         }
         else
         {
@@ -76,13 +110,24 @@ void NetSource::start()
     if (mode == MODE_UDP)
     {
         udp_server = std::make_shared<net::UDPServer>(port);
+        udp_server->enableTimeout();
     }
     else if (mode == MODE_NNGSUB)
     {
-        logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
-        nng_sub0_open_raw(&n_sock);
-        nng_dialer_create(&n_dialer, n_sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());
-        nng_dialer_start(n_dialer, (int)0);
+        std::string url = "tcp://" + address + ":" + std::to_string(port);
+        logger->info("Opening TCP socket on %s", url.c_str());
+
+        int rv = nng_sub0_open_raw(&n_sock);
+        if (rv != 0)
+            throw satdump_exception("Couldn't open nng socket : " + std::string(nng_strerror(rv)));
+
+        // Non-blocking, so the dialer keeps retrying in the background if the server is not up yet
+        if ((rv = nng_socket_set_ms(n_sock, NNG_OPT_RECVTIMEO, RECV_TIMEOUT_MS)) != 0 || (rv = nng_dialer_create(&n_dialer, n_sock, url.c_str())) != 0 ||
+            (rv = nng_dialer_start(n_dialer, NNG_FLAG_NONBLOCK)) != 0)
+        {
+            nng_close(n_sock);
+            throw satdump_exception("Couldn't connect to " + url + " : " + std::string(nng_strerror(rv)));
+        }
     }
 
     DSPSampleSource::start();
@@ -99,14 +144,18 @@ void NetSource::stop()
 
     is_started = false;
 
-    if (mode == MODE_UDP)
     {
-        udp_server.reset();
-    }
-    else if (mode == MODE_NNGSUB)
-    {
-        nng_dialer_close(n_dialer);
-        nng_close(n_sock);
+        std::lock_guard<std::mutex> lock(recv_mtx); // Waits for a receive in progress to return or time out
+
+        if (mode == MODE_UDP)
+        {
+            udp_server.reset();
+        }
+        else if (mode == MODE_NNGSUB)
+        {
+            nng_dialer_close(n_dialer);
+            nng_close(n_sock);
+        }
     }
 
     output_stream->flush();

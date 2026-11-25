@@ -6,6 +6,8 @@
 #include "core/style.h"
 #include "imgui/imgui.h"
 #include "logger.h"
+#include <atomic>
+#include <mutex>
 #include <thread>
 
 #include <nng/nng.h>
@@ -14,7 +16,8 @@
 class NetSource : public dsp::DSPSampleSource
 {
 protected:
-    bool is_open = false, is_started = false;
+    bool is_open = false;
+    std::atomic<bool> is_started{false};
 
     enum netsource_mode_t
     {
@@ -36,7 +39,11 @@ protected:
     std::string error;
 
 protected:
-    bool should_run = true;
+    // The receives time out, so that the thread rechecks is_started and should_run when no data arrives
+    static constexpr int RECV_TIMEOUT_MS = 100; // nng, the UDP one is set by UDPServer::enableTimeout()
+    std::mutex recv_mtx;                        // Held while receiving, so stop() does not close the socket under the thread
+
+    std::atomic<bool> should_run{true};
     std::thread work_thread;
     void run_thread();
 
