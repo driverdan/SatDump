@@ -116,7 +116,7 @@ inline ContainedContext::~ContainedContext()
 inline void ContainedContext::setFontDensity()
 {
 #if IMGUI_VERSION_NUM >= 19198
-    ImGui::SetFontRasterizerDensity(roundf(m_scale * 100.0f) / 100.0f); // Round density to two digits.
+    ImGui::SetPixelDensity(roundf(m_scale * 100.0f) / 100.0f); // Round density to two digits.
 #endif
 }
 

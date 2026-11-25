@@ -102,10 +102,11 @@ Barycentric operator+(const Barycentric& a, const Barycentric& b)
 // ----------------------------------------------------------------------------
 // Useful operators on ImGui vectors:
 
-ImVec2 operator*(const float f, const ImVec2& v)
-{
-	return ImVec2{f * v.x, f * v.y};
-}
+// Provided by imgui.h (IMGUI_DEFINE_MATH_OPERATORS) since Dear ImGui 1.92.7
+// ImVec2 operator*(const float f, const ImVec2& v)
+// {
+// 	return ImVec2{f * v.x, f * v.y};
+// }
 
 // ImVec2 operator+(const ImVec2& a, const ImVec2& b)
 // {
@@ -122,10 +123,11 @@ ImVec2 operator*(const float f, const ImVec2& v)
 // 	return a.x != b.x || a.y != b.y;
 // }
 
-ImVec4 operator*(const float f, const ImVec4& v)
-{
-	return ImVec4{f * v.x, f * v.y, f * v.z, f * v.w};
-}
+// Provided by imgui.h (IMGUI_DEFINE_MATH_OPERATORS) since Dear ImGui 1.92.7
+// ImVec4 operator*(const float f, const ImVec4& v)
+// {
+// 	return ImVec4{f * v.x, f * v.y, f * v.z, f * v.w};
+// }
 
 // ImVec4 operator+(const ImVec4& a, const ImVec4& b)
 // {

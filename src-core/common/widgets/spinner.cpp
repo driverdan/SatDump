@@ -39,7 +39,7 @@ namespace widgets
                                                 centre.y + ImSin(a + g.Time * 8) * radius));
         }
 
-        window->DrawList->PathStroke(color, false, thickness);
+        window->DrawList->PathStroke(color, (float)thickness);
 
         return true;
     }

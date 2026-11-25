@@ -38,8 +38,8 @@ float funcDeviceScale()
 
 void funcRebuildFonts()
 {
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
-    ImGui_ImplOpenGL3_CreateFontsTexture();
+    // Nothing to do: since Dear ImGui 1.92 the backend updates the font atlas texture itself
+    // (ImGuiBackendFlags_RendererHasTextures)
 }
 
 void funcSetMousePos(int, int)
