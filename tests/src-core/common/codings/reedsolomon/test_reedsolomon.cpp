@@ -1,4 +1,5 @@
 #include "common/codings/reedsolomon/reedsolomon.h"
+#include "core/exception.h"
 #include "helpers/random.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -453,6 +454,31 @@ TEST_CASE("ReedSolomon fill_bytes = -1 is the same as no fill bytes", "[common][
     CHECK(errors == errorsRef);
     CHECK(rx == rxRef);
     CHECK(std::equal(a.begin(), a.begin() + 223 * depth, rx.begin()));
+}
+
+// A shortened codeword must keep at least one data symbol: more fill bytes than that made
+// decode()/encode() and the interleave loops misbehave (negative lengths past 255)
+TEST_CASE("ReedSolomon rejects fill_bytes that leave no data symbols", "[common][codings][reedsolomon]")
+{
+    reedsolomon::RS_TYPE type = GENERATE(reedsolomon::RS223, reedsolomon::RS239);
+    const int k = dataLength(type);
+
+    CHECK_THROWS_AS(reedsolomon::ReedSolomon(type, k), satdump::satdump_exception_t);
+    CHECK_THROWS_AS(reedsolomon::ReedSolomon(type, 255), satdump::satdump_exception_t);
+    CHECK_THROWS_AS(reedsolomon::ReedSolomon(type, 1000), satdump::satdump_exception_t);
+
+    // The largest valid value: one data symbol followed by the parity
+    const int fill = k - 1;
+    reedsolomon::ReedSolomon rs(type, fill);
+    std::vector<uint8_t> cw(255, 0); // encode()/decode() work in place on a full codeword
+    cw[0] = 0x5A;
+    rs.encode(cw.data(), false);
+
+    std::vector<uint8_t> rx = cw;
+    rx[0] ^= 0xFF;
+    rx[3] ^= 0x01;                           // A parity symbol
+    CHECK(rs.decode(rx.data(), false) == 1); // Only data symbols are counted
+    CHECK(rx[0] == cw[0]); // decode() writes back the corrected data symbols, not the parity
 }
 
 TEST_CASE("reedsolomon::average_errors averages over the codewords it is given", "[common][codings][reedsolomon]")
