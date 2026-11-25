@@ -143,7 +143,7 @@ namespace fengyun3
         v["viterbi1_lock"] = viterbi1.getState();
         v["viterbi2_ber"] = viterbi2.ber();
         v["viterbi2_lock"] = viterbi2.getState();
-        v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3]) / 4;
+        v["rs_avg"] = reedsolomon::average_errors(errors, 4);
         std::string viterbi1_state = viterbi1.getState() == 0 ? "NOSYNC" : "SYNCED";
         std::string viterbi2_state = viterbi2.getState() == 0 ? "NOSYNC" : "SYNCED";
         std::string deframer_state = deframer.getState() == deframer.STATE_NOSYNC ? "NOSYNC" : (deframer.getState() == deframer.STATE_SYNCING ? "SYNCING" : "SYNCED");

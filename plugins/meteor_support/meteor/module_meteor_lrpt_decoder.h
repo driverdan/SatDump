@@ -21,7 +21,7 @@ namespace meteor
         float viterbi_ber;
 
         bool locked = false;
-        int errors[4];
+        int errors[4] = {};
         int cor;
 
         std::shared_ptr<viterbi::Viterbi27> viterbi;

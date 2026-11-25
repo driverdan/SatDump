@@ -306,7 +306,7 @@ namespace satdump
                 nlohmann::json v;
                 v["deframer_lock"] = deframer->getState() == deframer->STATE_SYNCED || deframer_qpsk->getState() == deframer_qpsk->STATE_SYNCED;
                 if (d_rs_interleaving_depth != 0)
-                    v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3]) / 4;
+                    v["rs_avg"] = reedsolomon::average_errors(errors, d_rs_interleaving_depth);
                 std::shared_ptr<deframing::BPSK_CCSDS_Deframer> def = deframer;
                 if (d_constellation == dsp::QPSK && !d_diff_decode)       // Is we are working with non-NRZM QPSK, check what deframer to use
                     if (deframer_qpsk->getState() > deframer->getState()) // ...and use the one that is locked

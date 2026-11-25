@@ -454,3 +454,36 @@ TEST_CASE("ReedSolomon fill_bytes = -1 is the same as no fill bytes", "[common][
     CHECK(rx == rxRef);
     CHECK(std::equal(a.begin(), a.begin() + 223 * depth, rx.begin()));
 }
+
+TEST_CASE("reedsolomon::average_errors averages over the codewords it is given", "[common][codings][reedsolomon]")
+{
+    const int errors[10] = {2, 4, 6, 8, 10, 0, 0, 0, 0, 0};
+
+    // Only the first i results are used, whatever the array holds after them
+    CHECK(reedsolomon::average_errors(errors, 1) == 2);
+    CHECK(reedsolomon::average_errors(errors, 4) == 5);
+    CHECK(reedsolomon::average_errors(errors, 5) == 6);
+    CHECK(reedsolomon::average_errors(errors, 8) == 3);
+
+    // Integer average, rounded towards 0
+    const int odd[2] = {1, 2};
+    CHECK(reedsolomon::average_errors(odd, 2) == 1);
+
+    // No codewords (Reed-Solomon off)
+    CHECK(reedsolomon::average_errors(errors, 0) == 0);
+}
+
+TEST_CASE("reedsolomon::average_errors is -1 when a codeword could not be corrected", "[common][codings][reedsolomon]")
+{
+    const int last_failed[5] = {16, 16, 16, 16, -1};
+    CHECK(reedsolomon::average_errors(last_failed, 5) == -1);
+
+    const int first_failed[4] = {-1, 3, 3, 3};
+    CHECK(reedsolomon::average_errors(first_failed, 4) == -1);
+
+    const int all_failed[4] = {-1, -1, -1, -1};
+    CHECK(reedsolomon::average_errors(all_failed, 4) == -1);
+
+    // A failure after the first i results is not looked at
+    CHECK(reedsolomon::average_errors(last_failed, 4) == 16);
+}

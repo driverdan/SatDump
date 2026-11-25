@@ -10,7 +10,7 @@ namespace aqua
     protected:
         uint8_t *buffer;
 
-        int errors[4];
+        int errors[4] = {};
         deframing::BPSK_CCSDS_Deframer deframer;
 
     public:

@@ -32,7 +32,7 @@ namespace fengyun3
         viterbi::Viterbi3_4 viterbi1, viterbi2;
         deframing::BPSK_CCSDS_Deframer deframer;
 
-        int errors[4];
+        int errors[4] = {};
 
         // UI Stuff
         float ber_history1[200];

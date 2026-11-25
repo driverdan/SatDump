@@ -1,4 +1,5 @@
 #include "module_dvbs_demod.h"
+#include "common/codings/reedsolomon/reedsolomon.h"
 #include "common/dsp/filter/firdes.h"
 #include "common/widgets/themed_widgets.h"
 #include "dvbs/dvbs_defines.h"
@@ -250,7 +251,7 @@ namespace satdump
                 v["viterbi_rate"] = rate;
                 if (def->d_fast_deframer)
                     v["deframer_synced"] = def->isSynced();
-                v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3] + errors[4] + errors[5] + errors[6] + errors[7]) / 8;
+                v["rs_avg"] = reedsolomon::average_errors(errors, 8);
                 return v;
             }
 

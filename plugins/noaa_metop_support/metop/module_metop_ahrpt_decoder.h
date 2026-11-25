@@ -18,7 +18,7 @@ namespace metop
         viterbi::Viterbi3_4 viterbi;
         deframing::BPSK_CCSDS_Deframer deframer;
 
-        int errors[4];
+        int errors[4] = {};
 
         // UI Stuff
         float ber_history[200];
