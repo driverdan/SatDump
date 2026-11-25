@@ -95,7 +95,7 @@ namespace satdump
                         pos_x2 = pos.x + (((vfo.f + (vfo.b / 2)) - (frequency - bandwidth / 2.0)) / bandwidth) * size.x;
 
                     if (vfo.l)
-                        ImGui::GetWindowDrawList()->AddRectFilled({pos_x, pos.y}, {pos_x1, pos.y + size.y}, ImColor(255, 255, 255, 100));
+                        ImGui::GetWindowDrawList()->AddRectFilled({pos_x1, pos.y}, {pos_x, pos.y + size.y}, ImColor(255, 255, 255, 100));
                     if (vfo.u)
                         ImGui::GetWindowDrawList()->AddRectFilled({pos_x, pos.y}, {pos_x2, pos.y + size.y}, ImColor(255, 255, 255, 100));
                 }

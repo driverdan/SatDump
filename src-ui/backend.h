@@ -8,7 +8,6 @@
 #include "gl.h"
 
 float funcDeviceScale();
-void funcRebuildFonts();
 void funcSetMousePos(int x, int y);
 std::pair<int, int> funcBeginFrame();
 void funcEndFrame();

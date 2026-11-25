@@ -115,9 +115,7 @@ inline ContainedContext::~ContainedContext()
 // Call after Begin()
 inline void ContainedContext::setFontDensity()
 {
-#if IMGUI_VERSION_NUM >= 19198
-    ImGui::SetFontRasterizerDensity(roundf(m_scale * 100.0f) / 100.0f); // Round density to two digits.
-#endif
+    ImGui::SetPixelDensity(roundf(m_scale * 100.0f) / 100.0f); // Round density to two digits.
 }
 
 inline void ContainedContext::begin()
@@ -194,8 +192,8 @@ inline void ContainedContext::end()
     ImGui::SetCurrentContext(m_original_ctx);
     m_original_ctx = nullptr;
 
-    for (int i = 0; i < draw_data->CmdListsCount; ++i)
-        AppendDrawData(draw_data->CmdLists[i], m_origin, m_scale);
+    for (ImDrawList *list : draw_data->CmdLists)
+        AppendDrawData(list, m_origin, m_scale);
 
     m_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows); //&& !m_anyWindowHovered;
 

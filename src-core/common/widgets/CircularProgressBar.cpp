@@ -23,7 +23,7 @@ void CircularProgressBar(const char *label, float progress, ImVec2 size, ImVec4 
         ImVec2 innerPos(center.x - circleRadius, center.y - circleRadius);
         ImVec2 outerPos(center.x + circleRadius, center.y + circleRadius);
         window->DrawList->PathArcTo(center, circleRadius, -IM_PI * 0.5f, -IM_PI * 0.5f + arcAngle, 32);
-        window->DrawList->PathStroke(ImGui::GetColorU32(color), false, 10.0f);
+        window->DrawList->PathStroke(ImGui::GetColorU32(color), 10.0f);
     }
 
     char textBuffer[32];
