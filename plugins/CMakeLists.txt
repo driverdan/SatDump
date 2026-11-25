@@ -316,6 +316,9 @@ if(PLUGIN_SIMD_NEON)
 endif()
 
 option(PLUGIN_SIMD_AVX2 "Enable SIMD AVX2 plugin" ON)
+# The AVX2 plugin has not been checked with MSVC / clang-cl yet, so it is off there unless
+# this is set (see plugins/simd_extensions/simd_avx2/CMakeLists.txt). No effect elsewhere.
+option(PLUGIN_SIMD_AVX2_MSVC "Build the SIMD AVX2 plugin with MSVC / clang-cl too (UNTESTED)" OFF)
 
 if(PLUGIN_SIMD_AVX2)
   add_subdirectory(simd_extensions/simd_avx2)
