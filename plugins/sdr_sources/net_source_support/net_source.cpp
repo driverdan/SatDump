@@ -53,18 +53,20 @@ void NetSource::run_thread()
         if (is_started && !d_ended)
         {
             int nsamples = 0;
+            std::shared_ptr<dsp::stream<complex_t>> stream; // start() replaces output_stream, so it is only read under recv_mtx
 
             {
                 std::lock_guard<std::mutex> lock(recv_mtx);
                 if (!is_started) // stop() closed the socket meanwhile
                     continue;
+                stream = output_stream;
 
                 if (mode == MODE_UDP)
                 {
                     int bytes;
                     try
                     {
-                        bytes = udp_server->recv((uint8_t *)output_stream->writeBuf, 8192 * sizeof(complex_t));
+                        bytes = udp_server->recv((uint8_t *)stream->writeBuf, 8192 * sizeof(complex_t));
                     }
                     catch (std::exception &)
                     {
@@ -78,7 +80,7 @@ void NetSource::run_thread()
                 {
                     size_t buffer_size = dsp::STREAM_BUFFER_SIZE * sizeof(complex_t);
                     size_t lpkt_size = buffer_size; // Size of the buffer in, size of the message out
-                    int rv = nng_recv(n_sock, output_stream->writeBuf, &lpkt_size, (int)0);
+                    int rv = nng_recv(n_sock, stream->writeBuf, &lpkt_size, (int)0);
 
                     if (rv == NNG_ETIMEDOUT)
                         continue;
@@ -96,7 +98,7 @@ void NetSource::run_thread()
             }
 
             if (nsamples > 0)
-                output_stream->swap(nsamples);
+                stream->swap(nsamples);
         }
         else
         {
