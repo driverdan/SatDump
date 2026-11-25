@@ -72,6 +72,10 @@ This also defines `SATDUMP_TEST_PLUGIN_<TARGET>`, the path of the built plugin: 
 | `plugins/xrit_support/xrit_decoder_test_helpers.h` | Runs the GK-2A, FengYun-4 and Elektro-L xRIT data decoders on such virtual channels, and lists what they wrote |
 | `plugins/sdr_sources/rtltcp_support/rtltcp_test_helpers.h` | A rtl_tcp server that plays samples back and records the commands it is sent |
 
+**ImGui callers**
+
+Code that draws with Dear ImGui, ImPlot, ImPlot3D or imnodes is tested without a display through `imgui_test::HeadlessContext` (`src-core/imgui/imgui_test_helpers.h`). It creates the contexts, acts as a renderer backend that accepts the texture requests without a GPU, runs frames with the widgets drawn inside a window covering the display, and queues mouse and keyboard input (`click()`, `pressKey()`, `typeText()`...). Widgets are located from their item rectangles, e.g. `ImGui::GetItemRectMin()` right after drawing them.
+
 ## Conventions
 
 Code is formatted with the repository's `.clang-format` (clang-format 19 or newer).

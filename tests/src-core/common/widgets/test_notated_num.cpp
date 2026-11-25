@@ -1,10 +1,11 @@
 #include "common/widgets/notated_num.h"
+#include "imgui/imgui_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 
 using satdump::widgets::NotatedNum;
 
-// Only the headless parts of the widget (construction, get/set and input parsing) are tested here
+// draw() is tested in a headless ImGui context
 
 TEST_CASE("NotatedNum formats its initial value", "[common][widgets][notated_num]")
 {
@@ -82,4 +83,41 @@ TEST_CASE("NotatedNum<int64_t> handles negative values", "[common][widgets][nota
     num.parse_input();
     CHECK(num.get() == -1250000);
     CHECK(num.display_val == "-1.25 MHz");
+}
+
+TEST_CASE("NotatedNum::draw parses what is typed once the input is left", "[common][widgets][notated_num]")
+{
+    imgui_test::HeadlessContext ctx;
+    NotatedNum<uint64_t> num("##freq", 100000000, "Hz");
+    ImVec2 center;
+    int edits = 0;
+    auto draw = [&]()
+    {
+        if (num.draw())
+            edits++;
+        center = (ImGui::GetItemRectMin() + ImGui::GetItemRectMax()) * 0.5f;
+    };
+    ctx.frame(draw);
+    CHECK(edits == 0);
+
+    // The whole text is selected on click, so typing replaces it
+    ctx.click(center, draw);
+    ctx.typeText("1.7G");
+    ctx.frame(draw);
+    CHECK(num.display_val == "1.7G");
+    CHECK(num.get() == 100000000); // Not parsed while editing
+    CHECK(edits == 0);
+
+    ctx.pressKey(ImGuiKey_Enter, draw);
+    CHECK(edits == 1);
+    CHECK(num.get() == 1700000000);
+    CHECK(num.display_val == "1.7 GHz");
+
+    // Invalid input is reverted
+    ctx.click(center, draw);
+    ctx.typeText("abc");
+    ctx.pressKey(ImGuiKey_Enter, draw);
+    CHECK(edits == 2);
+    CHECK(num.get() == 1700000000);
+    CHECK(num.display_val == "1.7 GHz");
 }
