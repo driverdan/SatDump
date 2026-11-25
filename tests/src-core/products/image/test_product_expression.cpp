@@ -1,3 +1,4 @@
+#include "image/io.h"
 #include "image/meta.h"
 #include "products/image/image_calibrator.h"
 #include "products/image/product_expression.h"
@@ -224,4 +225,78 @@ TEST_CASE("check_expression_product_composite reports whether a composite can be
     CHECK_FALSE(check_expression_product_composite(&p, "c1=(1,albedo,0,1); c1"));
     CHECK(check_expression_product_composite(&p, "c1=(1,equalized,0,1); c1"));
     CHECK_FALSE(check_expression_product_composite(&p, "c1=(5,equalized,0,1); c1"));
+}
+
+namespace
+{
+    // Lazy loading product : every channel is saved in dir, and its in-memory image is left empty
+    void buildLazyProduct(ImageProduct &p, const products_test::TempDir &dir)
+    {
+        buildProduct(p);
+        for (auto &h : p.images)
+        {
+            h.filename = "ch" + h.channel_name + ".png";
+            satdump::image::save_img(h.image, dir.file(h.filename));
+            h.image.clear();
+        }
+        p.contents["lazyload_path"] = dir.str();
+    }
+} // namespace
+
+TEST_CASE("generate_expression_product_composite unloads the channels it lazily loaded", "[products][product_expression]")
+{
+    products_test::TempDir dir("lazyload");
+    ImageProduct p;
+    buildLazyProduct(p, dir);
+
+    auto out = generate_expression_product_composite(&p, "ch1, ch3");
+    REQUIRE(out.channels() == 2);
+    REQUIRE(out.width() == W);
+    CHECK(near(out.get(0, 2, 1), v1(2, 1)));
+    CHECK(near(out.get(1, 2, 2), v3(1, 1)));
+    for (auto &h : p.images)
+        CHECK(h.image.size() == 0);
+
+    // Calibrated channels are lazily loaded and unloaded the same way
+    auto out2 = generate_expression_product_composite(&p, "c2=(2,equalized,0,1); c2");
+    CHECK(out2.width() == W);
+    for (auto &h : p.images)
+        CHECK(h.image.size() == 0);
+}
+
+TEST_CASE("generate_expression_product_composite keeps lazy loading channels that were already loaded", "[products][product_expression]")
+{
+    products_test::TempDir dir("lazyload");
+    ImageProduct p;
+    buildLazyProduct(p, dir);
+
+    // ch2 is in memory, with other values than its file on disk
+    p.images[1].image = satdump::image::Image(16, W, H, 1);
+    for (int y = 0; y < H; y++)
+        for (int x = 0; x < W; x++)
+            p.images[1].image.set(0, x, y, 30000);
+
+    auto out = generate_expression_product_composite(&p, "ch1, ch2");
+    CHECK(near(out.get(0, 4, 3), v1(4, 3)));
+    CHECK(near(out.get(1, 4, 3), 30000)); // The in-memory image was used, not reloaded from disk
+
+    CHECK(p.images[0].image.size() == 0);
+    REQUIRE(p.images[1].image.size() == (size_t)W * H);
+    CHECK(p.images[1].image.get(0, 4, 3) == 30000);
+    CHECK(p.images[2].image.size() == 0);
+}
+
+TEST_CASE("generate_expression_product_composite unloads lazily loaded channels when it fails", "[products][product_expression]")
+{
+    products_test::TempDir dir("lazyload");
+    ImageProduct p;
+    buildLazyProduct(p, dir);
+    p.images[0].image = satdump::image::Image(16, W, H, 1); // Already loaded
+
+    // Fails after ch1 and ch2 are set up, as the reference channel is not used
+    CHECK_THROWS(generate_expression_product_composite(&p, "ref_channel=3; ch1 + ch2"));
+
+    CHECK(p.images[0].image.size() == (size_t)W * H);
+    CHECK(p.images[1].image.size() == 0);
+    CHECK(p.images[2].image.size() == 0);
 }
