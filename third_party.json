@@ -48,7 +48,7 @@
       "consumption": "vendored",
       "upstream_state": "newer-available",
       "update_issue": 273,
-      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. #273 also lists android/imgui_backends and src-core/image/font_lib, but those are older copies with their own entries (imgui-android-backends, stb-font)."
+      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. #273 also lists android/imgui_backends, but that is an older copy with its own entry (imgui-android-backends)."
     },
     {
       "id": "imgui-android-backends",
@@ -1056,8 +1056,7 @@
       "paths": [
         "src-core/image/font/imstb_rectpack.h",
         "src-core/image/font/imstb_textedit.h",
-        "src-core/image/font/imstb_truetype.h",
-        "src-core/image/font_lib"
+        "src-core/image/font/imstb_truetype.h"
       ],
       "upstream_url": "https://github.com/ocornut/imgui",
       "version": "Dear ImGui 1.89 copies (stb_truetype 1.26, stb_textedit 1.14, stb_rect_pack 1.01)",
@@ -1072,7 +1071,7 @@
       "consumption": "vendored",
       "upstream_state": "newer-available",
       "update_issue": null,
-      "notes": "Used by src-core/image/text.*, independently of the Dear ImGui core (which has its own, newer copies). src-core/image/font_lib is an identical, unused duplicate of these three files. #273 lists font_lib as part of Dear ImGui; it is not, and it is not the copy that is used."
+      "notes": "Used by src-core/image/text.*, independently of the Dear ImGui core (which has its own, newer copies). An identical, unused duplicate in src-core/image/font_lib was removed (#332)."
     },
     {
       "id": "utfcpp",
