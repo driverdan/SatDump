@@ -234,22 +234,24 @@ namespace satdump
 
         bc->doUpdateTextures();
 
-        ImPlot::BeginPlot("##BitView", window_size, ImPlotFlags_Equal | ImPlotFlags_NoLegend);
-        ImPlot::SetupAxes(nullptr, nullptr, 0, ImPlotAxisFlags_Invert);
-
-        ImPlotRect c = ImPlot::GetPlotLimits();
-        bc->doDrawPlotTextures(c);
-
-        // ImPlot::GetPlotDrawList()->AddRectFilled(ImPlot::PlotToPixels({0, 0}), ImPlot::PlotToPixels({1, 1}), ImColor(255, 0, 0, 255 * 0.5));
-
-        if (reset_view)
+        if (ImPlot::BeginPlot("##BitView", window_size, ImPlotFlags_Equal | ImPlotFlags_NoLegend))
         {
-            ImPlot::GetCurrentPlot()->XAxis(0).SetRange(ImPlotRange(0, 512));
-            ImPlot::GetCurrentPlot()->YAxis(0).SetRange(ImPlotRange(0, 512));
-            reset_view = false;
-        }
+            ImPlot::SetupAxes(nullptr, nullptr, 0, ImPlotAxisFlags_Invert);
 
-        ImPlot::EndPlot();
+            ImPlotRect c = ImPlot::GetPlotLimits();
+            bc->doDrawPlotTextures(c);
+
+            // ImPlot::GetPlotDrawList()->AddRectFilled(ImPlot::PlotToPixels({0, 0}), ImPlot::PlotToPixels({1, 1}), ImColor(255, 0, 0, 255 * 0.5));
+
+            if (reset_view)
+            {
+                ImPlot::GetCurrentPlot()->XAxis(0).SetRange(ImPlotRange(0, 512));
+                ImPlot::GetCurrentPlot()->YAxis(0).SetRange(ImPlotRange(0, 512));
+                reset_view = false;
+            }
+
+            ImPlot::EndPlot();
+        }
 
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             reset_view = true;
