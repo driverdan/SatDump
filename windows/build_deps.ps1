@@ -158,8 +158,8 @@ cmake $cmake_params ..  -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIB
 ninja install
 cd ../..
 
-# HydraSDR
-git clone https://github.com/hydrasdr/hydrasdr-host libhydrasdr --depth 1 -b v1.1.2
+# HydraSDR (v1.1.3 is the first release that builds for Windows ARM64)
+git clone https://github.com/hydrasdr/hydrasdr-host libhydrasdr --depth 1 -b v1.1.3
 cd libhydrasdr
 mkdir build
 cd build
@@ -219,7 +219,8 @@ git clone https://github.com/analogdevicesinc/libiio --depth 1 -b v0.26
 cd libiio
 mkdir build
 cd build
-cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON
+# libiio only searches for libusb through pkg-config, which Windows lacks, so pass its paths in
+cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON -DLIBUSB_INCLUDE_DIR="$output_folder/include/libusb-1.0" -DLIBUSB_LIBRARIES="$output_folder/lib/usb-1.0.lib"
 ninja install
 cd ../..
 
