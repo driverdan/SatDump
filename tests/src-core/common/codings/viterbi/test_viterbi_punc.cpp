@@ -175,3 +175,28 @@ TEST_CASE("Viterbi_Depunc does not lock on noise and loses lock after max_outsyn
     CHECK(noiseBuffers > maxOutsync);
     CHECK(noiseBuffers <= maxOutsync + 2);
 }
+
+TEST_CASE("Viterbi_Depunc ber() before a lock is the best BER of every tested branch", "[common][codings][viterbi]")
+{
+    // With a negative threshold the decoder never locks, so ber() reports the best branch found by
+    // the lock search. Clean data has a branch with next to no errors, whichever shift it is at (#142)
+    auto rate = GENERATE(Rate{"2/3", "10", "11", 2.0 / 3.0}, Rate{"7/8", "1000101", "1111010", 7.0 / 8.0});
+    int offset = GENERATE(0, 1, 2, 3, 4, 5, 6);
+    bool iqSwap = GENERATE(false, true);
+    INFO("rate " << rate.name << ", offset " << offset << ", IQ swap " << iqSwap);
+
+    std::vector<uint8_t> bits = randomBits(BUFFER * 2, 5);
+    std::vector<int8_t> stream = encodePunctured(bits, rate);
+    std::vector<int8_t> in(stream.begin() + offset, stream.begin() + offset + BUFFER);
+    if (iqSwap)
+        rotate_soft(in.data(), in.size(), PHASE_0, true);
+
+    // Only two phases: the stored BERs of PHASE_90 used to overwrite those of PHASE_0 at shifts 2 and up
+    auto vitp = test_helpers::makePrefilled<viterbi::Viterbi_Depunc>(128, makeDepunc(rate.name), -1.0f, 5, BUFFER,
+                                                                      std::vector<phase_t>{PHASE_0, PHASE_90}, true);
+    viterbi::Viterbi_Depunc &vit = *vitp;
+    std::vector<uint8_t> out(BUFFER * 8);
+    CHECK(vit.work(in.data(), BUFFER, out.data()) == 0);
+    CHECK(vit.getState() == 0);
+    CHECK(vit.ber() < 0.05f); // Wrong branches are around 0.2
+}
