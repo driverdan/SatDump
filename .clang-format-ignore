@@ -1,4 +1,11 @@
-# Vendored third-party code (see third_party.json). clang-format matches "*" within one directory level only, so each directory is listed separately.
+# Vendored third-party code, from the paths in third_party.json.
+# "*" matches within one directory level only. clang-format 19 and older do
+# not support "**", so while 19 is supported every directory level that
+# holds vendored code needs its own "<dir>/*" line.
+# Vendored files in directories shared with SatDump code are listed
+# individually.
+# Files listed as satdump_files in third_party.json are SatDump code and are
+# deliberately not ignored.
 android/imgui_backends/*
 plugins/dvb_support/codings/dvb-s2/bbframe_bch.cpp
 plugins/dvb_support/codings/dvb-s2/bbframe_bch.h
