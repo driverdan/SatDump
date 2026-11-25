@@ -3,6 +3,7 @@
 #include "pipeline/modules/ccsds/module_ccsds_simple_psk_decoder.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <random>
 
 using namespace pipeline_test;
@@ -252,6 +253,53 @@ TEST_CASE("CCSDSSimplePSKDecoderModule reports an rs_avg of 0 until it has a fra
     m->process();
     REQUIRE(std::filesystem::file_size(m->getOutput()) == 0);
     CHECK(m->getModuleStats()["rs_avg"] == 0);
+}
+
+// rs_avg is the average over the rs_i codewords of the last frame, not over the first 4 of them
+// (#103), and -1 if one of them could not be corrected
+TEST_CASE("CCSDSSimplePSKDecoderModule averages rs_avg over rs_i codewords", "[pipeline][modules][ccsds_simple_psk_decoder]")
+{
+    struct Case
+    {
+        int rs_i;
+        std::vector<int> corrupted; // Data symbols corrupted in each codeword
+        int rs_avg;
+    };
+    // 17 symbols is more than RS(255,223) corrects
+    auto c = GENERATE(Case{1, {8}, 8},                      // Was 8 / 4, with errors[1..3] never written
+                      Case{4, {4, 8, 0, 12}, 6},            // Unchanged
+                      Case{5, {0, 0, 0, 0, 10}, 2},         // The fifth codeword was left out
+                      Case{8, {0, 0, 0, 0, 8, 8, 8, 8}, 4}, // The last four were left out
+                      Case{5, {17, 4, 4, 4, 4}, -1});       // Was (-1 + 3 * 4) / 4 = 2
+    INFO("rs_i = " << c.rs_i);
+
+    const int cadu_bytes = 4 + 255 * c.rs_i;
+    reedsolomon::ReedSolomon rs(reedsolomon::RS223);
+    std::mt19937 rng(c.rs_i);
+    std::vector<std::vector<uint8_t>> cadus;
+    for (int f = 0; f < 4; f++)
+    {
+        std::vector<uint8_t> cadu(cadu_bytes);
+        cadu[0] = 0x1A, cadu[1] = 0xCF, cadu[2] = 0xFC, cadu[3] = 0x1D;
+        for (int i = 4; i < cadu_bytes; i++)
+            cadu[i] = rng() & 0xFF;
+        rs.encode_interlaved(&cadu[4], true, c.rs_i);
+
+        // Symbol s of codeword b is at byte s * rs_i + b of the interleaved block
+        for (int b = 0; b < c.rs_i; b++)
+            for (int s = 0; s < c.corrupted[b]; s++)
+                cadu[4 + (s * 7 % 223) * c.rs_i + b] ^= 0x5A;
+        cadus.push_back(cadu);
+    }
+
+    TempDir tmp("pipe_ccsds");
+    std::string input = tmp.file("in.soft");
+    writeBytes(input, toSoft(cadus, false, cadu_bytes * 4, 12));
+
+    nlohmann::json params = {{"constellation", "bpsk"}, {"cadu_size", cadu_bytes * 8}, {"derandomize", false}, {"rs_i", c.rs_i}, {"rs_type", "rs223"}};
+    auto m = runDecoder(input, tmp.file("out"), params);
+    REQUIRE(std::filesystem::file_size(m->getOutput()) == cadus.size() * cadu_bytes);
+    CHECK(m->getModuleStats()["rs_avg"] == c.rs_avg);
 }
 
 // Bug: module_ccsds_simple_psk_decoder.cpp:135-140 : the loop runs while !data_in.eof(); when the input

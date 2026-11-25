@@ -206,7 +206,7 @@ namespace satdump
                 v["viterbi_ber"] = viterbi_ber;
                 v["viterbi_lock"] = viterbi_lock;
                 if (d_rs_interleaving_depth != 0)
-                    v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3]) / 4;
+                    v["rs_avg"] = reedsolomon::average_errors(errors, d_rs_interleaving_depth);
                 std::string viterbi_state = viterbi_lock == 0 ? "NOSYNC" : "SYNCED";
                 std::string deframer_state = deframer->getState() == deframer->STATE_NOSYNC ? "NOSYNC" : (deframer->getState() == deframer->STATE_SYNCING ? "SYNCING" : "SYNCED");
                 v["viterbi_state"] = viterbi_state;

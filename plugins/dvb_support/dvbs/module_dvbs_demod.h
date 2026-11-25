@@ -40,7 +40,7 @@ namespace satdump
 
                 deframing::DVBS_TS_Deframer ts_deframer;
 
-                int errors[8];
+                int errors[8] = {};
                 std::string rate = "";
 
                 // UI Stuff

@@ -15,7 +15,7 @@ namespace spacex
         ccsds::ccsds_tm::CADUDeframer deframer;
 
         uint8_t rsWorkBuffer[255];
-        int errors[5];
+        int errors[5] = {};
 
         bool qpsk;
 

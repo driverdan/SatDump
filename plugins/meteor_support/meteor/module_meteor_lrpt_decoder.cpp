@@ -267,7 +267,7 @@ namespace meteor
             v["deframer_lock"] = deframer->getState() == deframer->STATE_SYNCED;
             v["viterbi_ber"] = viterbi_ber;
             v["viterbi_lock"] = viterbi_lock;
-            v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3]) / 4;
+            v["rs_avg"] = reedsolomon::average_errors(errors, 4);
             std::string viterbi_state = viterbi_lock == 0 ? "NOSYNC" : "SYNCED";
             std::string deframer_state = deframer->getState() == deframer->STATE_NOSYNC ? "NOSYNC" : (deframer->getState() == deframer->STATE_SYNCING ? "SYNCING" : "SYNCED");
             v["viterbi_state"] = viterbi_state;
@@ -277,7 +277,7 @@ namespace meteor
         {
             v["correlator_lock"] = locked;
             v["viterbi_ber"] = viterbi->ber();
-            v["rs_avg"] = (errors[0] + errors[1] + errors[2] + errors[3]) / 4;
+            v["rs_avg"] = reedsolomon::average_errors(errors, 4);
             std::string lock_state = locked ? "SYNCED" : "NOSYNC";
             v["lock_state"] = lock_state;
         }

@@ -10,7 +10,7 @@ namespace metop
         uint8_t *buffer;
 
         bool locked = false;
-        int errors[4];
+        int errors[4] = {};
         int cor;
 
         // UI Stuff
