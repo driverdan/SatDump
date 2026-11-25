@@ -43,8 +43,9 @@ namespace goes
          */
         PrimaryBlockHeader get_header(uint8_t *frame)
         {
+            static_assert(sizeof(PrimaryBlockHeader) == 30, "PrimaryBlockHeader must be 30 bytes");
 
-            uint8_t *result = (uint8_t *)malloc(30 * sizeof(uint8_t));
+            uint8_t result[30];
 
             // Every header is 30 bytes long
             uint8_t a[30];
@@ -88,7 +89,9 @@ namespace goes
                 result[byteIndex] = majority;
             }
 
-            return *((PrimaryBlockHeader *)result);
+            PrimaryBlockHeader header;
+            memcpy(&header, result, sizeof(header));
+            return header;
         }
 
         /**
