@@ -214,7 +214,7 @@ namespace satdump
                         else
                         {
                             if (n->internal->blk->get_inputs().size() > ic)
-                                io.type = n->internal->blk->get_inputs()[ic++].type;
+                                io.type = n->internal->blk->get_inputs()[ic].type;
                             ic++;
                         }
                     }
