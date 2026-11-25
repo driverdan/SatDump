@@ -52,7 +52,6 @@ namespace satdump
                 if (input_data_type == DATA_FILE)
                 {
                     data_in = std::ifstream(d_input_file, std::ios::binary);
-                    // Otherwise eof() is never set and the loops below never end
                     if (!data_in.is_open())
                         throw satdump_exception("Couldn't open input file " + d_input_file);
                 }
@@ -60,7 +59,8 @@ namespace satdump
                 logger->info("Using input frames %s", d_input_file.c_str());
 
                 // Reads the next buffer, returns how many bytes of it are valid. At the
-                // end of a file this is less than pkt_size, possibly 0.
+                // end of a file this is less than pkt_size, possibly 0. 0 as well if
+                // the stream was stopped, as the buffer then holds nothing new.
                 auto read_buffer = [this]() -> size_t
                 {
                     if (input_data_type == DATA_FILE)
@@ -70,7 +70,8 @@ namespace satdump
                         return data_in.gcount();
                     }
 
-                    input_fifo->read((uint8_t *)buffer, pkt_size);
+                    if (input_fifo->read((uint8_t *)buffer, pkt_size) < 0)
+                        return 0;
                     return pkt_size;
                 };
 
@@ -92,7 +93,7 @@ namespace satdump
                         throw satdump_exception("Couldn't listen on " + url + " : " + std::string(nng_strerror(rv)));
                     }
 
-                    while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
+                    while (input_data_type == DATA_FILE ? data_in.good() : input_active.load())
                     {
                         size_t size = read_buffer();
                         if (size > 0)
@@ -105,7 +106,7 @@ namespace satdump
                 {
                     net::UDPClient udp_send((char *)address.c_str(), port);
 
-                    while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
+                    while (input_data_type == DATA_FILE ? data_in.good() : input_active.load())
                     {
                         size_t size = read_buffer();
                         if (size > 0)
@@ -114,7 +115,13 @@ namespace satdump
                 }
 
                 if (input_data_type == DATA_FILE)
+                {
+                    // good() also ends the loops on a read error, which eof() alone never did
+                    bool read_error = data_in.bad();
                     data_in.close();
+                    if (read_error)
+                        throw satdump_exception("Error reading input file " + d_input_file);
+                }
             }
 
             void NetworkServerModule::drawUI(bool window)
