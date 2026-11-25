@@ -138,8 +138,10 @@ inline void ContainedContext::begin()
     const ImGuiStyle &orig_style = ImGui::GetStyle();
     if (!m_ctx)
     {
-        // Also share clipboard between contexts
         m_ctx = ImGui::CreateContext(ImGui::GetIO().Fonts);
+        // Like the main context, do not save window settings (imgui.ini in the working directory)
+        m_ctx->IO.IniFilename = nullptr;
+        // Also share clipboard between contexts
         m_ctx->PlatformIO.Platform_GetClipboardTextFn = m_original_ctx->PlatformIO.Platform_GetClipboardTextFn;
         m_ctx->PlatformIO.Platform_SetClipboardTextFn = m_original_ctx->PlatformIO.Platform_SetClipboardTextFn;
     }

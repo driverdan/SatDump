@@ -16,8 +16,8 @@ using imgui_test::HeadlessContext;
 
 namespace
 {
-    // The contained context keeps the default IniFilename, so it reads and writes imgui.ini in
-    // the current directory: run in a temporary one. The mouse offsets are restored too.
+    // Run in a temporary directory, so a stray imgui.ini (#423) can be detected without touching
+    // the real working directory. The mouse offsets are restored too.
     struct WrapperEnv
     {
         test_helpers::TempDir dir{"imgui_context_wrapper"};
@@ -146,4 +146,27 @@ TEST_CASE("ContainedContext zooms with the mouse wheel within its limits", "[uti
         ctx.frame(draw);
     }
     CHECK_THAT(cc.scale(), WithinAbs(1.5, 1e-5));
+}
+
+TEST_CASE("ContainedContext does not save an imgui.ini", "[utils][imgui_context_wrapper]")
+{
+    WrapperEnv env;
+    {
+        HeadlessContext ctx;
+        ContainedContext cc;
+        cc.config().extra_window_wrapper = true; // Creates a window, which has settings to save
+        cc.config().size = ImVec2(600, 400);
+
+        Inner inner;
+        auto draw = [&]() { drawContained(cc, inner); };
+        ctx.frame(draw);
+        REQUIRE(cc.getRawContext() != nullptr);
+        CHECK(cc.getRawContext()->IO.IniFilename == nullptr);
+
+        // A few frames at 1/60 s stay well under io.IniSavingRate (5 s), so the periodic save
+        // never runs here: only the save in DestroyContext is exercised
+        ctx.frames(3, draw);
+    } // Destroying a context saves its settings when IniFilename is set
+
+    CHECK_FALSE(std::filesystem::exists(env.dir.path / "imgui.ini"));
 }
