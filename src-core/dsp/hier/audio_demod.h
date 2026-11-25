@@ -201,10 +201,10 @@ namespace satdump
                     // Both rates at once, so a running resampler never applies a mix of old and new.
                     // All resamplers check the rates the same way, so they all apply them or none does
                     cfg_res_t res = RES_OK;
-                    res = std::max(nfm_res.set_ratio(new_audio_samplerate, new_samplerate), res);
-                    res = std::max(am_res.set_ratio(new_audio_samplerate, new_samplerate), res);
-                    res = std::max(usb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
-                    res = std::max(lsb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = (std::max)(nfm_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = (std::max)(am_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = (std::max)(usb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
+                    res = (std::max)(lsb_res.set_ratio(new_audio_samplerate, new_samplerate), res);
 
                     if (res != RES_ERR)
                     {

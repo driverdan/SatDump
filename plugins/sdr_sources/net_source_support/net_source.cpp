@@ -93,7 +93,7 @@ void NetSource::run_thread()
                     }
 
                     // nng only copies what fits in the buffer, but returns the size of the whole message
-                    nsamples = std::min(lpkt_size, buffer_size) / sizeof(complex_t);
+                    nsamples = (std::min)(lpkt_size, buffer_size) / sizeof(complex_t);
                 }
             }
 

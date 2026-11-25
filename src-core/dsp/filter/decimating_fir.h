@@ -56,7 +56,7 @@ namespace satdump
                 if (key == "taps")
                     this->set_param(p_taps, v.get<std::vector<TT>>());
                 else if (key == "decimation")
-                    this->set_param(p_decimation, std::max(v.get<int>(), 1));
+                    this->set_param(p_decimation, (std::max)(v.get<int>(), 1));
                 else
                     throw satdump_exception(key);
                 return Block::RES_OK;
