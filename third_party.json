@@ -48,7 +48,7 @@
       "consumption": "vendored",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. The Android backends (imgui-android-backends) must be updated together with the core. Since 1.92.9, scalar inputs (InputInt, InputScalar, Drag, Slider) only write the typed value back when it is validated, unless ImGuiItemFlags_LiveEditOnInputScalar is set (common/widgets/datetime.cpp sets it)."
+      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. The Android backends (imgui-android-backends) must be updated together with the core. Since 1.92.9, scalar inputs (InputInt, InputScalar, Drag, Slider) only write the typed value back when it is validated, unless ImGuiItemFlags_LiveEditOnInputScalar is set (common/widgets/datetime.cpp sets it). Since 1.92.8 the OpenGL 3 backend binds its own linear sampler, overriding the filters of SatDump's image textures: src-ui/backend.cpp and android/backend.cpp call useImageTextureFilters() (imgui_image.h) every frame, which adds DrawCallback_SetSamplerFromTex. Since 1.93.0 AddRect() / AddRectFilled() draw nothing with inverted coordinates."
     },
     {
       "id": "imgui-android-backends",
@@ -64,7 +64,7 @@
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "All files include \"imgui/imgui.h\" instead of \"imgui.h\". imgui_impl_android.cpp/.h: a long press of 0.5 s generates a right click (procLongPress(), called by android/backend.cpp, uses satdump::getTime() from utils/time.h), and stylus and mouse touches are handled like fingers (S-Pen support)."
+        "details": "All files include \"imgui/imgui.h\" instead of \"imgui.h\". imgui_impl_android.cpp/.h: a long press of 0.5 s generates a right click (procLongPress(), called by android/backend.cpp, uses satdump::getTime() from utils/time.h), and stylus and mouse touches are handled like fingers (S-Pen support), except that only finger touches reset the mouse position when lifted."
       },
       "consumption": "vendored-platform",
       "upstream_state": "current",
@@ -1359,7 +1359,7 @@
       "license": "public-domain",
       "local_changes": {
         "status": "unknown",
-        "details": "Probably adjusted for the current Dear ImGui API; not itemized. The float * ImVec2 / ImVec4 operators of imgui_sw.cpp are commented out, as imgui.h defines them since Dear ImGui 1.92.7."
+        "details": "Probably adjusted for the current Dear ImGui API; not itemized. The float * ImVec2 / ImVec4 operators of imgui_sw.cpp are commented out, as imgui.h defines them since Dear ImGui 1.92.7, and paint_imgui() uses ImDrawData::CmdLists.Size instead of the obsolete CmdListsCount."
       },
       "consumption": "vendored",
       "upstream_state": "inactive",

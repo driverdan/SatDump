@@ -262,7 +262,8 @@ int32_t ImGui_ImplAndroid_HandleInputEvent(const AInputEvent* input_event)
                     io.AddMouseButtonEvent(1, false);
                     longpress_MouseDownTime = 0;
                 }
-                if (event_action == AMOTION_EVENT_ACTION_UP) // (#6627, #9474)
+                // Only fingers have no position once lifted: a mouse or stylus keeps hovering
+                if (event_action == AMOTION_EVENT_ACTION_UP && (tool_type == AMOTION_EVENT_TOOL_TYPE_FINGER || tool_type == AMOTION_EVENT_TOOL_TYPE_UNKNOWN)) // (#6627, #9474)
                     io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
             }
             break;

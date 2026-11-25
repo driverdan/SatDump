@@ -192,8 +192,8 @@ inline void ContainedContext::end()
     ImGui::SetCurrentContext(m_original_ctx);
     m_original_ctx = nullptr;
 
-    for (int i = 0; i < draw_data->CmdListsCount; ++i)
-        AppendDrawData(draw_data->CmdLists[i], m_origin, m_scale);
+    for (ImDrawList *list : draw_data->CmdLists)
+        AppendDrawData(list, m_origin, m_scale);
 
     m_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows); //&& !m_anyWindowHovered;
 

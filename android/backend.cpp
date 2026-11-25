@@ -1,5 +1,6 @@
 #include "backend.h"
 #include "core/exception.h"
+#include "imgui/imgui_image.h"
 #include "logger.h"
 
 extern struct android_app *g_App;
@@ -60,6 +61,7 @@ std::pair<int, int> funcBeginFrame()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
+    useImageTextureFilters();
 
     procLongPress();
 

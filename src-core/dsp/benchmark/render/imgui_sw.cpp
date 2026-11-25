@@ -700,7 +700,7 @@ void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels, const Sw
 	const ImDrawData* draw_data = ImGui::GetDrawData();
 
 	s_stats = Stats{};
-	for (int i = 0; i < draw_data->CmdListsCount; ++i) {
+	for (int i = 0; i < draw_data->CmdLists.Size; ++i) {
 		paint_draw_list(target, draw_data->CmdLists[i], options, &s_stats);
 	}
 }

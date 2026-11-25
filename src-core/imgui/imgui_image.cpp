@@ -7,6 +7,15 @@ SATDUMP_DLL std::function<void(unsigned int, uint32_t *, int, int)> updateImageT
 SATDUMP_DLL std::function<void(unsigned int, uint32_t*, int, int)> updateMMImageTexture;
 SATDUMP_DLL std::function<void(unsigned int)> deleteImageTexture;
 
+SATDUMP_DLL void useImageTextureFilters()
+{
+    // The background draw list is the first one rendered, and the sampler state set by the
+    // callback lasts for the rest of the frame. Only the OpenGL 2/3 backends provide it.
+    ImDrawCallback set_sampler_from_tex = ImGui::GetPlatformIO().DrawCallback_SetSamplerFromTex;
+    if (set_sampler_from_tex)
+        ImGui::GetBackgroundDrawList()->AddCallback(set_sampler_from_tex, nullptr);
+}
+
 void ushort_to_rgba(uint16_t *input, uint32_t *output, int size, int channels)
 {
     if (channels == 1)
