@@ -354,7 +354,9 @@ namespace satdump
                         ImGui::SeparatorText("Add others");
 
                         int nl = 1;
-                        for (auto &v : n->internal->blk->get_cfg().items())
+                        // get_cfg() returns by value. It must outlive the loop, items() only refers to it
+                        nlohmann::json cfg = n->internal->blk->get_cfg();
+                        for (auto &v : cfg.items())
                         {
                             bool found = false;
                             for (auto &v2 : n->vars)

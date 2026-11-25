@@ -151,8 +151,10 @@ TEST_CASE("ndsp ChannelModelSimpleBlock get_cfg returns every listed parameter",
     CHECK(all.size() == blk.get_cfg_list().size());
     CHECK(all["alpha"].get<float>() == Approx(0.1));
 
-    // Every listed parameter can also be set back
-    for (auto &[key, val] : blk.get_cfg_list().items())
+    // Every listed parameter can also be set back. get_cfg_list() returns by value, so it is kept
+    // for the loop : items() only refers to it (#420)
+    nlohmann::ordered_json list = blk.get_cfg_list();
+    for (auto &[key, val] : list.items())
     {
         INFO("key " << key);
         CHECK(blk.set_cfg(key, all[key]) == Block::RES_OK);

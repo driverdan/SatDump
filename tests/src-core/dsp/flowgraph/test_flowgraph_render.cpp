@@ -198,3 +198,37 @@ TEST_CASE("ndsp Flowgraph renderAddMenuList adds the clicked node", "[dsp][flowg
     REQUIRE(j["nodes"].size() == 1);
     CHECK(j["nodes"][0]["int_id"] == "multiply_constf");
 }
+
+// Regression (#420): the "Add others" list of the variables window looped over a temporary
+// get_cfg(), which was destroyed before the loop ran. Debug builds threw invalid_iterator.214.
+TEST_CASE("ndsp Flowgraph renderWindows lists the block parameters to assign from variables", "[dsp][flowgraph][render]")
+{
+    RenderEnv env;
+    Flowgraph fg;
+    makeChain(fg, false);
+    auto draw = [&fg]()
+    {
+        fg.render();
+        fg.renderWindows();
+    };
+    env.ctx.frames(2, draw);
+
+    // Double-clicking the multiply const opens its variables window
+    const int mul_id = fg.getJSON()["nodes"][1]["id"];
+    ImVec2 title = ImNodes::GetNodeScreenSpacePos(mul_id) + ImVec2(10, 5);
+    env.ctx.click(title, draw);
+    env.ctx.click(title, draw);
+    REQUIRE_NOTHROW(env.ctx.frames(2, draw));
+    ImGuiWindow *win = ImGui::FindWindowByName("multiply_constf##nodevarspopup");
+    REQUIRE(win != nullptr);
+    REQUIRE(win->Active);
+
+    // Its only parameter, "const", is the last button, at the bottom left of the auto-resized window
+    REQUIRE(fg.getJSON()["nodes"][1]["vars"].empty());
+    const ImGuiStyle &style = ImGui::GetStyle();
+    ImVec2 button(win->Pos.x + style.WindowPadding.x + 5, win->Pos.y + win->Size.y - style.WindowPadding.y - ImGui::GetFrameHeight() / 2);
+    env.ctx.click(button, draw);
+    nlohmann::json vars = fg.getJSON()["nodes"][1]["vars"];
+    REQUIRE(vars.size() == 1);
+    CHECK(vars.contains("const"));
+}
