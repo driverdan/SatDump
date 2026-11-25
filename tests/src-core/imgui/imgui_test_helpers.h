@@ -5,19 +5,22 @@ A Dear ImGui context that runs without a display, for testing the SatDump code t
 ImGui, ImPlot, ImPlot3D and imnodes.
 
 - HeadlessContext creates an ImGui context (and optionally the ImPlot, ImPlot3D and imnodes
-  ones), makes it current, and on destruction destroys them and restores the previous
-  context. Settings and log files are disabled, so nothing is written to the disk.
+  ones) and makes them current. frame() makes them current again, in case other code
+  changed the current contexts in between. On destruction it destroys them and restores the
+  contexts that were current before. Settings and log files are disabled for its context,
+  so it writes nothing to the disk.
 - It acts as a renderer backend that supports ImGuiBackendFlags_RendererHasTextures, like
   the SatDump OpenGL backends do: the texture requests ImGui makes are accepted without
   uploading anything, so the font atlas is built on demand.
 - frame() runs one ImGui frame and calls the given function inside a window that covers
   the whole display, so widgets can be drawn without a Begin() / End() of their own.
-- Input is queued with mouseMove(), mouseButton(), key() and typeText(), and is processed
-  by the next frame. ImGui handles at most one change of a mouse button or key per frame,
+- Input is queued with mouseMove(), mouseButton(), key() and typeText() into the IO of this
+  context (whichever context is current), and is processed by the next frame. ImGui handles at most one change of a mouse button or key per frame,
   so click() and pressKey() run the frames that they need.
 */
 
 #include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 #include "imgui/imnodes/imnodes.h"
 #include "imgui/implot/implot.h"
 #include "imgui/implot3d/implot3d.h"
@@ -41,6 +44,9 @@ namespace imgui_test
         explicit HeadlessContext(HeadlessOptions options = HeadlessOptions()) : options(options)
         {
             previous = ImGui::GetCurrentContext();
+            previous_plot = ImPlot::GetCurrentContext();
+            previous_plot3d = ImPlot3D::GetCurrentContext();
+            previous_nodes = ImNodes::GetCurrentContext();
             ctx = ImGui::CreateContext();
             ImGui::SetCurrentContext(ctx);
 
@@ -53,17 +59,19 @@ namespace imgui_test
             io.BackendRendererName = "satdump_tests";
             io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasVtxOffset;
 
+            // The Create functions only make the new context current if none is
             if (options.implot)
                 plot_ctx = ImPlot::CreateContext();
             if (options.implot3d)
                 plot3d_ctx = ImPlot3D::CreateContext();
             if (options.imnodes)
                 nodes_ctx = ImNodes::CreateContext();
+            makeCurrent();
         }
 
         ~HeadlessContext()
         {
-            ImGui::SetCurrentContext(ctx);
+            makeCurrent();
             if (nodes_ctx)
                 ImNodes::DestroyContext(nodes_ctx);
             if (plot3d_ctx)
@@ -82,6 +90,9 @@ namespace imgui_test
 
             ImGui::DestroyContext(ctx);
             ImGui::SetCurrentContext(previous);
+            ImPlot::SetCurrentContext(previous_plot);
+            ImPlot3D::SetCurrentContext(previous_plot3d);
+            ImNodes::SetCurrentContext(previous_nodes);
         }
 
         HeadlessContext(const HeadlessContext &) = delete;
@@ -93,7 +104,7 @@ namespace imgui_test
         // Runs one frame, calling draw() inside a window covering the display
         void frame(const std::function<void()> &draw = nullptr)
         {
-            ImGui::SetCurrentContext(ctx);
+            makeCurrent();
             ImGui::GetIO().DisplaySize = options.display_size;
             ImGui::NewFrame();
             ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -114,11 +125,11 @@ namespace imgui_test
         }
 
         // Queued input, processed by the next frame
-        void mouseMove(ImVec2 pos) { ImGui::GetIO().AddMousePosEvent(pos.x, pos.y); }
-        void mouseButton(ImGuiMouseButton button, bool down) { ImGui::GetIO().AddMouseButtonEvent(button, down); }
-        void mouseWheel(float wheel_y) { ImGui::GetIO().AddMouseWheelEvent(0.0f, wheel_y); }
-        void key(ImGuiKey key, bool down) { ImGui::GetIO().AddKeyEvent(key, down); }
-        void typeText(const std::string &text) { ImGui::GetIO().AddInputCharactersUTF8(text.c_str()); }
+        void mouseMove(ImVec2 pos) { ctx->IO.AddMousePosEvent(pos.x, pos.y); }
+        void mouseButton(ImGuiMouseButton button, bool down) { ctx->IO.AddMouseButtonEvent(button, down); }
+        void mouseWheel(float wheel_y) { ctx->IO.AddMouseWheelEvent(0.0f, wheel_y); }
+        void key(ImGuiKey key, bool down) { ctx->IO.AddKeyEvent(key, down); }
+        void typeText(const std::string &text) { ctx->IO.AddInputCharactersUTF8(text.c_str()); }
 
         // Moves the mouse to pos and clicks there, over three frames
         void click(ImVec2 pos, const std::function<void()> &draw, ImGuiMouseButton button = ImGuiMouseButton_Left)
@@ -141,22 +152,33 @@ namespace imgui_test
         }
 
         // Number of vertices drawn by the last frame
-        int lastVertexCount() const
+        int lastVertexCount()
         {
+            makeCurrent();
             ImDrawData *dd = ImGui::GetDrawData();
             return dd && dd->Valid ? dd->TotalVtxCount : 0;
         }
 
     private:
+        void makeCurrent()
+        {
+            ImGui::SetCurrentContext(ctx);
+            if (plot_ctx)
+                ImPlot::SetCurrentContext(plot_ctx);
+            if (plot3d_ctx)
+                ImPlot3D::SetCurrentContext(plot3d_ctx);
+            if (nodes_ctx)
+                ImNodes::SetCurrentContext(nodes_ctx);
+        }
+
         // What a renderer backend does with the texture requests of ImGui, without a GPU
         void updateTextures()
         {
-            int next_id = 1;
             for (ImTextureData *tex : ImGui::GetPlatformIO().Textures)
             {
                 if (tex->Status == ImTextureStatus_WantCreate)
                 {
-                    tex->SetTexID((ImTextureID)(intptr_t)next_id++);
+                    tex->SetTexID((ImTextureID)next_tex_id++); // Unique over the whole context
                     tex->SetStatus(ImTextureStatus_OK);
                 }
                 else if (tex->Status == ImTextureStatus_WantUpdates)
@@ -174,10 +196,14 @@ namespace imgui_test
 
         HeadlessOptions options;
         ImGuiContext *previous = nullptr;
+        ImPlotContext *previous_plot = nullptr;
+        ImPlot3DContext *previous_plot3d = nullptr;
+        ImNodesContext *previous_nodes = nullptr;
         ImGuiContext *ctx = nullptr;
         ImPlotContext *plot_ctx = nullptr;
         ImPlot3DContext *plot3d_ctx = nullptr;
         ImNodesContext *nodes_ctx = nullptr;
         int frame_count = 0;
+        intptr_t next_tex_id = 1;
     };
 } // namespace imgui_test

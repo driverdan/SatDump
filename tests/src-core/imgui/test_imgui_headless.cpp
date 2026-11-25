@@ -65,6 +65,49 @@ TEST_CASE("HeadlessContext creates the ImPlot, ImPlot3D and imnodes contexts", "
     CHECK(ctx.lastVertexCount() > 0);
 }
 
+TEST_CASE("HeadlessContext uses its own contexts and restores the previous ones", "[imgui][headless]")
+{
+    HeadlessOptions opts;
+    opts.implot = opts.implot3d = opts.imnodes = true;
+    HeadlessContext outer(opts);
+    ImGuiContext *outer_imgui = ImGui::GetCurrentContext();
+    ImPlotContext *outer_plot = ImPlot::GetCurrentContext();
+    ImPlot3DContext *outer_plot3d = ImPlot3D::GetCurrentContext();
+    ImNodesContext *outer_nodes = ImNodes::GetCurrentContext();
+    REQUIRE(outer_plot != nullptr);
+    REQUIRE(outer_plot3d != nullptr);
+    REQUIRE(outer_nodes != nullptr);
+    {
+        HeadlessContext inner(opts);
+        ImPlotContext *inner_plot = ImPlot::GetCurrentContext();
+        ImPlot3DContext *inner_plot3d = ImPlot3D::GetCurrentContext();
+        ImNodesContext *inner_nodes = ImNodes::GetCurrentContext();
+        CHECK(ImGui::GetCurrentContext() == inner.context());
+        CHECK(inner_plot != outer_plot);
+        CHECK(inner_plot3d != outer_plot3d);
+        CHECK(inner_nodes != outer_nodes);
+
+        // Something switches back to the outer contexts: input and frames still go to the inner ones
+        ImGui::SetCurrentContext(outer_imgui);
+        ImPlot::SetCurrentContext(outer_plot);
+        ImPlot3D::SetCurrentContext(outer_plot3d);
+        ImNodes::SetCurrentContext(outer_nodes);
+        inner.mouseMove(ImVec2(12, 34));
+        inner.frame();
+        CHECK(ImGui::GetCurrentContext() == inner.context());
+        CHECK(ImPlot::GetCurrentContext() == inner_plot);
+        CHECK(ImPlot3D::GetCurrentContext() == inner_plot3d);
+        CHECK(ImNodes::GetCurrentContext() == inner_nodes);
+        CHECK(ImGui::GetIO().MousePos.x == 12.0f);
+        CHECK(ImGui::GetIO().MousePos.y == 34.0f);
+    }
+    CHECK(ImGui::GetCurrentContext() == outer_imgui);
+    CHECK(ImPlot::GetCurrentContext() == outer_plot);
+    CHECK(ImPlot3D::GetCurrentContext() == outer_plot3d);
+    CHECK(ImNodes::GetCurrentContext() == outer_nodes);
+    CHECK(outer.context()->IO.MousePos.x != 12.0f);
+}
+
 TEST_CASE("HeadlessContext clicks buttons with the mouse", "[imgui][headless]")
 {
     HeadlessContext ctx;
@@ -121,14 +164,32 @@ TEST_CASE("imgui_stdlib InputTextMultiline and InputTextWithHint use std::string
 {
     HeadlessContext ctx;
     std::string multi = "line 1\nline 2", hint;
-    ctx.frames(2,
-               [&]()
-               {
-                   ImGui::InputTextMultiline("##multi", &multi, ImVec2(200, 100));
-                   ImGui::InputTextWithHint("##hint", "a hint", &hint);
-               });
+    ImVec2 multi_end, hint_center;
+    auto draw = [&]()
+    {
+        ImGui::InputTextMultiline("##multi", &multi, ImVec2(200, 100));
+        multi_end = ImGui::GetItemRectMax() - ImVec2(10, 10);
+        ImGui::InputTextWithHint("##hint", "a hint", &hint);
+        hint_center = (ImGui::GetItemRectMin() + ImGui::GetItemRectMax()) * 0.5f;
+    };
+    ctx.frames(2, draw);
     CHECK(multi == "line 1\nline 2");
     CHECK(hint.empty());
+
+    // Enter adds a line to the multiline input instead of validating it
+    ctx.click(multi_end, draw);
+    ctx.key(ImGuiMod_Ctrl, true);
+    ctx.pressKey(ImGuiKey_End, draw);
+    ctx.key(ImGuiMod_Ctrl, false);
+    ctx.pressKey(ImGuiKey_Enter, draw);
+    ctx.typeText("line 3");
+    ctx.frame(draw);
+    CHECK(multi == "line 1\nline 2\nline 3");
+
+    ctx.click(hint_center, draw);
+    ctx.typeText("typed");
+    ctx.frame(draw);
+    CHECK(hint == "typed");
 }
 
 TEST_CASE("imconfig.h settings are in effect", "[imgui][headless]")
