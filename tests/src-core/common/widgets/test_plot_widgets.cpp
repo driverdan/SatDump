@@ -42,6 +42,9 @@ namespace
             style::theme.constellation = ImColor(10, 200, 30, 255);
             style::theme.widget_bg = ImColor(5, 5, 5, 255);
             style::theme.plot_bg = ImColor(20, 20, 20, 255);
+            style::theme.red = ImColor(250, 1, 2, 255);
+            style::theme.green = ImColor(3, 250, 4, 255);
+            style::theme.orange = ImColor(250, 150, 5, 255);
         }
     };
 } // namespace
@@ -133,7 +136,7 @@ TEST_CASE("SNRPlotViewer and ValuePlotViewer draw their history", "[common][widg
 {
     WidgetEnv env;
     HeadlessContext ctx;
-    // Value-initialized, as the widgets do not initialize their history
+    // Value-initialized, as the widgets do not initialize their history (#414)
     satdump::widgets::SNRPlotViewer snr{};
     satdump::widgets::ValuePlotViewer value{};
 
@@ -148,12 +151,16 @@ TEST_CASE("SNRPlotViewer and ValuePlotViewer draw their history", "[common][widg
                    value_size = ImGui::GetItemRectSize();
                    level += 2.5f;
                });
-    // The plot of PlotLines() is 200x50, plus the frame padding
+    // The PlotLines() frames are 200x50
     CHECK(snr_size.x == 200.0f);
     CHECK(snr_size.y == 50.0f);
     CHECK(value_size.x == 200.0f);
     CHECK(value_size.y == 50.0f);
-    CHECK(ctx.lastVertexCount() > 0);
+
+    // Last frame: SNR 10 (orange), peak 20 (green), average 25 / 200 (red), value 10 (orange)
+    CHECK_FALSE(verticesWithColor(style::theme.orange).empty());
+    CHECK_FALSE(verticesWithColor(style::theme.green).empty());
+    CHECK_FALSE(verticesWithColor(style::theme.red).empty());
 }
 
 TEST_CASE("ThemedPlotLines uses the given background colour", "[common][widgets][themed_widgets]")
@@ -170,5 +177,9 @@ TEST_CASE("ThemedPlotLines uses the given background colour", "[common][widgets]
         });
     // The frame is filled with the background colour, which is popped afterwards
     CHECK(verticesWithColor(ImGui::GetColorU32(bg)).size() >= 4);
-    CHECK(frame_bg_after.x == ImGui::GetStyle().Colors[ImGuiCol_FrameBg].x);
+    const ImVec4 style_bg = ImGui::GetStyle().Colors[ImGuiCol_FrameBg];
+    CHECK(frame_bg_after.x == style_bg.x);
+    CHECK(frame_bg_after.y == style_bg.y);
+    CHECK(frame_bg_after.z == style_bg.z);
+    CHECK(frame_bg_after.w == style_bg.w);
 }

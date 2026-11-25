@@ -131,6 +131,12 @@ namespace
     // Largest difference between the components of two colours
     float colorDiff(ImVec4 a, ImVec4 b) { return std::max(std::max(std::fabs(a.x - b.x), std::fabs(a.y - b.y)), std::max(std::fabs(a.z - b.z), std::fabs(a.w - b.w))); }
 
+    // Theme colours that are not RRGGBBAA colours (#413)
+    bool isKnownInvalidColor(const std::string &theme, const std::string &section, const std::string &key)
+    {
+        return theme == "HiContrast-Light" && section == "ImGuiColors" && (key == "Button" || key == "ButtonHovered");
+    }
+
     std::vector<std::string> shippedThemes()
     {
         std::vector<std::string> themes;
@@ -162,10 +168,9 @@ TEST_CASE("style::setStyle applies the colours and sizes of each shipped theme",
             CAPTURE(c.key());
             int idx = imguiColorIndex(c.key());
             CHECK(idx >= 0);
-            // An invalid colour is ignored, see the [!shouldfail] test below
-            ImVec4 expected = hexColor(c.value());
-            if (idx >= 0 && expected.x >= 0)
-                CHECK(colorDiff(st.Colors[idx], expected) < 1e-6f);
+            // The known invalid colours are ignored, see the [!shouldfail] test below
+            if (idx >= 0 && !isKnownInvalidColor(name, "ImGuiColors", c.key()))
+                CHECK(colorDiff(st.Colors[idx], hexColor(c.value())) < 1e-6f);
             checked++;
         }
         CHECK(checked > 0);
@@ -232,10 +237,9 @@ TEST_CASE("style::setStyle uses the light or dark base colours of the theme", "[
     CHECK(colorDiff(ImGui::GetStyle().Colors[ImGuiCol_MenuBarBg], light_bg) < 1e-6f);
 }
 
-// Bug: resources/themes/HiContrast-Light.json:34-35 has "Button": "#6DB4FF" and
-// "ButtonHovered": "#99ACBFF", which are not RRGGBBAA colours, so hexToImVec4() ignores them
-TEST_CASE("Every colour of the shipped themes is a RRGGBBAA colour", "[core][style][!shouldfail]")
+TEST_CASE("Every colour of the shipped themes is a RRGGBBAA colour", "[core][style]")
 {
+    int checked = 0;
     for (const std::string &name : shippedThemes())
     {
         CAPTURE(name);
@@ -243,9 +247,27 @@ TEST_CASE("Every colour of the shipped themes is a RRGGBBAA colour", "[core][sty
         for (const char *section : {"ImGuiColors", "ImNodesColors", "SatDumpColors"})
             for (auto &c : theme[section].items())
             {
+                // See the [!shouldfail] test below
+                if (isKnownInvalidColor(name, section, c.key()))
+                    continue;
                 CAPTURE(section, c.key());
                 CHECK(hexColor(c.value()).x >= 0);
+                checked++;
             }
+    }
+    CHECK(checked > 100);
+}
+
+// Bug: resources/themes/HiContrast-Light.json:34-35 has "Button": "#6DB4FF" and
+// "ButtonHovered": "#99ACBFF", which are not RRGGBBAA colours, so hexToImVec4() ignores them (#413)
+TEST_CASE("The Button colours of HiContrast-Light are RRGGBBAA colours", "[core][style][!shouldfail]")
+{
+    nlohmann::json theme = loadTheme("HiContrast-Light");
+    for (const char *key : {"Button", "ButtonHovered"})
+    {
+        CAPTURE(key);
+        REQUIRE(isKnownInvalidColor("HiContrast-Light", "ImGuiColors", key));
+        CHECK(hexColor(theme["ImGuiColors"][key]).x >= 0);
     }
 }
 

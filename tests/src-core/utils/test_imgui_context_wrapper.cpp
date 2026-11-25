@@ -1,5 +1,6 @@
 #include "core/backend.h"
 #include "helpers/guards.h"
+#include "helpers/temp_files.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/imgui_test_helpers.h"
 #include "utils/imgui_context_wrapper.h"
@@ -15,6 +16,16 @@ using imgui_test::HeadlessContext;
 
 namespace
 {
+    // The contained context keeps the default IniFilename, so it reads and writes imgui.ini in
+    // the current directory: run in a temporary one. The mouse offsets are restored too.
+    struct WrapperEnv
+    {
+        test_helpers::TempDir dir{"imgui_context_wrapper"};
+        test_helpers::CwdGuard cwd{dir.path};
+        test_helpers::ValueGuard<float> ox{backend::mouse_set_offset_x, 0.0f};
+        test_helpers::ValueGuard<float> oy{backend::mouse_set_offset_y, 0.0f};
+    };
+
     struct Inner
     {
         ImVec2 button_min, button_max; // In the coordinates of the contained context
@@ -36,8 +47,7 @@ namespace
 
 TEST_CASE("ContainedContext draws a second context into the current window", "[utils][imgui_context_wrapper]")
 {
-    test_helpers::ValueGuard<float> ox(backend::mouse_set_offset_x, 0.0f);
-    test_helpers::ValueGuard<float> oy(backend::mouse_set_offset_y, 0.0f);
+    WrapperEnv env;
     HeadlessContext ctx;
     ContainedContext cc;
     cc.config().extra_window_wrapper = true;
@@ -75,8 +85,7 @@ TEST_CASE("ContainedContext draws a second context into the current window", "[u
 
 TEST_CASE("ContainedContext maps the mouse through its zoom", "[utils][imgui_context_wrapper]")
 {
-    test_helpers::ValueGuard<float> ox(backend::mouse_set_offset_x, 0.0f);
-    test_helpers::ValueGuard<float> oy(backend::mouse_set_offset_y, 0.0f);
+    WrapperEnv env;
     HeadlessContext ctx;
     ContainedContext cc;
     cc.config().extra_window_wrapper = true;
@@ -113,8 +122,7 @@ TEST_CASE("ContainedContext maps the mouse through its zoom", "[utils][imgui_con
 
 TEST_CASE("ContainedContext zooms with the mouse wheel within its limits", "[utils][imgui_context_wrapper]")
 {
-    test_helpers::ValueGuard<float> ox(backend::mouse_set_offset_x, 0.0f);
-    test_helpers::ValueGuard<float> oy(backend::mouse_set_offset_y, 0.0f);
+    WrapperEnv env;
     HeadlessContext ctx;
     ContainedContext cc;
     cc.config().size = ImVec2(600, 400);

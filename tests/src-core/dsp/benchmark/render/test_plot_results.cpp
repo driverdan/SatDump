@@ -15,7 +15,7 @@ using namespace satdump::ndsp;
 
 namespace
 {
-    // renderResults() leaves its ImGui and ImPlot contexts current, and never destroys them
+    // renderResults() leaves its ImGui and ImPlot contexts current, and never destroys them (#415)
     image::Image render(const std::vector<DSPBenchResult> &results)
     {
         ImGuiContext *before = ImGui::GetCurrentContext();
