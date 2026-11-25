@@ -11,7 +11,6 @@
 #include <android_native_app_glue.h>
 
 float funcDeviceScale();
-void funcRebuildFonts();
 void funcSetMousePos(int, int);
 std::pair<int, int> funcBeginFrame();
 void funcEndFrame();

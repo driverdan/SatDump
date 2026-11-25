@@ -8,7 +8,6 @@ namespace backend
     SATDUMP_DLL float mouse_set_offset_x = 0;
     SATDUMP_DLL float mouse_set_offset_y = 0;
 
-    SATDUMP_DLL std::function<void()> rebuildFonts;
     SATDUMP_DLL std::function<void(int, int)> setMousePos;
     SATDUMP_DLL std::function<std::pair<int, int>()> beginFrame;
     SATDUMP_DLL std::function<void()> endFrame;

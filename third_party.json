@@ -36,19 +36,19 @@
         "src-ui/imgui/imgui_image_base.cpp"
       ],
       "upstream_url": "https://github.com/ocornut/imgui",
-      "version": "1.92.5",
-      "commit": "6d910d5487d11ca567b61c7824b0c78c569d62f0",
+      "version": "1.93.0",
+      "commit": "c1aaac65e896a45f81f47a4d68f9959e0f86c859",
       "commit_verified": true,
-      "version_source": "IMGUI_VERSION in imgui.h. imgui.cpp, imgui.h, imgui_draw.cpp, imgui_tables.cpp, imgui_widgets.cpp, imgui_internal.h, imgui_demo.cpp and imstb_truetype.h are identical to the v1.92.5 tag.",
+      "version_source": "IMGUI_VERSION in imgui.h and the v1.93.0 tag. Every listed file was compared with the tag: imgui.cpp, imgui.h, imgui_demo.cpp, imgui_draw.cpp, imgui_internal.h, imgui_tables.cpp, imgui_widgets.cpp, the imstb_* headers and imgui_stdlib.cpp/.h (from misc/cpp) are identical, the others differ only by the local changes.",
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "imconfig.h is an older upstream imconfig.h with SatDump settings (IMGUI_DEFINE_MATH_OPERATORS etc.). imgui_stdlib.cpp/.h are from an older release than the core (comment and IMGUI_DISABLE-guard differences only). The src-ui backends include \"imgui/imgui.h\" instead of \"imgui.h\", and imgui_impl_opengl3.cpp includes gl3w."
+        "details": "imconfig.h defines IMGUI_DEFINE_MATH_OPERATORS and ImDrawIdx as unsigned int. The src-ui backends include \"imgui/imgui.h\" instead of \"imgui.h\", and imgui_impl_opengl3.cpp also includes \"gl3w/gl3w.h\" (unless IMGUI_IMPL_OPENGL_ES2)."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 273,
-      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. #273 also lists android/imgui_backends, but that is an older copy with its own entry (imgui-android-backends)."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "ImPlot, ImPlot3D, imnodes, imgui_markdown, gl3w and portable-file-dialogs have their own entries. The Android backends (imgui-android-backends) must be updated together with the core. Since 1.92.9, scalar inputs (InputInt, InputScalar, Drag, Slider) only write the typed value back when it is validated, unless ImGuiItemFlags_LiveEditOnInputScalar is set (common/widgets/datetime.cpp sets it). Since 1.92.8 the OpenGL 3 backend binds its own linear sampler, overriding the filters of SatDump's image textures: src-ui/backend.cpp and android/backend.cpp call useImageTextureFilters() (imgui_image.h) every frame, which adds DrawCallback_SetSamplerFromTex. Since 1.93.0 AddRect() / AddRectFilled() draw nothing with inverted coordinates."
     },
     {
       "id": "imgui-android-backends",
@@ -57,19 +57,19 @@
         "android/imgui_backends"
       ],
       "upstream_url": "https://github.com/ocornut/imgui",
-      "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded. imgui_impl_android.cpp and imgui_impl_opengl3.cpp differ from the v1.92.5 backends beyond local edits (older changelog and texture API), so these come from an older Dear ImGui release than the core.",
+      "version": "1.93.0",
+      "commit": "c1aaac65e896a45f81f47a4d68f9959e0f86c859",
+      "commit_verified": true,
+      "version_source": "The backends of the v1.93.0 tag, the same as the core. Before that update they were imgui_impl_android from v1.90.1 and imgui_impl_opengl3 from a master snapshot between v1.89.9 and v1.90.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against the matching upstream release."
+        "status": "yes",
+        "details": "All files include \"imgui/imgui.h\" instead of \"imgui.h\". imgui_impl_android.cpp/.h: a long press of 0.5 s generates a right click (procLongPress(), called by android/backend.cpp, uses satdump::getTime() from utils/time.h), and stylus and mouse touches are handled like fingers (S-Pen support), except that only finger touches reset the mouse position when lifted."
       },
       "consumption": "vendored-platform",
-      "upstream_state": "newer-available",
-      "update_issue": 273,
-      "notes": "Android only. Must be updated to the same version as the core (see #273)."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Android only. Must be updated to the same version as the core. imgui_impl_opengl3_loader.h is unused, as Android builds with IMGUI_IMPL_OPENGL_ES3."
     },
     {
       "id": "implot",
@@ -106,7 +106,7 @@
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "implot3d.h includes \"imgui/imgui.h\" and <cmath>; implot3d.cpp adds <cmath> for Windows and uses ImFont::LegacySize for Dear ImGui 1.92."
+        "details": "implot3d.h includes \"imgui/imgui.h\" and <cmath>; implot3d.cpp adds <cmath> for Windows and uses ImFont::LegacySize for Dear ImGui 1.92, and offsetof() / IM_TRUNC() instead of IM_OFFSETOF() / IM_FLOOR(), which Dear ImGui 1.92.6 removed."
       },
       "consumption": "vendored",
       "upstream_state": "newer-available",
@@ -1359,7 +1359,7 @@
       "license": "public-domain",
       "local_changes": {
         "status": "unknown",
-        "details": "Probably adjusted for the current Dear ImGui API; not itemized."
+        "details": "Probably adjusted for the current Dear ImGui API; not itemized. The float * ImVec2 / ImVec4 operators of imgui_sw.cpp are removed, as imgui.h defines them since Dear ImGui 1.92.7, and paint_imgui() uses ImDrawData::CmdLists.Size instead of the obsolete CmdListsCount."
       },
       "consumption": "vendored",
       "upstream_state": "inactive",

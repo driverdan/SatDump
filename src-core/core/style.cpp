@@ -401,8 +401,6 @@ namespace style
         // hugeFont = io.Fonts->AddFontFromFileTTF(resources::getResourcePath("fonts/" + theme.font + ".ttf").c_str(), 128.0f * font_scaling); //, &config, ranges);
         io.Fonts->Build();
         io.FontGlobalScale = 1 / macos_fbs;
-
-        backend::rebuildFonts();
     }
 
     float macos_framebuffer_scale()
