@@ -20,6 +20,8 @@ namespace satdump
         template <typename T>
         uint32_t AGCBlock<T>::process(T *in, uint32_t nsamples, T *out)
         {
+            this->reinit_if_needed();
+
             for (uint32_t i = 0; i < nsamples; i++)
             {
                 T output = in[i] * gain;

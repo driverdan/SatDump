@@ -29,34 +29,32 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             float *ibuf = iblk.getSamples<float>();
 
-            lbuf_size = iblk.size > buffer_size ? buffer_size : iblk.size;
             lbuf_offset = 0;
 
             while (lbuf_offset < iblk.size)
             {
+                // At most buffer_size samples at a time, and no more than are left
+                lbuf_size = std::min<size_t>(buffer_size, iblk.size - lbuf_offset);
+
                 DSPBuffer oblk = outputs[0].fifo->newBufferSamples(lbuf_size, sizeof(complex_t));
                 complex_t *obuf = oblk.getSamples<complex_t>();
 
-                memcpy(&buffer[p_ntaps], ibuf + lbuf_offset, lbuf_size * sizeof(float));
+                memcpy(&buffer[d_ntaps], ibuf + lbuf_offset, lbuf_size * sizeof(float));
 
                 for (int i = 0; i < lbuf_size; i++)
                 {
-                    volk_32f_x2_dot_prod_32f(&obuf[i].imag, &buffer[i], taps, p_ntaps);
-                    obuf[i].real = buffer[i + p_ntaps / 2];
+                    volk_32f_x2_dot_prod_32f(&obuf[i].imag, &buffer[i], taps, d_ntaps);
+                    obuf[i].real = buffer[i + d_ntaps / 2];
                 }
 
                 oblk.size = lbuf_size;
                 outputs[0].fifo->wait_enqueue(oblk);
 
-                memmove(&buffer[0], &buffer[lbuf_size], p_ntaps * sizeof(float));
+                memmove(&buffer[0], &buffer[lbuf_size], d_ntaps * sizeof(float));
                 lbuf_offset += lbuf_size;
             }
 

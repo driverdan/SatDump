@@ -126,6 +126,47 @@ TEST_CASE("ndsp FIRBlock taps configuration round-trip and IDs", "[dsp][filter]"
 
     CHECK_THROWS(ff.set_cfg("nope", 1));
     CHECK_THROWS(ff.get_cfg("nope"));
+
+    // init() applies the taps
+    ff.init();
+    CHECK_FALSE(ff.needs_reinit);
+    CHECK(ff.get_cfg("taps").get<std::vector<float>>() == t);
+}
+
+TEST_CASE("ndsp FIRBlock applies taps set while running", "[dsp][filter]")
+{
+    auto fir = std::make_shared<FIRBlock<float>>();
+    fir->set_cfg("taps", std::vector<float>{1});
+    auto in = std::make_shared<DSPStream>(4);
+    fir->set_input({"in", DSP_SAMPLE_TYPE_F32, in}, 0);
+    ndsp_test::Collector<float> col(fir->get_output(0, 4).fifo);
+    fir->start();
+
+    std::vector<float> ramp1, ramp2;
+    for (int i = 0; i < 100; i++)
+    {
+        ramp1.push_back(i);
+        ramp2.push_back(100 + i);
+    }
+
+    // With one tap, the oldest sample is held back
+    ndsp_test::pushSamples(*in, ramp1);
+    CHECK(col.waitFor(99));
+    fir->set_cfg("taps", std::vector<float>{2});
+    // The change drops the held back sample
+    ndsp_test::pushSamples(*in, ramp2);
+    CHECK(col.waitFor(99 + 99));
+
+    ndsp_test::pushTerminator(*in);
+    CHECK(ndsp_test::stopBlock(fir));
+    col.finish();
+
+    std::vector<float> expected;
+    for (int i = 1; i < 100; i++)
+        expected.push_back(i);
+    for (int i = 101; i < 200; i++)
+        expected.push_back(2 * i);
+    CHECK(col.data() == expected);
 }
 
 TEST_CASE("ndsp FIRBlock taps can be changed between runs", "[dsp][filter]")

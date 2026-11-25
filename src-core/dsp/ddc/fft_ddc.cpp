@@ -56,11 +56,7 @@ namespace satdump
                 return true;
             }
 
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
 
             // Simply copy those over
             bool has_actual_vfos = false;

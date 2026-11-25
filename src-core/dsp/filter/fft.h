@@ -15,8 +15,8 @@ namespace satdump
         template <typename T, typename TT = float>
         class FFTFilterBlock : public Block
         {
-        public:
-            bool needs_reinit = false;
+        private:
+            // Parameters, see Block::set_param()
             std::vector<TT> p_taps;
 
         private:
@@ -49,7 +49,7 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "taps")
-                    return p_taps;
+                    return get_param(p_taps);
                 else
                     throw satdump_exception(key);
             }
@@ -57,10 +57,7 @@ namespace satdump
             Block::cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "taps")
-                {
-                    p_taps = v.get<std::vector<TT>>();
-                    needs_reinit = true;
-                }
+                    set_param(p_taps, v.get<std::vector<TT>>());
                 else
                     throw satdump_exception(key);
                 return Block::RES_OK;

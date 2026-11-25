@@ -11,14 +11,13 @@ namespace satdump
         template <typename T>
         class MMClockRecoveryFastBlock : public Block
         {
-        public:
+        private:
+            // Parameters, see Block::set_param()
             float p_omega = 0;
             float p_omegaGain = pow(8.7e-3, 2) / 4.0;
             float p_mu = 0.5f;
             float p_muGain = 8.7e-3;
             float p_omegaLimit = 0.005;
-
-            bool needs_reinit = false;
 
         private:
             // Buffer
@@ -70,15 +69,15 @@ namespace satdump
             nlohmann::json get_cfg(std::string key)
             {
                 if (key == "omega")
-                    return p_omega;
+                    return get_param(p_omega);
                 else if (key == "omegaGain")
-                    return p_omegaGain;
+                    return get_param(p_omegaGain);
                 else if (key == "mu")
-                    return p_mu;
+                    return get_param(p_mu);
                 else if (key == "muGain")
-                    return p_muGain;
+                    return get_param(p_muGain);
                 else if (key == "omegaLimit")
-                    return p_omegaLimit;
+                    return get_param(p_omegaLimit);
                 else
                     throw satdump_exception(key);
             }
@@ -86,30 +85,15 @@ namespace satdump
             cfg_res_t set_cfg(std::string key, nlohmann::json v)
             {
                 if (key == "omega")
-                {
-                    p_omega = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_omega, v.get<float>());
                 else if (key == "omegaGain")
-                {
-                    p_omegaGain = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_omegaGain, v.get<float>());
                 else if (key == "mu")
-                {
-                    p_mu = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_mu, v.get<float>());
                 else if (key == "muGain")
-                {
-                    p_muGain = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_muGain, v.get<float>());
                 else if (key == "omegaLimit")
-                {
-                    p_omegaLimit = v;
-                    needs_reinit = true;
-                }
+                    set_param(p_omegaLimit, v.get<float>());
                 else
                     throw satdump_exception(key);
                 return RES_OK;

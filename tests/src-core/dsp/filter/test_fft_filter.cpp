@@ -111,6 +111,11 @@ TEST_CASE("ndsp FFTFilterBlock configuration round-trip", "[dsp][filter][fft_fil
     CHECK(f.get_cfg("taps").get<std::vector<float>>() == t);
     CHECK_THROWS(f.set_cfg("x", 1));
     CHECK_THROWS(f.get_cfg("x"));
+
+    // init() applies the taps
+    f.init();
+    CHECK_FALSE(f.needs_reinit);
+    CHECK(f.get_cfg("taps").get<std::vector<float>>() == t);
 }
 
 namespace

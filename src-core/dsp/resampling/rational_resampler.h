@@ -4,7 +4,6 @@
 #include "common/dsp/resamp/polyphase_bank.h"
 #include "dsp/block.h"
 #include "dsp/block_simple.h"
-#include <atomic>
 #include <mutex>
 #include <optional>
 #include <volk/volk_alloc.hh>
@@ -17,15 +16,10 @@ namespace satdump
         class RationalResamplerBlock : public BlockSimple<T, T>
         {
         private:
-            // Parameters, set from other threads (eg, the UI) while the block runs : always
-            // access them with cfg_mtx held. init() applies them all together
-            std::mutex cfg_mtx;
+            // Parameters, see Block::set_param(). init() applies them all together
             float p_interpolation = 1;
             float p_decimation = 2;
             std::vector<float> p_taps = {};
-
-        public:
-            std::atomic<bool> needs_reinit = false;
 
         private:
             // Buffer
@@ -62,7 +56,7 @@ namespace satdump
 
             nlohmann::json get_cfg(std::string key)
             {
-                std::lock_guard<std::mutex> lock(cfg_mtx);
+                std::lock_guard<std::mutex> lock(this->params_mtx);
                 if (key == "interpolation")
                     return p_interpolation;
                 else if (key == "decimation")
@@ -101,14 +95,14 @@ namespace satdump
                 if ((interpolation && !valid_rate(*interpolation)) || (decimation && !valid_rate(*decimation)))
                     return Block::RES_ERR;
 
-                std::lock_guard<std::mutex> lock(cfg_mtx);
+                std::lock_guard<std::mutex> lock(this->params_mtx);
                 if (interpolation)
                     p_interpolation = *interpolation;
                 if (decimation)
                     p_decimation = *decimation;
                 if (taps)
                     p_taps = std::move(*taps);
-                needs_reinit = true;
+                this->needs_reinit = true;
                 return Block::RES_OK;
             }
         };

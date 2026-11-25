@@ -24,13 +24,15 @@ namespace satdump
             // Copy over samples
             memcpy(out, in, nsamples * sizeof(T));
 
-            if (needs_reinit)
+            this->reinit_if_needed();
+
+            if (restart)
             {
-                sample_time_period = std::chrono::duration<double>(1.0 / (double)samplerate);
+                sample_time_period = std::chrono::duration<double>(1.0 / d_samplerate);
                 start_time_point = std::chrono::steady_clock::now();
                 total_samples = 0;
 
-                needs_reinit = false;
+                restart = false;
             }
 
             total_samples += nsamples;

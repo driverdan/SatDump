@@ -16,11 +16,7 @@ namespace satdump
 
         uint32_t ExponentiateBlock::process(complex_t *input, uint32_t nsamples, complex_t *output)
         {
-            if (needs_reinit)
-            {
-                needs_reinit = false;
-                init();
-            }
+            reinit_if_needed();
             volk_32fc_x2_multiply_32fc((lv_32fc_t *)output, (lv_32fc_t *)input, (lv_32fc_t *)input, nsamples);
             for (uint32_t i = 2; i < d_expo; i++)
             {

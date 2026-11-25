@@ -15,11 +15,15 @@ namespace satdump
         template <typename T>
         void WaveformBlock<T>::init()
         {
-            d_waveform = p_waveform;
-            d_samprate = p_samprate;
-            d_freq = p_freq;
-            d_amp = p_amp;
-            d_phase = p_phase;
+            apply_params(
+                [&]()
+                {
+                    d_waveform = p_waveform;
+                    d_samprate = p_samprate;
+                    d_freq = p_freq;
+                    d_amp = p_amp;
+                    d_phase = p_phase;
+                });
         }
 
         template <typename T>
@@ -35,18 +39,14 @@ namespace satdump
                 auto oblk = outputs[0].fifo->newBufferSamples(d_buffer_size, sizeof(T));
                 T *obuf = oblk.template getSamples<T>();
 
-                if (needs_reinit)
-                {
-                    needs_reinit = false;
-                    init();
-                }
+                reinit_if_needed();
 
                 int nsamples = d_buffer_size;
 
                 double noise_imp = 1;
                 double noise_snr_linear = 1e3 * pow(10, -150 / 10);
 
-                if (p_waveform == "cosine")
+                if (d_waveform == "cosine")
                 {
                     for (size_t i = 0; i < nsamples; i++)
                     {
@@ -77,7 +77,7 @@ namespace satdump
                         }
                     }
                 }
-                if (p_waveform == "sine")
+                if (d_waveform == "sine")
                 {
 
                     for (size_t i = 0; i < nsamples; i++)
