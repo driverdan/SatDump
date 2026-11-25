@@ -158,8 +158,8 @@ cmake $cmake_params ..  -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIB
 ninja install
 cd ../..
 
-# HydraSDR
-git clone https://github.com/hydrasdr/hydrasdr-host libhydrasdr --depth 1 -b v1.1.2
+# HydraSDR (v1.1.3 is the first release that builds for Windows ARM64)
+git clone https://github.com/hydrasdr/hydrasdr-host libhydrasdr --depth 1 -b v1.1.3
 cd libhydrasdr
 mkdir build
 cd build
@@ -200,7 +200,9 @@ if(!$is_arm) {
     cd Limesuite
     mkdir build2
     cd build2
-    cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5"
+    # v23.11.0 misses <chrono> includes that current MSVC no longer pulls in transitively. Fixed upstream in
+    # 4b86e3d (MCU_BD.cpp, FPGA_common.cpp) but not in any release, so force-include it.
+    cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON -DCMAKE_POLICY_VERSION_MINIMUM="3.5" -DCMAKE_CXX_FLAGS="/DWIN32 /D_WINDOWS /W3 /GR /EHsc /FIchrono"
     ninja install
     cd ../..
 }
@@ -219,7 +221,10 @@ git clone https://github.com/analogdevicesinc/libiio --depth 1 -b v0.26
 cd libiio
 mkdir build
 cd build
-cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON
+# libiio only searches for libusb through pkg-config, which Windows lacks, so pass its paths in.
+# Use forward slashes: libiio puts LIBUSB_LIBRARIES in a try_compile, where '\a' would be read as an escape.
+$output_folder_cmake = "$output_folder" -replace '\\', '/'
+cmake $cmake_params .. -DBUILD_SHARED_LIBS=ON -DLIBUSB_INCLUDE_DIR="$output_folder_cmake/include/libusb-1.0" -DLIBUSB_LIBRARIES="$output_folder_cmake/lib/usb-1.0.lib"
 ninja install
 cd ../..
 
