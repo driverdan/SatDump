@@ -19,6 +19,9 @@
 #include "projection/utils/equirectangular.h"
 #include "utils/unit_parser.h"
 
+#include <memory>
+#include <vector>
+
 namespace satdump
 {
     namespace products
@@ -232,6 +235,44 @@ namespace satdump
             return tokens;
         }
 
+        namespace
+        {
+            // Lazy loading of channels, for products whose contents have "lazyload_path" set.
+            // Only the channels that are not in memory yet are loaded from disk, and only those
+            // are unloaded again when this goes out of scope, on success as well as on errors.
+            // Channels that were already loaded beforehand are left alone.
+            class LazyLoadedChannels
+            {
+            private:
+                ImageProduct *product;
+                std::vector<ImageProduct::ImageHolder *> loaded;
+
+            public:
+                LazyLoadedChannels(ImageProduct *product) : product(product) {}
+                LazyLoadedChannels(const LazyLoadedChannels &) = delete;
+                LazyLoadedChannels &operator=(const LazyLoadedChannels &) = delete;
+
+                ~LazyLoadedChannels()
+                {
+                    for (auto *h : loaded)
+                    {
+                        logger->trace("Unload %s", h->channel_name.c_str());
+                        h->image.clear();
+                    }
+                }
+
+                void load(ImageProduct::ImageHolder &h)
+                {
+                    if (!product->contents.contains("lazyload_path") || h.image.size() > 0)
+                        return;
+
+                    logger->trace("Load %s", h.channel_name.c_str());
+                    loaded.push_back(&h); // Before loading, so that a partial load is also undone
+                    image::load_img(h.image, product->contents["lazyload_path"].get<std::string>() + "/" + h.filename);
+                }
+            };
+        } // namespace
+
         image::Image generate_expression_product_composite(ImageProduct *product, std::string expression, float *progress)
         {
             // Dummy mode, a special mode where no actual work is done, only checking
@@ -372,12 +413,15 @@ namespace satdump
             // Index of the reference channel
             int reference_channel_index = reference_channel == "" ? 0 : -1;
 
+            // Channels lazily loaded from disk, unloaded again on every exit path
+            LazyLoadedChannels lazy_loaded(product);
+
             try
             {
                 // Setup expression parser
                 size_t ntkts = 0;
-                TokenS **tkts = new TokenS *[tokens.size()];
-                image::Image *other_images = new image::Image[tokens.size()];
+                std::vector<std::unique_ptr<TokenS>> tkts(tokens.size());
+                std::vector<image::Image> other_images(tokens.size()); // Never resized, TokenS keeps references to its elements
                 mu::Parser equParser;
                 equParser.SetExpr(expression);
 
@@ -418,20 +462,15 @@ namespace satdump
                         logger->trace("Needs channel %s", index.c_str());
                         auto &h = product->get_channel_image(index);
 
-                        // TODOREWORK?
-                        if (product->contents.contains("lazyload_path"))
-                        {
-                            logger->trace("Load %s", h.channel_name.c_str());
-                            image::load_img(h.image, product->contents["lazyload_path"].get<std::string>() + "/" + h.filename);
-                        }
+                        lazy_loaded.load(h); // TODOREWORK?
 
-                        auto nt = new TokenS(h.image, h.ch_transform);
+                        auto nt = std::make_unique<TokenS>(h.image, h.ch_transform);
                         nt->ch_idx = h.abs_index;
                         nt->width = h.image.width();
                         nt->height = h.image.height();
                         nt->maxval = h.image.maxval();
                         equParser.DefineVar(tkt, &nt->v);
-                        tkts[ntkts++] = nt;
+                        tkts[ntkts++] = std::move(nt);
 
                         if (reference_channel != "" && reference_channel == index)
                             reference_channel_index = ntkts - 1; // Try to set reference
@@ -443,12 +482,7 @@ namespace satdump
                         logger->trace("Needs calibrated channel %s as %s", index.c_str(), c.unit.c_str());
                         auto &h = product->get_channel_image(index);
 
-                        // TODOREWORK?
-                        if (product->contents.contains("lazyload_path"))
-                        {
-                            logger->trace("Load %s", h.channel_name.c_str());
-                            image::load_img(h.image, product->contents["lazyload_path"].get<std::string>() + "/" + h.filename);
-                        }
+                        lazy_loaded.load(h); // TODOREWORK?
 
                         if (c.unit == "equalized") // TODOREWORK this is an exception?
                         {
@@ -458,13 +492,13 @@ namespace satdump
                         else
                             other_images[ntkts] = generate_calibrated_product_channel(product, index, c.min, c.max, c.unit, progress); // TODOREWORK handle progress?
                         auto &image = other_images[ntkts];
-                        auto nt = new TokenS(image, h.ch_transform);
+                        auto nt = std::make_unique<TokenS>(image, h.ch_transform);
                         nt->ch_idx = h.abs_index;
                         nt->width = image.width();
                         nt->height = image.height();
                         nt->maxval = image.maxval();
                         equParser.DefineVar(tkt, &nt->v);
-                        tkts[ntkts++] = nt;
+                        tkts[ntkts++] = std::move(nt);
 
                         if (reference_channel != "" && reference_channel == index)
                             reference_channel_index = ntkts - 1; // Try to set reference
@@ -479,7 +513,7 @@ namespace satdump
                 // Select reference channel
                 if (reference_channel_index == -1)
                     throw satdump_exception("Reference channel " + reference_channel + " not found! Must be present/used in equation!");
-                TokenS *rtkt = tkts[reference_channel_index];
+                TokenS *rtkt = tkts[reference_channel_index].get();
 
                 // Setup output image
                 image::Image out(rtkt->img.depth(), rtkt->img.width(), rtkt->img.height(), nout_channels);
@@ -504,7 +538,7 @@ namespace satdump
                         // Update raw values, apply transforms if needed
                         for (i = 0; i < ntkts; i++)
                         {
-                            TokenS *t = tkts[i];
+                            TokenS *t = tkts[i].get();
                             t->px = x, t->py = y;
                             rtkt->transform.forward(&t->px, &t->py);
                             t->transform.reverse(&t->px, &t->py);
@@ -531,26 +565,11 @@ namespace satdump
                 if (product->has_proj_cfg())
                     image::set_metadata_proj_cfg(out, product->get_proj_cfg(rtkt->ch_idx));
 
-                // Free up tokens
-                for (int i = 0; i < ntkts; i++)
-                    delete tkts[i];
-                delete[] other_images;
-
                 return out;
             }
             catch (mu::ParserError &e)
             {
                 throw satdump_exception(e.GetMsg());
-            }
-
-            // TODOREWORK?
-            if (product->contents.contains("lazyload_path"))
-            {
-                for (auto &img : product->images)
-                {
-                    logger->trace("Unload %s", img.channel_name.c_str());
-                    img.image.clear();
-                }
             }
         }
 
