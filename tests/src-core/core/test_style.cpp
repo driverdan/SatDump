@@ -306,12 +306,9 @@ TEST_CASE("style::setFonts loads the theme font, the icons and the big font", "[
     test_helpers::ValueGuard<ImFont *> base_guard(style::baseFont);
     test_helpers::ValueGuard<ImFont *> big_guard(style::bigFont);
     test_helpers::ValueGuard<std::string> i18n_guard(style::i18n_extraFont, "");
-    int rebuilds = 0;
-    test_helpers::ValueGuard<std::function<void()>> rebuild_guard(backend::rebuildFonts, [&]() { rebuilds++; });
 
     imgui_test::HeadlessContext ctx;
     style::setFonts(1.5f);
-    CHECK(rebuilds == 1);
     REQUIRE(style::baseFont != nullptr);
     REQUIRE(style::bigFont != nullptr);
     CHECK(style::baseFont != style::bigFont);

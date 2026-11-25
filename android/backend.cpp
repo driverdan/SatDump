@@ -37,12 +37,6 @@ float funcDeviceScale()
     return jflt;
 }
 
-void funcRebuildFonts()
-{
-    // Nothing to do: since Dear ImGui 1.92 the backend updates the font atlas texture itself
-    // (ImGuiBackendFlags_RendererHasTextures)
-}
-
 void funcSetMousePos(int, int)
 {
     // Not implemented on Android
@@ -118,7 +112,6 @@ void bindBackendFunctions()
 {
     backend::device_scale = funcDeviceScale();
 
-    backend::rebuildFonts = funcRebuildFonts;
     backend::setMousePos = funcSetMousePos;
     backend::beginFrame = funcBeginFrame;
     backend::endFrame = funcEndFrame;

@@ -23,22 +23,6 @@ float funcDeviceScale()
     return display_scale;
 }
 
-void funcRebuildFonts()
-{
-#ifndef IMGUI_IMPL_OPENGL_ES2
-    if (fallback_gl)
-    {
-        // ImGui_ImplOpenGL2_DestroyFontsTexture();
-        // ImGui_ImplOpenGL2_CreateFontsTexture();
-    }
-    else
-#endif
-    {
-        // ImGui_ImplOpenGL3_DestroyFontsTexture();
-        // ImGui_ImplOpenGL3_CreateFontsTexture();
-    }
-}
-
 void funcSetMousePos(int x, int y)
 {
     glfwSetCursorPos(window, x + backend::mouse_set_offset_x, y + backend::mouse_set_offset_y);
@@ -236,7 +220,6 @@ void bindBackendFunctions()
 {
     backend::device_scale = funcDeviceScale();
 
-    backend::rebuildFonts = funcRebuildFonts;
     backend::setMousePos = funcSetMousePos;
     backend::beginFrame = funcBeginFrame;
     backend::endFrame = funcEndFrame;

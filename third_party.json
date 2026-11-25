@@ -1359,7 +1359,7 @@
       "license": "public-domain",
       "local_changes": {
         "status": "unknown",
-        "details": "Probably adjusted for the current Dear ImGui API; not itemized. The float * ImVec2 / ImVec4 operators of imgui_sw.cpp are commented out, as imgui.h defines them since Dear ImGui 1.92.7, and paint_imgui() uses ImDrawData::CmdLists.Size instead of the obsolete CmdListsCount."
+        "details": "Probably adjusted for the current Dear ImGui API; not itemized. The float * ImVec2 / ImVec4 operators of imgui_sw.cpp are removed, as imgui.h defines them since Dear ImGui 1.92.7, and paint_imgui() uses ImDrawData::CmdLists.Size instead of the obsolete CmdListsCount."
       },
       "consumption": "vendored",
       "upstream_state": "inactive",
