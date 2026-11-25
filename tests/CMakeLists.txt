@@ -76,6 +76,7 @@ endfunction()
 
 satdump_add_plugin_tests(rtltcp_support sdr_sources/rtltcp_support)
 satdump_add_plugin_tests(remote_sdr_support sdr_sources/remote_sdr_support)
+satdump_add_plugin_tests(net_source_support sdr_sources/net_source_support)
 satdump_add_plugin_tests(xrit_support xrit_support)
 satdump_add_plugin_tests(goes_support goes_support)
 satdump_add_plugin_tests(fengyun2_support fengyun2_support)
