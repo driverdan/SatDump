@@ -200,7 +200,8 @@ TEST_CASE("ndsp Flowgraph renderAddMenuList adds the clicked node", "[dsp][flowg
 }
 
 // Regression (#420): the "Add others" list of the variables window looped over a temporary
-// get_cfg(), which was destroyed before the loop ran. Debug builds threw invalid_iterator.214.
+// get_cfg(), which was destroyed before the loop ran. In Debug builds the loop never ended, so
+// a regression shows up as this test hitting its CTest timeout.
 TEST_CASE("ndsp Flowgraph renderWindows lists the block parameters to assign from variables", "[dsp][flowgraph][render]")
 {
     RenderEnv env;
