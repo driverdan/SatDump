@@ -48,37 +48,58 @@ namespace satdump
                     filesize = getFilesize(d_input_file);
                 else
                     filesize = 0;
+                progress = 0;
                 if (input_data_type == DATA_FILE)
+                {
                     data_in = std::ifstream(d_input_file, std::ios::binary);
+                    // Otherwise eof() is never set and the loops below never end
+                    if (!data_in.is_open())
+                        throw satdump_exception("Couldn't open input file " + d_input_file);
+                }
 
                 logger->info("Using input frames %s", d_input_file.c_str());
+
+                // Reads the next buffer, returns how many bytes of it are valid. At the
+                // end of a file this is less than pkt_size, possibly 0.
+                auto read_buffer = [this]() -> size_t
+                {
+                    if (input_data_type == DATA_FILE)
+                    {
+                        data_in.read((char *)buffer, pkt_size);
+                        progress += data_in.gcount();
+                        return data_in.gcount();
+                    }
+
+                    input_fifo->read((uint8_t *)buffer, pkt_size);
+                    return pkt_size;
+                };
 
                 if (mode == "default")
                 {
                     nng_socket sock;
                     nng_listener listener;
+                    std::string url = "tcp://" + address + ":" + std::to_string(port);
 
-                    logger->info("Opening TCP socket on tcp://%s:%d", address.c_str(), port);
+                    logger->info("Opening TCP socket on %s", url.c_str());
 
-                    nng_pub0_open_raw(&sock);
-                    nng_listener_create(&listener, sock, std::string("tcp://" + address + ":" + std::to_string(port)).c_str());
-                    nng_listener_start(listener, NNG_FLAG_NONBLOCK);
+                    int rv = nng_pub0_open_raw(&sock);
+                    if (rv != 0)
+                        throw satdump_exception("Couldn't open nng socket : " + std::string(nng_strerror(rv)));
+
+                    if ((rv = nng_listener_create(&listener, sock, url.c_str())) != 0 || (rv = nng_listener_start(listener, NNG_FLAG_NONBLOCK)) != 0)
+                    {
+                        nng_close(sock);
+                        throw satdump_exception("Couldn't listen on " + url + " : " + std::string(nng_strerror(rv)));
+                    }
 
                     while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
                     {
-                        // Read a buffer
-                        if (input_data_type == DATA_FILE)
-                            data_in.read((char *)buffer, pkt_size);
-                        else
-                            input_fifo->read((uint8_t *)buffer, pkt_size);
-
-                        nng_send(sock, buffer, pkt_size, NNG_FLAG_NONBLOCK);
-
-                        if (input_data_type == DATA_FILE)
-                            progress = data_in.tellg();
+                        size_t size = read_buffer();
+                        if (size > 0)
+                            nng_send(sock, buffer, size, NNG_FLAG_NONBLOCK);
                     }
 
-                    nng_listener_close(listener);
+                    nng_close(sock); // Also closes the listener
                 }
                 else if (mode == "udp_send")
                 {
@@ -86,16 +107,9 @@ namespace satdump
 
                     while (input_data_type == DATA_FILE ? !data_in.eof() : input_active.load())
                     {
-                        // Read a buffer
-                        if (input_data_type == DATA_FILE)
-                            data_in.read((char *)buffer, pkt_size);
-                        else
-                            input_fifo->read((uint8_t *)buffer, pkt_size);
-
-                        udp_send.send(buffer, pkt_size);
-
-                        if (input_data_type == DATA_FILE)
-                            progress = data_in.tellg();
+                        size_t size = read_buffer();
+                        if (size > 0)
+                            udp_send.send(buffer, size);
                     }
                 }
 
