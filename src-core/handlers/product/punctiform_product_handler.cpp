@@ -174,20 +174,21 @@ namespace satdump
         {
             if (current_mode == MODE_GRAPH)
             {
-                ImPlot::BeginPlot("PlotHandler", {win_size.x, win_size.y});
-
-                for (auto &ch : product->data)
+                if (ImPlot::BeginPlot("PlotHandler", {win_size.x, win_size.y}))
                 {
-                    if (ch.channel_name == selected_channel)
+                    for (auto &ch : product->data)
                     {
-                        std::vector<double> t;
-                        for (int i = 0; i < ch.timestamps.size(); i++)
-                            t.push_back(i);
-                        ImPlot::PlotLine(std::string(_("Channel ") + ch.channel_name).c_str(), t.data(), ch.data.data(), ch.timestamps.size());
+                        if (ch.channel_name == selected_channel)
+                        {
+                            std::vector<double> t;
+                            for (int i = 0; i < ch.timestamps.size(); i++)
+                                t.push_back(i);
+                            ImPlot::PlotLine(std::string(_("Channel ") + ch.channel_name).c_str(), t.data(), ch.data.data(), ch.timestamps.size());
+                        }
                     }
-                }
 
-                ImPlot::EndPlot();
+                    ImPlot::EndPlot();
+                }
             }
             else if (current_mode == MODE_DOTMAP || current_mode == MODE_FILLMAP)
             {
