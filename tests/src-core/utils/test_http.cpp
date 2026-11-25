@@ -6,6 +6,8 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <algorithm>
+#include <chrono>
 #include <curl/curl.h>
 #include <string>
 
@@ -261,5 +263,61 @@ TEST_CASE("perform_http_request_post fails on an HTTP error status", "[utils][ht
     CHECK(ret == 1);
     CHECK(result == "error page");
     CHECK(server.request.rfind("POST /api HTTP/1.1\r\n", 0) == 0);
+}
+
+// A loopback port that completes connections (in the backlog) but never answers them
+class SilentServer
+{
+public:
+    int fd = -1;
+    int port = 0;
+
+    SilentServer()
+    {
+        fd = socket(AF_INET, SOCK_STREAM, 0);
+        REQUIRE(fd >= 0);
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        socklen_t len = sizeof(addr);
+        bool ok = bind(fd, (sockaddr *)&addr, sizeof(addr)) == 0 && listen(fd, 4) == 0 && getsockname(fd, (sockaddr *)&addr, &len) == 0;
+        if (!ok)
+            close(fd); // The destructor does not run when the constructor fails
+        REQUIRE(ok);
+        port = ntohs(addr.sin_port);
+    }
+
+    ~SilentServer() { close(fd); }
+
+    std::string url() { return "http://127.0.0.1:" + std::to_string(port) + "/"; }
+};
+
+// Each of these waits for HTTP_STALL_TIMEOUT, so they are hidden: run them with "[slow]"
+TEST_CASE("perform_http_request gives up on a server that never answers", "[.][slow][utils][http]")
+{
+    NoProxy np;
+    SilentServer server;
+    std::string result;
+    long status = -1;
+    auto start = std::chrono::steady_clock::now();
+    CHECK(satdump::perform_http_request(server.url(), result, "", nullptr, &status) == 1);
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start).count();
+
+    CHECK(status == 0);
+    CHECK(elapsed >= satdump::HTTP_STALL_TIMEOUT - 1);
+    CHECK(elapsed <= satdump::HTTP_STALL_TIMEOUT + 10);
+}
+
+TEST_CASE("perform_http_request_post gives up on a server that never answers", "[.][slow][utils][http]")
+{
+    NoProxy np;
+    SilentServer server;
+    std::string result;
+    auto start = std::chrono::steady_clock::now();
+    CHECK(satdump::perform_http_request_post(server.url(), result, "x=1") == 1);
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start).count();
+
+    CHECK(elapsed >= std::min(satdump::HTTP_STALL_TIMEOUT, satdump::HTTP_POST_TIMEOUT) - 1);
+    CHECK(elapsed <= satdump::HTTP_POST_TIMEOUT + 10);
 }
 #endif

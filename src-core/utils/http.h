@@ -10,6 +10,24 @@
 namespace satdump
 {
     /**
+     * @brief Timeouts of the HTTP requests, in seconds.
+     *
+     * A connection must be established within HTTP_CONNECT_TIMEOUT.
+     * A request is then aborted if less than HTTP_STALL_MIN_BYTES_PER_SEC
+     * bytes per second are received for HTTP_STALL_TIMEOUT, which covers
+     * a server that accepts the connection but never answers, while
+     * leaving large downloads that keep progressing alone. This also
+     * means a request fails if the server takes longer than
+     * HTTP_STALL_TIMEOUT to send the first byte of its response.
+     * A POST request, which only carries small payloads (e.g. webhooks),
+     * is also aborted after HTTP_POST_TIMEOUT in total.
+     */
+    constexpr long HTTP_CONNECT_TIMEOUT = 15;
+    constexpr long HTTP_STALL_TIMEOUT = 30;
+    constexpr long HTTP_STALL_MIN_BYTES_PER_SEC = 1;
+    constexpr long HTTP_POST_TIMEOUT = 30;
+
+    /**
      * @brief cURL helper function, writing
      * the payload into a std::string
      *
