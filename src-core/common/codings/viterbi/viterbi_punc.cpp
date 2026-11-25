@@ -29,14 +29,14 @@ namespace viterbi
                     d_bers[s][i][y] = 10;
     }
 
-    int Viterbi_Depunc::get_num_shifts() { return std::min(depunc->get_numstates() * 2, MAX_SHIFTS); }
-
     Viterbi_Depunc::~Viterbi_Depunc()
     {
         delete[] soft_buffer;
         delete[] depunc_buffer;
         delete[] output_buffer;
     }
+
+    int Viterbi_Depunc::get_num_shifts() const { return std::min(depunc->get_numstates() * 2, MAX_SHIFTS); }
 
     float Viterbi_Depunc::get_ber(uint8_t *raw, uint8_t *rencoded, int len, float ratio)
     {
