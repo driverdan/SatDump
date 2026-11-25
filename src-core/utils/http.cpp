@@ -53,7 +53,7 @@ namespace satdump
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 100);
             curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, HTTP_CONNECT_TIMEOUT);
-            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, HTTP_STALL_MIN_BYTES_PER_SEC);
             curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, HTTP_STALL_TIMEOUT);
 
 #ifdef CURLSSLOPT_NATIVE_CA
@@ -128,7 +128,7 @@ namespace satdump
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_std_string);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &result);
             curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, HTTP_CONNECT_TIMEOUT);
-            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
+            curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, HTTP_STALL_MIN_BYTES_PER_SEC);
             curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, HTTP_STALL_TIMEOUT);
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, HTTP_POST_TIMEOUT);
 

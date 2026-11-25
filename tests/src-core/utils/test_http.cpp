@@ -275,13 +275,15 @@ public:
     SilentServer()
     {
         fd = socket(AF_INET, SOCK_STREAM, 0);
+        REQUIRE(fd >= 0);
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         socklen_t len = sizeof(addr);
-        REQUIRE(bind(fd, (sockaddr *)&addr, sizeof(addr)) == 0);
-        REQUIRE(listen(fd, 4) == 0);
-        REQUIRE(getsockname(fd, (sockaddr *)&addr, &len) == 0);
+        bool ok = bind(fd, (sockaddr *)&addr, sizeof(addr)) == 0 && listen(fd, 4) == 0 && getsockname(fd, (sockaddr *)&addr, &len) == 0;
+        if (!ok)
+            close(fd); // The destructor does not run when the constructor fails
+        REQUIRE(ok);
         port = ntohs(addr.sin_port);
     }
 
