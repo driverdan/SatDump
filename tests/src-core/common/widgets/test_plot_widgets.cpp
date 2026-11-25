@@ -8,8 +8,11 @@
 #include "imgui/imgui_internal.h"
 #include "imgui/imgui_test_helpers.h"
 #include "imgui/implot/implot_internal.h"
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <cstring>
+#include <new>
 #include <vector>
 
 // The constellation, histogram, SNR and value plot widgets, drawn in a headless ImGui context
@@ -136,9 +139,8 @@ TEST_CASE("SNRPlotViewer and ValuePlotViewer draw their history", "[common][widg
 {
     WidgetEnv env;
     HeadlessContext ctx;
-    // Value-initialized, as the widgets do not initialize their history (#414)
-    satdump::widgets::SNRPlotViewer snr{};
-    satdump::widgets::ValuePlotViewer value{};
+    satdump::widgets::SNRPlotViewer snr;
+    satdump::widgets::ValuePlotViewer value;
 
     ImVec2 snr_size, value_size;
     float level = 0;
@@ -161,6 +163,51 @@ TEST_CASE("SNRPlotViewer and ValuePlotViewer draw their history", "[common][widg
     CHECK_FALSE(verticesWithColor(style::theme.orange).empty());
     CHECK_FALSE(verticesWithColor(style::theme.green).empty());
     CHECK_FALSE(verticesWithColor(style::theme.red).empty());
+}
+
+TEST_CASE("SNRPlotViewer and ValuePlotViewer start with an empty history", "[common][widgets][snr_plot]")
+{
+    WidgetEnv env;
+    HeadlessContext ctx;
+
+    // Default-initialized over storage holding 5.0f, as the demod modules hold them as members
+    // of classes with user-provided constructors (#414)
+    alignas(satdump::widgets::SNRPlotViewer) unsigned char snr_buf[sizeof(satdump::widgets::SNRPlotViewer)];
+    alignas(satdump::widgets::ValuePlotViewer) unsigned char value_buf[sizeof(satdump::widgets::ValuePlotViewer)];
+    const float garbage = 5.0f;
+    for (size_t i = 0; i + sizeof(float) <= sizeof(snr_buf); i += sizeof(float))
+        std::memcpy(&snr_buf[i], &garbage, sizeof(float));
+    for (size_t i = 0; i + sizeof(float) <= sizeof(value_buf); i += sizeof(float))
+        std::memcpy(&value_buf[i], &garbage, sizeof(float));
+    auto *snr = new (snr_buf) satdump::widgets::SNRPlotViewer;
+    auto *value = new (value_buf) satdump::widgets::ValuePlotViewer;
+
+    SECTION("SNR")
+    {
+        ctx.frame([&]() { snr->draw(0, 20); });
+        // SNR 0 (red), peak 20 (green), average 0 (red). The old history would average 4.975 (orange)
+        CHECK_FALSE(verticesWithColor(style::theme.red).empty());
+        CHECK_FALSE(verticesWithColor(style::theme.green).empty());
+        CHECK(verticesWithColor(style::theme.orange).empty());
+    }
+
+    SECTION("Value")
+    {
+        ctx.frame([&]() { value->draw(0, 10, 0, "Value"); });
+        // Every point of the history is 0, so the line is flat at the bottom of the 50px high plot
+        std::vector<ImVec2> line = verticesWithColor(ImGui::GetColorU32(ImGuiCol_PlotLines));
+        REQUIRE_FALSE(line.empty());
+        float min_y = line[0].y, max_y = line[0].y;
+        for (const ImVec2 &p : line)
+        {
+            min_y = std::min(min_y, p.y);
+            max_y = std::max(max_y, p.y);
+        }
+        CHECK(max_y - min_y < 5.0f); // Line thickness and anti-aliasing, the old history stepped by about 24px
+    }
+
+    snr->~SNRPlotViewer();
+    value->~ValuePlotViewer();
 }
 
 TEST_CASE("ThemedPlotLines uses the given background colour", "[common][widgets][themed_widgets]")
