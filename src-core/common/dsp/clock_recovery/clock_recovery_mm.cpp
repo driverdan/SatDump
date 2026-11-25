@@ -21,7 +21,9 @@ namespace dsp
 #if DO_BRANCH
         buffer = create_volk_buffer<T>(pfb.ntaps * 4);
 #else
-        buffer = create_volk_buffer<T>(STREAM_BUFFER_SIZE);
+        // Each chunk is copied after ntaps - 1 history samples, and the history copy at the
+        // end of work() reads ntaps samples from the end of the chunk
+        buffer = create_volk_buffer<T>(STREAM_BUFFER_SIZE + pfb.ntaps);
 #endif
     }
 

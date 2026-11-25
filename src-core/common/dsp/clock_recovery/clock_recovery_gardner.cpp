@@ -14,13 +14,14 @@ namespace dsp
         omega_mid = omega;
         omega_limit = omega_relative_limit * omega;
 
-        // Buffer
-        buffer = create_volk_buffer<T>(STREAM_BUFFER_SIZE);
-
         // Init interpolator
         pfb.init(windowed_sinc(nfilt * ntaps, hz_to_rad(0.5 / (double)nfilt, 1.0), window::nuttall, nfilt), nfilt);
 
         bufs = 20;
+
+        // Buffer. Each chunk is copied after ntaps - 1 + bufs history samples, and the history
+        // copy at the end of work() reads ntaps + bufs samples from the end of the chunk
+        buffer = create_volk_buffer<T>(STREAM_BUFFER_SIZE + pfb.ntaps + bufs);
     }
 
     template <typename T>
