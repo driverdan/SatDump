@@ -142,18 +142,18 @@
       ],
       "upstream_url": "https://github.com/enkisoftware/imgui_markdown",
       "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded (no upstream releases).",
+      "commit": "68fb679b1ab314940589445b36934682cd3e8027",
+      "commit_verified": true,
+      "version_source": "No releases. imgui_markdown.h is identical to master at this commit (2026-11-02; the file last changed in 4acbf80584753e15ea54eb271129995862daac8f, 2026-07-03), apart from the local changes below.",
       "license": "Zlib",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against upstream."
+        "status": "yes",
+        "details": "In defaultMarkdownFormatCallback (marked \"SatDump\"): headings start with ImGui::Spacing() instead of ImGui::NewLine() and add no blank line after them, and links use fixed blue colours instead of the ImGuiCol_Button/ButtonHovered style colours. Markdown() value-initialises its Emphasis (avoids a -Wmaybe-uninitialized warning on Emphasis::sym). The header comment links to enkisoftware/imgui_markdown and says the file is altered."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 277,
-      "notes": "Upstream moved from juliettef/imgui_markdown to enkisoftware/imgui_markdown."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Upstream moved from juliettef/imgui_markdown to enkisoftware/imgui_markdown. Updated in #277 from e1e7885b1f02fe279ee4af3e513cecfa672d127d (2021-04-02; the old copy was reformatted with clang-format). Its other local changes (commented-out unused ImGuiStyle variable, [[fallthrough]]) are covered by upstream."
     },
     {
       "id": "nlohmann-json",
