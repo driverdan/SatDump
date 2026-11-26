@@ -133,6 +133,32 @@ TEST_CASE("HistoViewer draws an ImPlot histogram", "[common][widgets][histogram]
     CHECK(size.y == 200.0f);
     CHECK_FALSE(plot_open); // EndPlot() was called
     CHECK(ctx.lastVertexCount() > 200);
+
+    // The "Real" bars are filled at half alpha (ImPlotSpec::FillAlpha), the "Imag" bars are not
+    ImGuiWindow *w = ImGui::FindWindowByName("##satdump_tests");
+    REQUIRE(w != nullptr);
+    const ImU32 rgb_mask = ~IM_COL32_A_MASK;
+    const ImU32 real_rgb = ImPlot::GetColormapColorU32(0, IMPLOT_AUTO) & rgb_mask;
+    const ImU32 imag_rgb = ImPlot::GetColormapColorU32(1, IMPLOT_AUTO) & rgb_mask;
+    REQUIRE(real_rgb != imag_rgb);
+    auto isHalfAlpha = [](ImU32 col)
+    {
+        int a = (col >> IM_COL32_A_SHIFT) & 0xFF;
+        return a >= 120 && a <= 135;
+    };
+    bool real_half = false, imag_half = false, imag_opaque = false;
+    for (const ImDrawVert &v : w->DrawList->VtxBuffer)
+    {
+        if ((v.col & rgb_mask) == real_rgb && isHalfAlpha(v.col))
+            real_half = true;
+        if ((v.col & rgb_mask) == imag_rgb && isHalfAlpha(v.col))
+            imag_half = true;
+        if (v.col == (imag_rgb | IM_COL32_A_MASK))
+            imag_opaque = true;
+    }
+    CHECK(real_half);
+    CHECK_FALSE(imag_half);
+    CHECK(imag_opaque);
 }
 
 TEST_CASE("SNRPlotViewer and ValuePlotViewer draw their history", "[common][widgets][snr_plot]")

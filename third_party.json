@@ -78,19 +78,19 @@
         "src-core/imgui/implot"
       ],
       "upstream_url": "https://github.com/epezent/implot",
-      "version": "0.18 WIP",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "IMPLOT_VERSION in implot.h. A WIP version is a master snapshot between tags, so the commit is not known.",
+      "version": "1.1",
+      "commit": "819f200639455a58b6b3d4156b70e4271aeb2d00",
+      "commit_verified": true,
+      "version_source": "IMPLOT_VERSION in implot.h. implot.cpp, implot.h, implot_demo.cpp, implot_internal.h and implot_items.cpp are the v1.1 tag, apart from the local changes below.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against upstream."
+        "status": "yes",
+        "details": "implot.h includes \"imgui/imgui.h\" instead of \"imgui.h\", and implot_internal.h includes \"imgui/imgui_internal.h\" instead of \"imgui_internal.h\"."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 274,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated from a 0.18 WIP snapshot (upstream master 81b8b1951392767cf458508385fa025fd087a252, identical apart from the include paths) in #274. v1.0 replaced the SetNextXXX item styling and the PlotX flags/offset/stride arguments with ImPlotSpec, and PlotScatter now cycles markers unless ImPlotSpec::Marker is set."
     },
     {
       "id": "implot3d",

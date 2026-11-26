@@ -38,7 +38,7 @@ namespace satdump
             time_history_mtx.lock();
             if (ImPlot::BeginPlot("TimeSeries", size))
             {
-                ImPlot::PlotScatter("Real", time_history.data(), time_history.size());
+                ImPlot::PlotScatter("Real", time_history.data(), time_history.size(), 1, 0, ImPlotSpec(ImPlotProp_Marker, ImPlotMarker_Circle));
                 ImPlot::EndPlot();
             }
             time_history_mtx.unlock();
