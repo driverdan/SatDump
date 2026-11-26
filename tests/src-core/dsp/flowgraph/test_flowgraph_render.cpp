@@ -3,6 +3,7 @@
 #include "dsp/flowgraph/flowgraph.h"
 #include "dsp/io/file_sink.h"
 #include "dsp/io/file_source.h"
+#include "dsp/utils/add.h"
 #include "dsp/utils/multiply_const.h"
 #include "helpers/guards.h"
 #include "imgui/imgui_test_helpers.h"
@@ -171,6 +172,31 @@ TEST_CASE("ndsp Flowgraph render creates a link dragged from an output to an inp
     REQUIRE(j["links"].size() == 1);
     CHECK(j["links"][0]["start"] == mul_out);
     CHECK(j["links"][0]["end"] == sink_in);
+}
+
+// Regression (#164): setJSON() refreshed the IO types from the block with the input index
+// incremented twice, so every input after the first kept the type it was loaded with (the
+// type is not saved in the JSON) and its pin was drawn in the wrong color.
+TEST_CASE("ndsp Flowgraph render colors every input pin of a loaded node by its type", "[dsp][flowgraph][render]")
+{
+    RenderEnv env;
+    Flowgraph fg;
+    registerNodeSimple<AddBlock<float>>(fg, "Utils/Add FF");
+    fg.addNode("add_f", fg.node_internal_registry.at("add_f").inst(&fg));
+    fg.setJSON(fg.getJSON());
+    env.ctx.frames(2, env.drawer(fg));
+
+    nlohmann::json j = fg.getJSON();
+    REQUIRE(j["nodes"][0]["io"].size() == 3);
+    const ImU32 f32 = getColorFromDSPType(DSP_SAMPLE_TYPE_F32);
+    ImNodesEditorContext &editor = ImNodes::EditorContextGet();
+    for (auto &io : j["nodes"][0]["io"])
+    {
+        CAPTURE(io["name"].get<std::string>());
+        int idx = ImNodes::ObjectPoolFind(editor.Pins, io["id"].get<int>());
+        REQUIRE(idx >= 0);
+        CHECK(editor.Pins.Pool[idx].ColorStyle.Background == f32);
+    }
 }
 #endif
 
