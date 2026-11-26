@@ -228,7 +228,7 @@ namespace satdump
 
                             auto color = ImGui::ColorConvertFloat4ToU32(imgui_style.Colors[ImGuiCol_Text]);
                             draw_list->AddRect(ImVec2(ImGui::GetCursorScreenPos().x + cpass_xs, ImGui::GetCursorScreenPos().y + thsat_ys),
-                                               ImVec2(ImGui::GetCursorScreenPos().x + cpass_xe, ImGui::GetCursorScreenPos().y + thsat_ye), color, 3, 0, 2 * ui_scale);
+                                               ImVec2(ImGui::GetCursorScreenPos().x + cpass_xe, ImGui::GetCursorScreenPos().y + thsat_ye), color, 3, 2 * ui_scale);
                         }
                     }
                 }

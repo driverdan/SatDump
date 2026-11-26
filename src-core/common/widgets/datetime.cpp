@@ -82,6 +82,9 @@ namespace satdump
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3 * ui_scale, style.ItemSpacing.y));
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(3 * ui_scale, style.ItemInnerSpacing.y));
 
+                // The fields move to the next one as digits are typed, so they need the typed values right away
+                ImGui::PushItemFlag(ImGuiItemFlags_LiveEditOnInputScalar, true);
+
                 // Draw backgrounds
                 ImGui::SameLine();
                 ImVec2 start_position = ImGui::GetCursorScreenPos();
@@ -257,6 +260,7 @@ namespace satdump
                 }
 
                 ImGui::SameLine();
+                ImGui::PopItemFlag();
                 ImGui::PopStyleVar(4);
                 ImGui::PopStyleColor();
                 ImGui::TextUnformatted(" UTC");

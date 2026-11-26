@@ -1,5 +1,6 @@
 #include "backend.h"
 #include "core/exception.h"
+#include "imgui/imgui_image.h"
 #include "logger.h"
 
 extern struct android_app *g_App;
@@ -36,12 +37,6 @@ float funcDeviceScale()
     return jflt;
 }
 
-void funcRebuildFonts()
-{
-    ImGui_ImplOpenGL3_DestroyFontsTexture();
-    ImGui_ImplOpenGL3_CreateFontsTexture();
-}
-
 void funcSetMousePos(int, int)
 {
     // Not implemented on Android
@@ -60,6 +55,7 @@ std::pair<int, int> funcBeginFrame()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplAndroid_NewFrame();
     ImGui::NewFrame();
+    useImageTextureFilters();
 
     procLongPress();
 
@@ -116,7 +112,6 @@ void bindBackendFunctions()
 {
     backend::device_scale = funcDeviceScale();
 
-    backend::rebuildFonts = funcRebuildFonts;
     backend::setMousePos = funcSetMousePos;
     backend::beginFrame = funcBeginFrame;
     backend::endFrame = funcEndFrame;
