@@ -87,6 +87,7 @@ satdump_add_plugin_tests(jpss_support jpss_support)
 satdump_add_plugin_tests(meteor_support meteor_support)
 satdump_add_plugin_tests(fengyun3_support fengyun3_support)
 satdump_add_plugin_tests(noaa_metop_support noaa_metop_support)
+satdump_add_plugin_tests(dvb_support dvb_support)
 satdump_add_plugin_tests(webhook_app webhook_app)
 
 # Lets tests load files shipped in the repository (e.g. resources/)
