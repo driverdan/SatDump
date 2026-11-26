@@ -173,7 +173,7 @@
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "The ignore_comments default is true instead of false in the lexer, the lexer's ignore_comments member, sax_parse, parse and accept (12 places), so SatDump's JSON files may contain // and /* */ comments."
+        "details": "The ignore_comments default is true instead of false in the lexer, the lexer's ignore_comments member, sax_parse, parse and accept (12 places), so SatDump's JSON files may contain // and /* */ comments. The original change (c89c7b8b9) also set the detail::parser skip_comments default; that 13th spot is intentionally not carried, because basic_json::parser() always passes it explicitly and nothing constructs detail::parser directly."
       },
       "consumption": "vendored",
       "upstream_state": "current",
