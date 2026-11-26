@@ -24,6 +24,7 @@ namespace satdump
         private:
             // Buffer
             T *buffer = nullptr;
+            size_t buffer_size = 0;
 
             // Variables
             float mu;

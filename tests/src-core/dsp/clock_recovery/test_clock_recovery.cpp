@@ -234,3 +234,77 @@ TEST_CASE("ndsp MMClockRecoveryBlock, GardnerClockRecoveryBlock and simple recov
         CHECK_THROWS(b->get_cfg("x"));
     }
 }
+
+namespace
+{
+    // Runs a recovery block on the same input twice : in small buffers, then with one buffer larger than
+    // the initial (1e6 samples) history buffer in the middle of the stream. The output must be the same
+    template <typename B, typename T>
+    void checkLargeBuffer(const std::vector<T> &in, double sps)
+    {
+        auto small = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(sps), in);
+        REQUIRE(small.completed);
+
+        ndsp_sig_test::RunOptions opt;
+        opt.chunk_cycle = {4096, 1100000, 4096};
+        auto large = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(sps), in, opt);
+        REQUIRE(large.completed);
+        REQUIRE(large.outputs[0].max_sizes.size() >= 2);
+        CHECK(large.outputs[0].max_sizes[1] == 1100000);
+
+        REQUIRE(large.output().size() == small.output().size());
+        size_t diffs = 0;
+        for (size_t i = 0; i < small.output().size(); i++)
+            if (!ndsp_test::sameBits(small.output()[i], large.output()[i]))
+                diffs++;
+        CHECK(diffs == 0);
+    }
+
+    // Omega below 1 gives more than one output per input sample. Each output buffer
+    // is only as large as the input one, so the output must stop there
+    template <typename B, typename T>
+    void checkOutputBound(const std::vector<T> &in)
+    {
+        auto r = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(0.5), in, ndsp_sig_test::chunked(4096));
+        REQUIRE(r.completed);
+        REQUIRE(r.outputs[0].sizes.size() == r.outputs[0].max_sizes.size());
+        for (size_t i = 0; i < r.outputs[0].sizes.size(); i++)
+            CHECK(r.outputs[0].sizes[i] <= r.outputs[0].max_sizes[i]);
+    }
+} // namespace
+
+TEST_CASE("ndsp MM, MM fast and Gardner clock recovery take input buffers larger than 1e6 samples", "[dsp][clock_recovery]")
+{
+    // #432: the history buffer was a fixed 1e6 samples and the input buffer is copied into it after the
+    // history, so a larger input buffer wrote past its end (caught by AddressSanitizer). It now grows,
+    // keeping the history, so the output is the same as with small buffers
+    const double sps = 4.0;
+    std::vector<complex_t> csyms = ndsp_sig_test::qpskSymbols(300000, 10);
+    auto cin = ndsp_sig_test::rcShape(csyms, sps, 0.37, 0.5);
+    std::vector<float> fin(cin.size());
+    for (size_t i = 0; i < cin.size(); i++)
+        fin[i] = cin[i].real;
+    REQUIRE(cin.size() > 1100000 + 2 * 4096);
+
+    SECTION("MM float") { checkLargeBuffer<MMClockRecoveryBlock<float>>(fin, sps); }
+    SECTION("MM complex") { checkLargeBuffer<MMClockRecoveryBlock<complex_t>>(cin, sps); }
+    SECTION("MM fast float") { checkLargeBuffer<MMClockRecoveryFastBlock<float>>(fin, sps); }
+    SECTION("MM fast complex") { checkLargeBuffer<MMClockRecoveryFastBlock<complex_t>>(cin, sps); }
+    SECTION("Gardner float") { checkLargeBuffer<GardnerClockRecoveryBlock<float>>(fin, sps); }
+    SECTION("Gardner complex") { checkLargeBuffer<GardnerClockRecoveryBlock<complex_t>>(cin, sps); }
+}
+
+TEST_CASE("ndsp MM, MM fast and Gardner clock recovery do not overflow the output buffer with omega below 1", "[dsp][clock_recovery]")
+{
+    // The loop stopped at 2 outputs per input sample, but each output buffer only holds as many samples
+    // as the input buffer (caught by AddressSanitizer)
+    auto cin = ndsp_test::randomComplex(5 * 4096, 11);
+    auto fin = ndsp_test::randomFloats(5 * 4096, 12);
+
+    SECTION("MM float") { checkOutputBound<MMClockRecoveryBlock<float>>(fin); }
+    SECTION("MM complex") { checkOutputBound<MMClockRecoveryBlock<complex_t>>(cin); }
+    SECTION("MM fast float") { checkOutputBound<MMClockRecoveryFastBlock<float>>(fin); }
+    SECTION("MM fast complex") { checkOutputBound<MMClockRecoveryFastBlock<complex_t>>(cin); }
+    SECTION("Gardner float") { checkOutputBound<GardnerClockRecoveryBlock<float>>(fin); }
+    SECTION("Gardner complex") { checkOutputBound<GardnerClockRecoveryBlock<complex_t>>(cin); }
+}

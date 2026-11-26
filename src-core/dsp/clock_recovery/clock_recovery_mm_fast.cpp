@@ -21,7 +21,8 @@ namespace satdump
 #if MM_DO_BRANCH
             buffer = create_volk_buffer<T>(pfb.ntaps * 4);
 #else
-            buffer = dsp::create_volk_buffer<T>(1e6);
+            buffer_size = 1e6;
+            buffer = dsp::create_volk_buffer<T>(buffer_size);
 #endif
         }
 
@@ -82,11 +83,25 @@ namespace satdump
 
             int nsamples = iblk.size;
 
+            // The history buffer must hold ntaps history samples plus the whole input block.
+            // Block sizes are set upstream and can change at runtime, so grow it when needed,
+            // keeping the history of the previous call
+            if ((size_t)nsamples + ntaps > buffer_size)
+            {
+                size_t new_size = (size_t)nsamples + ntaps;
+                T *new_buffer = dsp::create_volk_buffer<T>(new_size);
+                memcpy(new_buffer, buffer, std::min<size_t>(ntaps, buffer_size) * sizeof(T));
+                volk_free(buffer);
+                buffer = new_buffer;
+                buffer_size = new_size;
+            }
+
             // Copy NTAPS samples in the buffer from input, as that's required for the last samples
             memcpy(&buffer[ntaps - 1], ibuf, nsamples * sizeof(T));
             ouc = 0;
 
-            for (; inc < nsamples && ouc < nsamples * 2 /* TODO THIS PROBABLY SUCKS!!!!*/;)
+            // The output buffer holds iblk.max_size samples, more than one output per input sample (omega < 1) must not overflow it
+            for (; inc < nsamples && ouc < nsamples * 2 /* TODO THIS PROBABLY SUCKS!!!!*/ && ouc < (int)oblk.max_size;)
             {
                 if constexpr (std::is_same_v<T, complex_t>)
                 {
