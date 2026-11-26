@@ -19,7 +19,8 @@ namespace satdump
             if (buffer != nullptr)
                 volk_free(buffer); // TODOREWORK
 
-            buffer = dsp::create_volk_buffer<T>(1e6);
+            buffer_size = 1e6;
+            buffer = dsp::create_volk_buffer<T>(buffer_size);
         }
 
         template <typename T>
@@ -79,18 +80,34 @@ namespace satdump
 
             reinit_if_needed();
 
-            DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size, sizeof(T));
+            // The loop below writes up to 2 outputs per input sample (omega below 1), so the output buffer is twice
+            // the input one and no input is dropped down to omega 0.5. The ouc < oblk.max_size bound in the loop
+            // is only a safety net
+            DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size * 2, sizeof(T));
             T *ibuf = iblk.getSamples<T>();
             T *obuf = oblk.getSamples<T>();
 
             int nsamples = iblk.size;
+
+            // The history buffer must hold pfb.ntaps + bufs history samples plus the whole input block.
+            // Block sizes are set upstream and can change at runtime, so grow it when needed,
+            // keeping the history of the previous call
+            if ((size_t)nsamples + pfb.ntaps + bufs > buffer_size)
+            {
+                size_t new_size = (size_t)nsamples + pfb.ntaps + bufs;
+                T *new_buffer = dsp::create_volk_buffer<T>(new_size);
+                memcpy(new_buffer, buffer, std::min<size_t>(pfb.ntaps + bufs, buffer_size) * sizeof(T));
+                volk_free(buffer);
+                buffer = new_buffer;
+                buffer_size = new_size;
+            }
 
             // Copy NTAPS samples in the buffer from input, as that's required for the last samples
             memcpy(&buffer[pfb.ntaps - 1 + bufs], ibuf, nsamples * sizeof(T));
 
             ouc = 0;
 
-            for (; inc < nsamples && ouc < nsamples * 2 /* TODO THIS PROBABLY SUCKS!!!!*/;)
+            for (; inc < nsamples && ouc < nsamples * 2 /* TODO THIS PROBABLY SUCKS!!!!*/ && ouc < (int)oblk.max_size;)
             {
                 // Compute Zero-Crossing sample
                 float muz = mu - (omega / 2.0);
