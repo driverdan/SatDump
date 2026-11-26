@@ -323,8 +323,8 @@ namespace goes
                         return;
                     }
 
-                    // Decompress. Not with mz_zip_reader_extract_to_heap(), which sizes its buffer from
-                    // the 32-bit field, and not the ZIP64 size the archive may hold instead
+                    // Decompress into a buffer of the size checked above, rather than letting
+                    // mz_zip_reader_extract_to_heap() allocate one
                     std::vector<uint8_t> outBuffer(stat.m_uncomp_size);
                     if (!mz_zip_reader_extract_to_mem(&zipFile, 0, outBuffer.data(), outBuffer.size(), 0))
                     {
