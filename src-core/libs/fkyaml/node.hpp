@@ -1,6 +1,6 @@
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -22,7 +22,7 @@
 // #include <fkYAML/detail/macros/define_macros.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -34,7 +34,7 @@
 // #include <fkYAML/detail/macros/version_macros.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -42,7 +42,7 @@
 
 // Check version definitions if already defined.
 #if defined(FK_YAML_MAJOR_VERSION) && defined(FK_YAML_MINOR_VERSION) && defined(FK_YAML_PATCH_VERSION)
-#if FK_YAML_MAJOR_VERSION != 0 || FK_YAML_MINOR_VERSION != 4 || FK_YAML_PATCH_VERSION != 3
+#if FK_YAML_MAJOR_VERSION != 0 || FK_YAML_MINOR_VERSION != 5 || FK_YAML_PATCH_VERSION != 0
 #warning Already included a different version of the fkYAML library!
 #else
 // define macros to skip defining macros down below.
@@ -53,8 +53,8 @@
 #ifndef FK_YAML_VERCHECK_SUCCEEDED
 
 #define FK_YAML_MAJOR_VERSION 0
-#define FK_YAML_MINOR_VERSION 4
-#define FK_YAML_PATCH_VERSION 3
+#define FK_YAML_MINOR_VERSION 5
+#define FK_YAML_PATCH_VERSION 0
 
 #define FK_YAML_NAMESPACE_VERSION_CONCAT_IMPL(major, minor, patch) v##major##_##minor##_##patch
 
@@ -84,7 +84,7 @@
 // #include <fkYAML/detail/macros/cpp_config_macros.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -243,7 +243,7 @@
 // #include <fkYAML/detail/assert.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -267,7 +267,7 @@
 // #include <fkYAML/detail/document_metainfo.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -284,7 +284,7 @@
 // #include <fkYAML/detail/meta/node_traits.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -298,7 +298,7 @@
 // #include <fkYAML/detail/meta/detect.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -315,7 +315,7 @@
 // #include <fkYAML/detail/meta/stl_supplement.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -763,7 +763,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/meta/type_traits.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -860,7 +860,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/fkyaml_fwd.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1055,7 +1055,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/yaml_version_type.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1120,7 +1120,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/exception_safe_allocation.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1232,7 +1232,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/deserializer.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1243,6 +1243,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 
 #include <algorithm>
 #include <deque>
+#include <memory>
 #include <vector>
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
@@ -1252,7 +1253,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/lexical_analyzer.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1262,17 +1263,65 @@ FK_YAML_DETAIL_NAMESPACE_END
 #define FK_YAML_DETAIL_INPUT_LEXICAL_ANALYZER_HPP
 
 #include <algorithm>
-#include <cctype>
 #include <cstdlib>
+#include <deque>
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
 
 // #include <fkYAML/detail/assert.hpp>
 
+// #include <fkYAML/detail/char_class.hpp>
+//  _______   __ __   __  _____   __  __  __
+// |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
+// |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
+//
+// SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
+// SPDX-License-Identifier: MIT
+
+#ifndef FK_YAML_DETAIL_CHAR_CLASS_HPP
+#define FK_YAML_DETAIL_CHAR_CLASS_HPP
+
+// #include <fkYAML/detail/macros/define_macros.hpp>
+
+
+FK_YAML_DETAIL_NAMESPACE_BEGIN
+
+// The functions below replace their <cctype> counterparts, which must not be used on the characters of
+// an input buffer. Those take an int whose value has to be representable as an unsigned char or equal
+// to EOF, so passing a char is undefined behavior for any byte of a multi-byte UTF-8 sequence on a
+// platform where char is signed. They also depend on the current locale, while both YAML syntax and
+// URI syntax allow exactly the ASCII ranges spelled out here.
+
+/// @brief Check if the given character is a digit.
+/// @param c A character to be checked.
+/// @return true if the given character is a digit, false otherwise.
+inline bool is_digit(char c) noexcept {
+    return ('0' <= c && c <= '9');
+}
+
+/// @brief Check if the given character is a hex-digit.
+/// @param c A character to be checked.
+/// @return true if the given character is a hex-digit, false otherwise.
+inline bool is_xdigit(char c) noexcept {
+    return is_digit(c) || ('A' <= c && c <= 'F') || ('a' <= c && c <= 'f');
+}
+
+/// @brief Check if the given character is an alphabet or a digit.
+/// @param c A character to be checked.
+/// @return true if the given character is an alphabet or a digit, false otherwise.
+inline bool is_alnum(char c) noexcept {
+    return is_digit(c) || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
+}
+
+FK_YAML_DETAIL_NAMESPACE_END
+
+#endif /* FK_YAML_DETAIL_CHAR_CLASS_HPP */
+
 // #include <fkYAML/detail/encodings/uri_encoding.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1281,8 +1330,9 @@ FK_YAML_DETAIL_NAMESPACE_END
 #ifndef FK_YAML_DETAIL_ENCODINGS_URI_ENCODING_HPP
 #define FK_YAML_DETAIL_ENCODINGS_URI_ENCODING_HPP
 
-#include <cctype>
 #include <string>
+// #include <fkYAML/detail/char_class.hpp>
+
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
 
@@ -1310,6 +1360,11 @@ public:
                     return false;
                 }
 
+                // validate_octets() advances `current` past the last octet it consumed. Without
+                // moving it back, the loop's own ++current skips the character which follows the
+                // escape sequence, and, when the escape ends the sequence, moves `current` one
+                // past `end` so that the loop condition never holds and reads out of bounds.
+                --current;
                 continue;
             }
 
@@ -1333,18 +1388,9 @@ private:
                 return false;
             }
 
-            // Normalize a character for a-f/A-F comparison
-            const int octet = std::tolower(*begin);
-
-            if ('0' <= octet && octet <= '9') {
-                continue;
+            if (!is_xdigit(*begin)) {
+                return false;
             }
-
-            if ('a' <= octet && octet <= 'f') {
-                continue;
-            }
-
-            return false;
         }
 
         return true;
@@ -1388,7 +1434,7 @@ private:
             return true;
         default:
             // alphabets and numbers are also allowed.
-            return static_cast<bool>(std::isalnum(c));
+            return is_alnum(c);
         }
     }
 };
@@ -1400,7 +1446,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/encodings/utf_encodings.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1417,7 +1463,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/exception.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1436,7 +1482,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/string_formatter.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1483,26 +1529,10 @@ FK_YAML_DETAIL_NAMESPACE_END
 
 #endif /* FK_YAML_DETAIL_STRING_FORMATTER_HPP */
 
-// #include <fkYAML/detail/types/node_t.hpp>
-//  _______   __ __   __  _____   __  __  __
-// |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
-// |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
-//
-// SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
-// SPDX-License-Identifier: MIT
-
-#ifndef FK_YAML_DETAIL_TYPES_NODE_T_HPP
-#define FK_YAML_DETAIL_TYPES_NODE_T_HPP
-
-#include <cstdint>
-
-// #include <fkYAML/detail/macros/define_macros.hpp>
-
 // #include <fkYAML/node_type.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -1554,87 +1584,6 @@ inline const char* to_string(node_type t) noexcept {
 FK_YAML_NAMESPACE_END
 
 #endif /* FK_YAML_NODE_TYPE_HPP */
-
-
-FK_YAML_DETAIL_NAMESPACE_BEGIN
-
-/// @brief Definition of node value types.
-enum class node_t : std::uint8_t {
-    SEQUENCE,     //!< sequence value type
-    MAPPING,      //!< mapping value type
-    NULL_OBJECT,  //!< null value type
-    BOOLEAN,      //!< boolean value type
-    INTEGER,      //!< integer value type
-    FLOAT_NUMBER, //!< float number value type
-    STRING,       //!< string value type
-};
-
-inline const char* to_string(node_t t) noexcept {
-    switch (t) {
-    case node_t::SEQUENCE:
-        return "sequence";
-    case node_t::MAPPING:
-        return "mapping";
-    case node_t::NULL_OBJECT:
-        return "null";
-    case node_t::BOOLEAN:
-        return "boolean";
-    case node_t::INTEGER:
-        return "integer";
-    case node_t::FLOAT_NUMBER:
-        return "float";
-    case node_t::STRING:
-        return "string";
-    default:                   // LCOV_EXCL_LINE
-        detail::unreachable(); // LCOV_EXCL_LINE
-    }
-}
-
-inline node_t convert_from_node_type(node_type t) {
-    switch (t) {
-    case node_type::SEQUENCE:
-        return node_t::SEQUENCE;
-    case node_type::MAPPING:
-        return node_t::MAPPING;
-    case node_type::NULL_OBJECT:
-        return node_t::NULL_OBJECT;
-    case node_type::BOOLEAN:
-        return node_t::BOOLEAN;
-    case node_type::INTEGER:
-        return node_t::INTEGER;
-    case node_type::FLOAT:
-        return node_t::FLOAT_NUMBER;
-    case node_type::STRING:
-        return node_t::STRING;
-    default:                   // LCOV_EXCL_LINE
-        detail::unreachable(); // LCOV_EXCL_LINE
-    }
-}
-
-inline node_type convert_to_node_type(node_t t) {
-    switch (t) {
-    case node_t::SEQUENCE:
-        return node_type::SEQUENCE;
-    case node_t::MAPPING:
-        return node_type::MAPPING;
-    case node_t::NULL_OBJECT:
-        return node_type::NULL_OBJECT;
-    case node_t::BOOLEAN:
-        return node_type::BOOLEAN;
-    case node_t::INTEGER:
-        return node_type::INTEGER;
-    case node_t::FLOAT_NUMBER:
-        return node_type::FLOAT;
-    case node_t::STRING:
-        return node_type::STRING;
-    default:                   // LCOV_EXCL_LINE
-        detail::unreachable(); // LCOV_EXCL_LINE
-    }
-}
-
-FK_YAML_DETAIL_NAMESPACE_END
-
-#endif /* FK_YAML_DETAIL_TYPES_NODE_T_HPP */
 
 
 FK_YAML_NAMESPACE_BEGIN
@@ -1758,15 +1707,6 @@ public:
     /// @param[in] type The type of a source node value.
     explicit type_error(const char* msg, node_type type) noexcept
         : exception(generate_error_message(msg, type).c_str()) {
-    }
-
-    /// @brief Construct a new type_error object with an error message and a node type.
-    /// @deprecated Use type_error(const char*, node_type) constructor. (since 0.3.12).
-    /// @param[in] msg An error message.
-    /// @param[in] type The type of a source node value.
-    FK_YAML_DEPRECATED("Since 0.3.12; Use explicit type_error(const char*, node_type)")
-    explicit type_error(const char* msg, detail::node_t type) noexcept
-        : type_error(msg, detail::convert_to_node_type(type)) {
     }
 
 private:
@@ -2084,7 +2024,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/block_scalar_header.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -2122,7 +2062,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/position_tracker.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -2138,7 +2078,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/str_view.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -2790,15 +2730,15 @@ public:
     /// @param n The length of `s` character sequence used for comparison.
     /// @return The beginning position of `s` characters, `npos` otherwise.
     size_type find_last_of(const CharT* s, size_type pos, size_type n) const noexcept {
-        if FK_YAML_LIKELY (n <= m_len) {
-            pos = std::min(m_len - n - 1, pos);
+        if FK_YAML_LIKELY (m_len > 0 && n > 0) {
+            pos = std::min(m_len - 1, pos) + 1;
 
             do {
-                const CharT* p_found = traits_type::find(s, n, mp_str[pos]);
+                const CharT* p_found = traits_type::find(s, n, mp_str[--pos]);
                 if (p_found) {
                     return pos;
                 }
-            } while (pos-- != 0);
+            } while (pos > 0);
         }
 
         return npos;
@@ -2892,8 +2832,8 @@ public:
     /// @param n The length of `s` character sequence used for comparison.
     /// @return The beginning position of non `s` characters, `npos` otherwise.
     size_type find_last_not_of(const CharT* s, size_type pos, size_type n) const noexcept {
-        if FK_YAML_UNLIKELY (n <= m_len) {
-            pos = std::min(m_len - n, pos) + 1;
+        if FK_YAML_LIKELY (m_len > 0) {
+            pos = std::min(m_len - 1, pos) + 1;
 
             do {
                 const CharT* p_found = traits_type::find(s, n, mp_str[--pos]);
@@ -3203,7 +3143,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/types/lexical_token_t.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -3281,6 +3221,13 @@ struct lexical_token {
 
 /// @brief A class which lexically analyzes YAML formatted inputs.
 class lexical_analyzer {
+    struct token_info {
+        lexical_token token;
+        uint32_t begin_pos {0};
+        uint32_t begin_line {0};
+        const char* begin_itr {nullptr};
+    };
+
     // whether the current context is flow(1) or block(0)
     static constexpr uint32_t flow_context_bit = 1u << 0u;
     // whether the current document part is directive(1) or content(0)
@@ -3292,210 +3239,55 @@ public:
     explicit lexical_analyzer(str_view input_buffer) noexcept
         : m_begin_itr(input_buffer.begin()),
           m_cur_itr(input_buffer.begin()),
-          m_end_itr(input_buffer.end()) {
+          m_end_itr(input_buffer.end()),
+          m_last_token_begin_itr(input_buffer.begin()) {
         m_pos_tracker.set_target_buffer(input_buffer);
     }
 
     /// @brief Get the next lexical token by scanning the left of the input buffer.
     /// @return lexical_token The next lexical token.
     lexical_token get_next_token() {
-        skip_white_spaces_and_newline_codes();
-
-        m_token_begin_itr = m_cur_itr;
-        m_pos_tracker.update_position(m_cur_itr);
-        m_last_token_begin_pos = m_pos_tracker.get_cur_pos_in_line();
-        m_last_token_begin_line = m_pos_tracker.get_lines_read();
-
-        if (m_cur_itr == m_end_itr) {
-            return {lexical_token_t::END_OF_BUFFER};
+        token_info info {};
+        if (!m_pending_token_queue.empty()) {
+            info = m_pending_token_queue.front();
+            m_pending_token_queue.pop_front();
+        }
+        else {
+            info = process_token();
         }
 
-        switch (*m_cur_itr) {
-        case '?':
-            if (++m_cur_itr == m_end_itr) {
-                return {lexical_token_t::PLAIN_SCALAR, {m_token_begin_itr, 1}};
-            }
+        m_last_token_begin_pos = info.begin_pos;
+        m_last_token_begin_line = info.begin_line;
+        m_last_token_begin_itr = info.begin_itr;
+        m_last_token_type = info.token.type;
+        return info.token;
+    }
 
-            if (*m_cur_itr == ' ') {
-                return {lexical_token_t::EXPLICIT_KEY_PREFIX};
-            }
-            break;
-        case ':': // key separator
-            if (++m_cur_itr == m_end_itr) {
-                return {lexical_token_t::KEY_SEPARATOR};
-            }
-
-            switch (*m_cur_itr) {
-            case ' ':
-            case '\t':
-            case '\n':
-                return {lexical_token_t::KEY_SEPARATOR};
-            default:
-                if ((m_state & flow_context_bit) == 0) {
-                    // in a block context
-                    break;
-                }
-
-                switch (*m_cur_itr) {
-                case ',':
-                case '[':
-                case ']':
-                case '{':
-                case '}':
-                    // Flow indicators are not "safe" to be followed in a flow context.
-                    // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
-                    return {lexical_token_t::KEY_SEPARATOR};
-                default:
-                    // At least '{' or '[' must precedes this token.
-                    FK_YAML_ASSERT(m_token_begin_itr != m_begin_itr);
-
-                    // if a key inside a flow mapping is JSON-like (surrounded by indicators, see below), YAML allows
-                    // the following value to be specified adjacent to the ":" mapping value indicator.
-                    // ```yaml
-                    // # the following flow mapping entries are all valid.
-                    // {
-                    //   "foo":true,
-                    //   'bar':false,          # 'bar' is actually not JSON but allowed in YAML
-                    //                         # since its surrounded by the single quotes.
-                    //   {[1,2,3]:null}:"baz"
-                    // }
-                    // ```
-                    switch (*(m_token_begin_itr - 1)) {
-                    case '\'':
-                    case '\"':
-                    case ']':
-                    case '}':
-                        return {lexical_token_t::KEY_SEPARATOR};
-                    default:
-                        break;
-                    }
-                    break;
-                }
-                break;
-            }
-            break;
-        case ',': // value separator
-            ++m_cur_itr;
-            return {lexical_token_t::VALUE_SEPARATOR};
-        case '&': // anchor prefix
-            return {lexical_token_t::ANCHOR_PREFIX, extract_anchor_name()};
-        case '*': // alias prefix
-            return {lexical_token_t::ALIAS_PREFIX, extract_anchor_name()};
-        case '!': // tag prefix
-            return {lexical_token_t::TAG_PREFIX, extract_tag_name()};
-        case '#': // comment prefix
-            scan_comment();
-            return get_next_token();
-        case '%': // directive prefix
-            if (m_state & document_directive_bit) {
-                return {scan_directive()};
-            }
-            // The '%' character can be safely used as the first character in document contents.
-            // See https://yaml.org/spec/1.2.2/#912-document-markers for more details.
-            break;
-        case '-': {
-            switch (*(m_cur_itr + 1)) {
-            case ' ':
-            case '\t':
-            case '\n':
-                // Move a cursor to the beginning of the next token.
-                m_cur_itr += 2;
-                return {lexical_token_t::SEQUENCE_BLOCK_PREFIX};
-            default:
-                break;
-            }
-
-            if (m_pos_tracker.get_cur_pos_in_line() == 0) {
-                if ((m_end_itr - m_cur_itr) > 2) {
-                    const bool is_dir_end = std::equal(m_token_begin_itr, m_cur_itr + 3, "---");
-                    if (is_dir_end) {
-                        m_cur_itr += 3;
-                        return {lexical_token_t::END_OF_DIRECTIVES};
-                    }
-                }
-            }
-
-            break;
+    /// @brief Peek the next lexical token without consuming it.
+    /// @return lexical_token The next lexical token.
+    lexical_token peek_next_token() {
+        if (!m_pending_token_queue.empty()) {
+            return m_pending_token_queue.front().token;
         }
-        case '[': // sequence flow begin
-            ++m_cur_itr;
-            return {lexical_token_t::SEQUENCE_FLOW_BEGIN};
-        case ']': // sequence flow end
-            ++m_cur_itr;
-            return {lexical_token_t::SEQUENCE_FLOW_END};
-        case '{': // mapping flow begin
-            ++m_cur_itr;
-            return {lexical_token_t::MAPPING_FLOW_BEGIN};
-        case '}': // mapping flow end
-            ++m_cur_itr;
-            return {lexical_token_t::MAPPING_FLOW_END};
-        case '@':
-            emit_error("Any token cannot start with at(@). It is a reserved indicator for YAML.");
-        case '`':
-            emit_error("Any token cannot start with grave accent(`). It is a reserved indicator for YAML.");
-        case '\"':
-            ++m_token_begin_itr;
-            return {lexical_token_t::DOUBLE_QUOTED_SCALAR, determine_double_quoted_scalar_range()};
-        case '\'':
-            ++m_token_begin_itr;
-            return {lexical_token_t::SINGLE_QUOTED_SCALAR, determine_single_quoted_scalar_range()};
-        case '.': {
-            if (m_pos_tracker.get_cur_pos_in_line() == 0) {
-                const auto rem_size = m_end_itr - m_cur_itr;
-                if FK_YAML_LIKELY (rem_size > 2) {
-                    const bool is_doc_end = std::equal(m_cur_itr, m_cur_itr + 3, "...");
-                    if (is_doc_end) {
-                        if (rem_size > 3) {
-                            switch (*(m_cur_itr + 3)) {
-                            case ' ':
-                            case '\t':
-                            case '\n':
-                                m_cur_itr += 4;
-                                break;
-                            default:
-                                // See https://yaml.org/spec/1.2.2/#912-document-markers for more details.
-                                emit_error("The document end marker \"...\" must not be followed by non-ws char.");
-                            }
-                        }
-                        else {
-                            m_cur_itr += 3;
-                        }
-                        return {lexical_token_t::END_OF_DOCUMENT};
-                    }
-                }
-            }
-            break;
-        }
-        case '|':
-        case '>': {
-            const str_view sv {m_token_begin_itr, m_end_itr};
-            const std::size_t header_end_pos = sv.find('\n');
-            FK_YAML_ASSERT(header_end_pos != str_view::npos);
-            const uint32_t base_indent = get_current_indent_level(&sv[header_end_pos]);
-
-            const lexical_token_t type = *m_token_begin_itr == '|' ? lexical_token_t::BLOCK_LITERAL_SCALAR
-                                                                   : lexical_token_t::BLOCK_FOLDED_SCALAR;
-            const str_view header_line = sv.substr(1, header_end_pos - 1);
-            m_block_scalar_header = convert_to_block_scalar_header(header_line);
-
-            m_token_begin_itr = sv.begin() + (header_end_pos + 1);
-
-            return {
-                type,
-                determine_block_scalar_content_range(
-                    base_indent, m_block_scalar_header.indent, m_block_scalar_header.indent)};
-        }
-        default:
-            break;
-        }
-
-        return {lexical_token_t::PLAIN_SCALAR, determine_plain_scalar_range()};
+        const token_info info = process_token();
+        m_pending_token_queue.push_back(info);
+        return info.token;
     }
 
     /// @brief Get the beginning position of a last token.
     /// @return uint32_t The beginning position of a last token.
     uint32_t get_last_token_begin_pos() const noexcept {
         return m_last_token_begin_pos;
+    }
+
+    /// @brief Check whether a tab character is used within the indentation of the last token line.
+    /// @note Indentation must consist of spaces only, so a tab which appears before the given width
+    /// cannot be part of it. A tab which follows the indentation is valid separation white space.
+    /// https://yaml.org/spec/1.2.2/#61-indentation-spaces
+    /// @param indent The indentation width required at the beginning of the last token line.
+    /// @return true if a tab appears before the required indentation, false otherwise.
+    bool has_tab_in_indentation(uint32_t indent) const noexcept {
+        return has_tab_before(m_last_token_begin_itr, indent);
     }
 
     /// @brief Get the number of lines already processed.
@@ -3534,6 +3326,9 @@ public:
         m_state &= ~flow_context_bit;
         if (is_flow_context) {
             m_state |= flow_context_bit;
+            // The outermost flow collection owns the indentation which its lines must have. Only that
+            // one reaches here, since the deserializer enters the flow context from the block one alone.
+            m_flow_required_indent = get_required_continuation_indent();
         }
     }
 
@@ -3547,6 +3342,350 @@ public:
     }
 
 private:
+    token_info process_token() {
+        skip_white_spaces_and_newline_codes();
+
+        m_token_begin_itr = m_cur_itr;
+        m_pos_tracker.update_position(m_cur_itr);
+        token_info info {};
+        info.begin_pos = m_pos_tracker.get_cur_pos_in_line();
+        info.begin_line = m_pos_tracker.get_lines_read();
+        info.begin_itr = m_token_begin_itr;
+
+        if (m_cur_itr == m_end_itr) {
+            info.token.type = lexical_token_t::END_OF_BUFFER;
+            return info;
+        }
+
+        const bool continues_flow_line = (m_state & flow_context_bit) != 0 && info.begin_line > m_last_token_begin_line;
+        if FK_YAML_UNLIKELY (continues_flow_line && has_tab_before(m_token_begin_itr, m_flow_required_indent)) {
+            emit_error("A tab character cannot be used as indentation.");
+        }
+
+        switch (*m_cur_itr) {
+        case '?':
+            if (++m_cur_itr == m_end_itr) {
+                info.token = {lexical_token_t::PLAIN_SCALAR, {m_token_begin_itr, 1}};
+                return info;
+            }
+
+            switch (*m_cur_itr) {
+            case ' ':
+            case '\t':
+            case '\n':
+                // Any separation white space may follow the explicit key indicator, just like the block
+                // sequence entry indicator. https://yaml.org/spec/1.2.2/#rule-c-l-block-map-explicit-key
+                info.token.type = lexical_token_t::EXPLICIT_KEY_PREFIX;
+                return info;
+            case '{':
+            case '}':
+            case '[':
+            case ']':
+            case ',':
+                if (m_state & flow_context_bit) {
+                    info.token.type = lexical_token_t::EXPLICIT_KEY_PREFIX;
+                    return info;
+                }
+                break;
+            default:
+                break;
+            }
+            break;
+        case ':': // key separator
+            if (++m_cur_itr == m_end_itr) {
+                info.token.type = lexical_token_t::KEY_SEPARATOR;
+                return info;
+            }
+
+            switch (*m_cur_itr) {
+            case ' ':
+            case '\t':
+            case '\n':
+                info.token.type = lexical_token_t::KEY_SEPARATOR;
+                return info;
+            default:
+                if ((m_state & flow_context_bit) == 0) {
+                    // in a block context
+                    break;
+                }
+
+                switch (*m_cur_itr) {
+                case ',':
+                case '[':
+                case ']':
+                case '{':
+                case '}':
+                    // Flow indicators are not "safe" to be followed in a flow context.
+                    // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
+                    info.token.type = lexical_token_t::KEY_SEPARATOR;
+                    return info;
+                default:
+                    // if a key inside a flow mapping is JSON-like (surrounded by indicators, see below), YAML allows
+                    // the following value to be specified adjacent to the ":" mapping value indicator.
+                    // ```yaml
+                    // # the following flow mapping entries are all valid.
+                    // {
+                    //   "foo":true,
+                    //   'bar':false,          # 'bar' is actually not JSON but allowed in YAML
+                    //                         # since its surrounded by the single quotes.
+                    //   {[1,2,3]:null}:"baz"
+                    // }
+                    // ```
+                    switch (m_last_token_type) {
+                    case lexical_token_t::SINGLE_QUOTED_SCALAR:
+                    case lexical_token_t::DOUBLE_QUOTED_SCALAR:
+                    case lexical_token_t::SEQUENCE_FLOW_END:
+                    case lexical_token_t::MAPPING_FLOW_END:
+                        info.token.type = lexical_token_t::KEY_SEPARATOR;
+                        return info;
+                    default:
+                        break;
+                    }
+                    break;
+                }
+                break;
+            }
+            break;
+        case ',': // value separator
+            ++m_cur_itr;
+            info.token.type = lexical_token_t::VALUE_SEPARATOR;
+            return info;
+        case '&': // anchor prefix
+            info.token = {lexical_token_t::ANCHOR_PREFIX, extract_anchor_name()};
+            return info;
+        case '*': // alias prefix
+            info.token = {lexical_token_t::ALIAS_PREFIX, extract_anchor_name()};
+            return info;
+        case '!': // tag prefix
+            info.token = {lexical_token_t::TAG_PREFIX, extract_tag_name()};
+            return info;
+        case '#': // comment prefix
+            scan_comment();
+            return process_token();
+        case '%': // directive prefix
+            if (m_state & document_directive_bit) {
+                info.token.type = scan_directive();
+                return info;
+            }
+            // The '%' character can be safely used as the first character in document contents.
+            // See https://yaml.org/spec/1.2.2/#912-document-markers for more details.
+            break;
+        case '-': {
+            if (m_cur_itr + 1 == m_end_itr) {
+                ++m_cur_itr;
+                info.token.type = lexical_token_t::SEQUENCE_BLOCK_PREFIX;
+                return info;
+            }
+            switch (*(m_cur_itr + 1)) {
+            case ' ':
+            case '\t':
+            case '\n':
+                // Move a cursor to the beginning of the next token.
+                m_cur_itr += 2;
+                info.token.type = lexical_token_t::SEQUENCE_BLOCK_PREFIX;
+                return info;
+            case '{':
+            case '}':
+            case '[':
+            case ']':
+            case ',':
+                // "-" cannot start a plain scalar if it is followed by a flow indicator in a flow context.
+                // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
+                if (m_state & flow_context_bit) {
+                    ++m_cur_itr;
+                    info.token.type = lexical_token_t::SEQUENCE_BLOCK_PREFIX;
+                    return info;
+                }
+                break;
+            default:
+                break;
+            }
+
+            if (m_pos_tracker.get_cur_pos_in_line() == 0) {
+                const str_view sv {m_cur_itr, m_end_itr};
+                const bool is_dir_end =
+                    sv.size() >= 3 && sv.compare(0, 3, "---") == 0 && is_followed_by_white_space(sv, 3);
+                if (is_dir_end) {
+                    m_cur_itr += 3;
+                    info.token.type = lexical_token_t::END_OF_DIRECTIVES;
+                    return info;
+                }
+            }
+
+            break;
+        }
+        case '[': // sequence flow begin
+            ++m_cur_itr;
+            info.token.type = lexical_token_t::SEQUENCE_FLOW_BEGIN;
+            return info;
+        case ']': // sequence flow end
+            ++m_cur_itr;
+            info.token.type = lexical_token_t::SEQUENCE_FLOW_END;
+            return info;
+        case '{': // mapping flow begin
+            ++m_cur_itr;
+            info.token.type = lexical_token_t::MAPPING_FLOW_BEGIN;
+            return info;
+        case '}': // mapping flow end
+            ++m_cur_itr;
+            info.token.type = lexical_token_t::MAPPING_FLOW_END;
+            return info;
+        case '@':
+            emit_error("Any token cannot start with at(@). It is a reserved indicator for YAML.");
+        case '`':
+            emit_error("Any token cannot start with grave accent(`). It is a reserved indicator for YAML.");
+        case '\"':
+            ++m_token_begin_itr;
+            info.token = {lexical_token_t::DOUBLE_QUOTED_SCALAR, determine_double_quoted_scalar_range()};
+            return info;
+        case '\'':
+            ++m_token_begin_itr;
+            info.token = {lexical_token_t::SINGLE_QUOTED_SCALAR, determine_single_quoted_scalar_range()};
+            return info;
+        case '.': {
+            if (m_pos_tracker.get_cur_pos_in_line() == 0) {
+                const auto rem_size = m_end_itr - m_cur_itr;
+                if FK_YAML_LIKELY (rem_size > 2) {
+                    const bool is_doc_end = std::equal(m_cur_itr, m_cur_itr + 3, "...");
+                    if (is_doc_end) {
+                        const char* cur_itr = m_cur_itr + 3;
+                        while (cur_itr != m_end_itr && (*cur_itr == ' ' || *cur_itr == '\t')) {
+                            ++cur_itr;
+                        }
+                        if FK_YAML_UNLIKELY (cur_itr != m_end_itr && *cur_itr != '\n' && *cur_itr != '#') {
+                            // See https://yaml.org/spec/1.2.2/#912-document-markers for more details.
+                            emit_error("The document end marker \"...\" must not be followed by non-ws char.");
+                        }
+                        m_cur_itr = cur_itr;
+                        info.token.type = lexical_token_t::END_OF_DOCUMENT;
+                        return info;
+                    }
+                }
+            }
+            break;
+        }
+        case '|':
+        case '>': {
+            const lexical_token_t type = *m_token_begin_itr == '|' ? lexical_token_t::BLOCK_LITERAL_SCALAR
+                                                                   : lexical_token_t::BLOCK_FOLDED_SCALAR;
+            const str_view sv {m_token_begin_itr, m_end_itr};
+            const std::size_t header_end_pos = sv.find('\n');
+
+            if FK_YAML_UNLIKELY (header_end_pos == str_view::npos) {
+                m_block_scalar_header = convert_to_block_scalar_header(sv.substr(1));
+                // If the block scalar header is not followed by a newline code, its content is empty.
+                m_cur_itr = m_token_begin_itr = m_end_itr;
+                info.token = {type, {m_token_begin_itr, 0}};
+                return info;
+            }
+
+            const uint32_t base_indent =
+                get_current_indent_level(find_block_scalar_base_line_end(m_token_begin_itr, &sv[header_end_pos]));
+            // Must be checked before m_token_begin_itr is moved to the beginning of the contents below.
+            const bool is_document_root = begins_document_level_node();
+
+            const str_view header_line = sv.substr(1, header_end_pos - 1);
+            m_block_scalar_header = convert_to_block_scalar_header(header_line);
+
+            m_token_begin_itr = sv.begin() + (header_end_pos + 1);
+
+            info.token = {
+                type,
+                determine_block_scalar_content_range(
+                    base_indent, m_block_scalar_header.indent, is_document_root, m_block_scalar_header.indent)};
+            return info;
+        }
+        default:
+            break;
+        }
+
+        info.token = {lexical_token_t::PLAIN_SCALAR, determine_plain_scalar_range()};
+        return info;
+    }
+
+    /// @brief Checks if the token which begins at m_token_begin_itr is the root node of a document.
+    /// @note Such a node has no parent, so its contents may begin at the first column.
+    /// @return true if nothing but a document start marker precedes the token on its line, false otherwise.
+    bool begins_document_level_node() const {
+        const char* p_line_begin = m_token_begin_itr;
+        while (p_line_begin != m_begin_itr && *(p_line_begin - 1) != '\n') {
+            --p_line_begin;
+        }
+
+        if (p_line_begin == m_token_begin_itr) {
+            return true;
+        }
+
+        const char* cur_itr = p_line_begin;
+        if (m_token_begin_itr - cur_itr < 3 || !std::equal(cur_itr, cur_itr + 3, "---")) {
+            return false;
+        }
+
+        for (cur_itr += 3; cur_itr != m_token_begin_itr; ++cur_itr) {
+            if (*cur_itr != ' ') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// @brief Checks if the given position is a white space, a line break or the end of the buffer.
+    /// @note Tabs count as white space here, as in the definition of c-forbidden.
+    /// https://yaml.org/spec/1.2.2/#912-document-markers
+    /// @param sv The buffer contents being scanned.
+    /// @param pos The position to inspect.
+    /// @return true if nothing, a white space or a line break follows, false otherwise.
+    static bool is_followed_by_white_space(str_view sv, std::size_t pos) noexcept {
+        return (pos == sv.size()) || (sv[pos] == ' ') || (sv[pos] == '\t') || (sv[pos] == '\n');
+    }
+
+    /// @brief Checks if the given position begins something a plain scalar cannot continue into.
+    /// @note Must not be static, as flow indicators only end a plain scalar within a flow context.
+    /// @param sv The buffer contents being scanned.
+    /// @param pos The position of the first non-space character in a line.
+    /// @param is_first_column Whether the position is at the beginning of its line.
+    /// @return true if a document marker or a block structure indicator begins there.
+    bool begins_non_scalar_content(str_view sv, std::size_t pos, bool is_first_column) const noexcept {
+        switch (sv[pos]) {
+        case ':':
+        case '?':
+            // These can never appear in a plain scalar, whatever their indentation. Others such as
+            // "- " can, when they are indented deeply enough to be content.
+            // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
+            return is_followed_by_white_space(sv, pos + 1);
+        case '[':
+        case ']':
+        case '{':
+        case '}':
+            // A flow collection beginning a line starts a node of its own.
+            return true;
+        case ',':
+            // A separator beginning a line ends the preceding entry of a flow collection, while in a
+            // block context it is just an ordinary plain scalar character.
+            return (m_state & flow_context_bit) != 0;
+        case '#':
+            return true;
+        default:
+            break;
+        }
+
+        // Document markers are only recognized at the beginning of a line.
+        if (!is_first_column) {
+            return false;
+        }
+
+        return begins_document_marker(sv, pos);
+    }
+
+    /// @brief Checks if the given position begins a document marker (`---` or `...`).
+    /// @param sv The buffer contents being scanned.
+    /// @param pos The position to inspect.
+    /// @return true if a document marker begins at the given position.
+    static bool begins_document_marker(str_view sv, std::size_t pos) noexcept {
+        const bool begins_marker = (sv.compare(pos, 3, "---") == 0) || (sv.compare(pos, 3, "...") == 0);
+        return begins_marker && is_followed_by_white_space(sv, pos + 3);
+    }
+
     uint32_t get_current_indent_level(const char* p_line_end) {
         // get the beginning position of the current line.
         std::size_t line_begin_pos = str_view(m_begin_itr, p_line_end - 1).find_last_of('\n');
@@ -3639,6 +3778,70 @@ private:
         }
 
         return indent;
+    }
+
+    /// @brief Finds the end of the line which the base indentation of a block scalar is taken from.
+    /// @note A block scalar header which has nothing but node properties before it on its line tells nothing
+    /// about the indentation of the parent node, so the lines above it are searched instead, skipping the ones
+    /// with nothing but node properties or comments.
+    /// ```yaml
+    /// folded:
+    ///    !foo
+    ///   >1
+    ///  value
+    /// ```
+    /// @param p_header_begin The beginning of the block scalar header.
+    /// @param p_header_line_end The end of the line which the block scalar header sits on.
+    /// @return The end of the line which the base indentation is taken from.
+    const char* find_block_scalar_base_line_end(const char* p_header_begin, const char* p_header_line_end) const {
+        const char* p_content_end = p_header_begin;
+        for (;;) {
+            const char* p_line_begin = p_content_end;
+            while (p_line_begin != m_begin_itr && *(p_line_begin - 1) != '\n') {
+                --p_line_begin;
+            }
+
+            if (!has_only_node_properties(p_line_begin, p_content_end)) {
+                return p_content_end == p_header_begin ? p_header_line_end : p_content_end;
+            }
+
+            if (p_line_begin == m_begin_itr) {
+                return p_header_line_end;
+            }
+
+            p_content_end = p_line_begin - 1;
+        }
+    }
+
+    /// @brief Checks if the given range has nothing but node properties, white spaces and a comment.
+    /// @param p_begin The beginning of the range.
+    /// @param p_end The end of the range.
+    /// @return true if the range has nothing but node properties, white spaces and a comment, false otherwise.
+    static bool has_only_node_properties(const char* p_begin, const char* p_end) noexcept {
+        bool is_separated = true;
+        for (const char* itr = p_begin; itr != p_end; ++itr) {
+            switch (*itr) {
+            case ' ':
+            case '\t':
+                is_separated = true;
+                break;
+            case '#':
+                if (is_separated) {
+                    return true;
+                }
+                break;
+            case '!':
+            case '&':
+                is_separated = false;
+                break;
+            default:
+                if (is_separated) {
+                    return false;
+                }
+                break;
+            }
+        }
+        return true;
     }
 
     /// @brief Skip until a newline code or a null character is found.
@@ -3755,7 +3958,7 @@ private:
                 case '-':
                     break;
                 default:
-                    if FK_YAML_UNLIKELY (!isalnum(*m_cur_itr)) {
+                    if FK_YAML_UNLIKELY (!is_alnum(*m_cur_itr)) {
                         // See https://yaml.org/spec/1.2.2/#rule-c-named-tag-handle for more details.
                         emit_error("named handle can contain only numbers(0-9), alphabets(A-Z,a-z) and hyphens(-).");
                     }
@@ -3777,6 +3980,11 @@ private:
         //
         // extract a tag prefix.
         //
+
+        // skip_white_spaces() above may have consumed the rest of the input buffer.
+        if FK_YAML_UNLIKELY (m_cur_itr == m_end_itr) {
+            emit_error("invalid TAG directive is found.");
+        }
 
         m_token_begin_itr = m_cur_itr;
         const char* p_tag_prefix_begin = m_cur_itr;
@@ -3839,8 +4047,13 @@ private:
 
         m_yaml_version = str_view {m_token_begin_itr, m_cur_itr};
 
-        if FK_YAML_UNLIKELY (m_yaml_version.compare("1.1") != 0 && m_yaml_version.compare("1.2") != 0) {
-            emit_error("Only 1.1 and 1.2 can be specified as the YAML version.");
+        // A YAML processor must reject a different major version, but should only warn about a minor
+        // version it does not know and keep parsing the document.
+        // See https://yaml.org/spec/1.2.2/#681-yaml-directives for more details.
+        const bool is_yaml_1_x = m_yaml_version.size() > 2 && m_yaml_version.substr(0, 2).compare("1.") == 0 &&
+                                 m_yaml_version.find_first_not_of("0123456789", 2) == str_view::npos;
+        if FK_YAML_UNLIKELY (!is_yaml_1_x) {
+            emit_error("Only the 1.x versions can be specified as the YAML version.");
         }
 
         return lexical_token_t::YAML_VER_DIRECTIVE;
@@ -3902,13 +4115,22 @@ private:
         case '\n':
             // Just "!" is a non-specific tag.
             return {m_token_begin_itr, m_cur_itr};
+        case '}':
+        case ']':
+        case ',':
+            if ((m_state & flow_context_bit) != 0) {
+                return {m_token_begin_itr, m_cur_itr};
+            }
+            break;
         case '!':
             // Secondary tag handles (!!suffix)
             break;
         case '<':
             // Verbatim tags (!<TAG>)
             is_verbatim = true;
-            ++m_cur_itr;
+            if FK_YAML_UNLIKELY (++m_cur_itr == m_end_itr) {
+                emit_error("verbatim tag (!<TAG>) must be ended with \'>\'.");
+            }
             break;
         default:
             // Either local tags (!suffix) or named handles (!tag!suffix)
@@ -3917,6 +4139,7 @@ private:
         }
 
         bool is_named_handle = false;
+        bool is_in_verbatim_uri = is_verbatim;
         bool ends_loop = false;
         do {
             if (++m_cur_itr == m_end_itr) {
@@ -3930,6 +4153,10 @@ private:
             case '\n':
                 ends_loop = true;
                 break;
+            case '>':
+                // End of a verbatim tag (!<TAG>)
+                is_in_verbatim_uri = false;
+                break;
             case '!':
                 if FK_YAML_UNLIKELY (!allows_another_tag_prefix) {
                     emit_error("invalid tag prefix (!) is found.");
@@ -3938,6 +4165,16 @@ private:
                 is_named_handle = true;
                 // tag prefix must not appear three times.
                 allows_another_tag_prefix = false;
+                break;
+            case '}':
+            case ']':
+            case ',':
+                // Since these indicators can terminate a flow collection or its entry in a flow context,
+                // the trailing part is cut off so that the tag only includes the part before the flow indicator.
+                // ```yaml
+                // {foo: !!str, bar: !<tag:yaml.org,2002:str>}
+                // ```
+                ends_loop = !is_in_verbatim_uri && (m_state & flow_context_bit) != 0;
                 break;
             default:
                 break;
@@ -3996,26 +4233,120 @@ private:
         return tag_name;
     }
 
+    /// @brief Check that the continuation lines of a multi-line token are indented with spaces.
+    /// @note A node continues on lines which are indented at least as deep as itself, and indentation
+    /// consists of spaces only. A tab which follows that indentation is valid separation white space,
+    /// and a line which holds nothing but white space is empty.
+    /// https://yaml.org/spec/1.2.2/#rule-s-flow-line-prefix
+    /// @param content The token contents, which may span multiple lines.
+    void check_continuation_indent(str_view content) {
+        const uint32_t required = get_required_continuation_indent();
+
+        for (std::size_t pos = content.find('\n'); pos != str_view::npos; pos = content.find('\n', pos + 1)) {
+            const std::size_t line_begin_pos = pos + 1;
+            const std::size_t content_pos = content.find_first_not_of(" \t", line_begin_pos);
+            const bool is_empty_line = (content_pos == str_view::npos) || content[content_pos] == '\n';
+            if (is_empty_line) {
+                continue;
+            }
+
+            if FK_YAML_UNLIKELY (content_pos - line_begin_pos < required) {
+                m_cur_itr = content.begin() + content_pos;
+                emit_error("A continuation line must be indented sufficiently.");
+            }
+
+            const std::size_t tab_pos = content.find('\t', line_begin_pos);
+            if FK_YAML_UNLIKELY (tab_pos < content_pos && tab_pos - line_begin_pos < required) {
+                m_cur_itr = content.begin() + content_pos;
+                emit_error("A tab character cannot be used as indentation.");
+            }
+        }
+    }
+
+    /// @brief Get the indentation which the continuation lines of the current token must have.
+    /// @note A token which begins a line is the node at that indentation, so its continuation lines only
+    /// need the same one. A token preceded by something else on its line, a mapping value for instance,
+    /// belongs to a collection which owns that indentation, so its own contents must be indented deeper.
+    /// ```yaml
+    /// "1st          # the scalar is the node at column 0, so 0 is required
+    /// 2nd"
+    /// foo: "1st     # the scalar belongs to a mapping at column 0, so 1 is required
+    ///  2nd"
+    /// ```
+    /// @return uint32_t The indentation width required for the continuation lines.
+    uint32_t get_required_continuation_indent() const noexcept {
+        const char* p_line_begin = find_line_begin(m_token_begin_itr);
+
+        // The token begins after the opening quotation mark. When that mark follows a document
+        // start marker, the scalar is still the document root and owns the first column.
+        if (m_token_begin_itr - p_line_begin > 4 &&
+            (*(m_token_begin_itr - 1) == '\'' || *(m_token_begin_itr - 1) == '"') &&
+            std::equal(p_line_begin, p_line_begin + 3, "---")) {
+            return 0;
+        }
+
+        uint32_t indent = 0;
+        while (p_line_begin + indent < m_token_begin_itr && p_line_begin[indent] == ' ') {
+            ++indent;
+        }
+
+        // The token of a quoted scalar begins just after its opening quotation mark, which is the real
+        // beginning of the node, so one extra column still counts as beginning the line.
+        const bool begins_the_line = (m_token_begin_itr <= p_line_begin + indent + 1);
+        return begins_the_line ? indent : indent + 1;
+    }
+
+    /// @brief Check whether a tab appears before the given column on the line of `p_token_begin`.
+    /// @param p_token_begin The beginning of the token whose line is inspected.
+    /// @param indent The indentation width required at the beginning of that line.
+    /// @return true if a tab appears before the required indentation, false otherwise.
+    bool has_tab_before(const char* p_token_begin, uint32_t indent) const noexcept {
+        const char* p_line_begin = find_line_begin(p_token_begin);
+        const str_view line_head {p_line_begin, static_cast<std::size_t>(p_token_begin - p_line_begin)};
+        return line_head.find('\t') < indent;
+    }
+
+    /// @brief Get the beginning of the line which contains the given position.
+    /// @param p The position to start from.
+    /// @return const char* The beginning of its line.
+    const char* find_line_begin(const char* p) const noexcept {
+        while (p != m_begin_itr && *(p - 1) != '\n') {
+            --p;
+        }
+        return p;
+    }
+
     /// @brief Determines the range of single quoted scalar by scanning remaining input buffer contents.
     /// @return A single quoted scalar.
     str_view determine_single_quoted_scalar_range() {
         const str_view sv {m_token_begin_itr, m_end_itr};
 
-        std::size_t pos = sv.find('\'');
+        const str_view filter {"\'\n"};
+        std::size_t pos = sv.find_first_of(filter);
         while (pos != str_view::npos) {
             FK_YAML_ASSERT(pos < sv.size());
+            if (sv[pos] == '\n') {
+                if FK_YAML_UNLIKELY (begins_document_marker(sv, pos + 1)) {
+                    m_cur_itr = &sv[pos + 1];
+                    emit_error("Document marker found in the scalar content.");
+                }
+                pos = sv.find_first_of(filter, pos + 1);
+                continue;
+            }
+
             if FK_YAML_LIKELY (pos == sv.size() - 1 || sv[pos + 1] != '\'') {
                 // closing single quote is found.
                 m_cur_itr = m_token_begin_itr + (pos + 1);
                 str_view single_quoted_scalar {m_token_begin_itr, pos};
                 check_scalar_content(single_quoted_scalar);
+                check_continuation_indent(single_quoted_scalar);
                 return single_quoted_scalar;
             }
 
             // If single quotation marks are repeated twice in a single quoted scalar, they are considered as an
             // escaped single quotation mark. Skip the second one which would otherwise be detected as a closing
             // single quotation mark in the next loop.
-            pos = sv.find('\'', pos + 2);
+            pos = sv.find_first_of(filter, pos + 2);
         }
 
         m_cur_itr = m_end_itr; // update for error information
@@ -4027,9 +4358,19 @@ private:
     str_view determine_double_quoted_scalar_range() {
         const str_view sv {m_token_begin_itr, m_end_itr};
 
-        std::size_t pos = sv.find('\"');
+        const str_view filter {"\"\n"};
+        std::size_t pos = sv.find_first_of(filter);
         while (pos != str_view::npos) {
             FK_YAML_ASSERT(pos < sv.size());
+
+            if (sv[pos] == '\n') {
+                if FK_YAML_UNLIKELY (begins_document_marker(sv, pos + 1)) {
+                    m_cur_itr = &sv[pos + 1];
+                    emit_error("Document marker found in the scalar content.");
+                }
+                pos = sv.find_first_of(filter, pos + 1);
+                continue;
+            }
 
             bool is_closed = true;
             if FK_YAML_LIKELY (pos > 0) {
@@ -4040,12 +4381,18 @@ private:
                 // * even number of backslashes -> double quotation mark IS NOT escaped (e.g., "\\"")
                 uint32_t backslash_counts = 0;
                 const char* p = m_token_begin_itr + (pos - 1);
-                do {
-                    if (*p-- != '\\') {
+                for (;;) {
+                    if (*p != '\\') {
                         break;
                     }
                     ++backslash_counts;
-                } while (p != m_token_begin_itr);
+                    if (p == m_token_begin_itr) {
+                        // the first character of the token has just been counted. Stopping here
+                        // also keeps `p` from being decremented past the beginning of the token.
+                        break;
+                    }
+                    --p;
+                }
                 is_closed = ((backslash_counts & 1u) == 0); // true: even, false: odd
             }
 
@@ -4054,10 +4401,11 @@ private:
                 m_cur_itr = m_token_begin_itr + (pos + 1);
                 str_view double_quoted_scalar {m_token_begin_itr, pos};
                 check_scalar_content(double_quoted_scalar);
+                check_continuation_indent(double_quoted_scalar);
                 return double_quoted_scalar;
             }
 
-            pos = sv.find('\"', pos + 1);
+            pos = sv.find_first_of(filter, pos + 1);
         }
 
         m_cur_itr = m_end_itr; // update for error information
@@ -4080,12 +4428,19 @@ private:
 
         bool ends_loop = false;
         uint32_t indent = std::numeric_limits<uint32_t>::max();
+        bool begins_own_line = false;
+        std::size_t trailing_white_space_pos = str_view::npos;
         do {
             FK_YAML_ASSERT(pos < sv.size());
             switch (sv[pos]) {
             case '\n': {
                 if (indent == std::numeric_limits<uint32_t>::max()) {
                     indent = get_current_indent_level(&sv[pos]);
+                    // The scalar begins a line of its own if its column is the indentation of that line.
+                    // Only meaningful in a block context: in a flow context the surrounding collection
+                    // determines the required indentation of continuation lines.
+                    begins_own_line =
+                        ((m_state & flow_context_bit) == 0) && (m_pos_tracker.get_cur_pos_in_line() == indent);
                 }
 
                 constexpr str_view space_filter {" \t\n"};
@@ -4093,48 +4448,108 @@ private:
                 const std::size_t last_newline_pos = sv.find_last_of('\n', non_space_pos);
                 FK_YAML_ASSERT(last_newline_pos != str_view::npos);
 
-                if (non_space_pos == str_view::npos || non_space_pos - last_newline_pos - 1 <= indent) {
+                // A plain scalar which begins a line of its own can be continued by lines at the same
+                // indentation, since nothing else on that line owns it:
+                // ```yaml
+                // foo:
+                //   first line
+                //   second line
+                // ```
+                // One which follows a key on the same line must be continued by more indented lines,
+                // because a line at the key's indentation belongs to the parent mapping instead.
+                uint32_t min_continuation_indent = 0;
+                if (m_state & flow_context_bit) {
+                    min_continuation_indent = m_flow_required_indent;
+                }
+                else {
+                    min_continuation_indent = begins_own_line ? indent : indent + 1;
+                }
+
+                if (non_space_pos == str_view::npos) {
+                    if (trailing_white_space_pos != str_view::npos) {
+                        pos = trailing_white_space_pos;
+                    }
                     ends_loop = true;
                     break;
                 }
 
+                const std::size_t cur_line_indent = non_space_pos - last_newline_pos - 1;
+                const bool ends_scalar = begins_non_scalar_content(sv, non_space_pos, cur_line_indent == 0);
+                if (cur_line_indent < min_continuation_indent || ends_scalar) {
+                    if (trailing_white_space_pos != str_view::npos) {
+                        pos = trailing_white_space_pos;
+                    }
+                    ends_loop = true;
+                    break;
+                }
+
+                trailing_white_space_pos = str_view::npos;
                 pos = non_space_pos;
                 break;
             }
             case ' ':
-            case '\t':
-                if FK_YAML_UNLIKELY (pos == sv.size() - 1) {
-                    // trim trailing space.
+            case '\t': {
+                // Any number of white spaces may separate the characters of a plain scalar, so the whole
+                // run of them belongs to it and what follows the run decides whether it ends.
+                // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
+                const std::size_t next_pos = sv.find_first_not_of(" \t", pos + 1);
+                if FK_YAML_UNLIKELY (next_pos == str_view::npos) {
+                    // trim trailing white space.
                     ends_loop = true;
                     break;
                 }
 
-                // Allow a space in a plain scalar only if the space is surrounded by non-space characters, but not
-                // followed by the comment prefix " #".
-                // Also, flow indicators are not allowed to be followed after a space in a flow context.
-                // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
-                switch (sv[pos + 1]) {
-                case ' ':
-                case '\t':
+                // White space is not allowed to be followed by the comment prefix " #", and flow
+                // indicators are not allowed to follow it in a flow context.
+                switch (sv[next_pos]) {
                 case '\n':
+                    // The following line decides whether these white spaces are trailing or precede
+                    // a continuation line. Let the newline handler make that decision.
+                    trailing_white_space_pos = pos;
+                    pos = next_pos;
+                    continue;
                 case '#':
                     ends_loop = true;
                     break;
-                case ':':
-                    // " :" is permitted in a plain style string token, but not when followed by a space.
-                    ends_loop = (pos < sv.size() - 2) && (sv[pos + 2] == ' ');
+                case ':': {
+                    // " :" is permitted in a plain style string token, but not when the ":" is a mapping
+                    // value indicator, that is, when it is followed by a white space, a line break or the
+                    // end of the input. In a flow context, a flow indicator is not safe to follow it either.
+                    if (next_pos + 1 == sv.size()) {
+                        ends_loop = true;
+                        break;
+                    }
+
+                    switch (sv[next_pos + 1]) {
+                    case ' ':
+                    case '\t':
+                    case '\n':
+                        ends_loop = true;
+                        break;
+                    case ',':
+                    case '[':
+                    case ']':
+                    case '{':
+                    case '}':
+                        ends_loop = ((m_state & flow_context_bit) != 0);
+                        break;
+                    default:
+                        break;
+                    }
                     break;
+                }
                 case '{':
                 case '}':
                 case '[':
                 case ']':
                 case ',':
-                    ends_loop = (m_state & flow_context_bit);
+                    ends_loop = ((m_state & flow_context_bit) != 0);
                     break;
                 default:
                     break;
                 }
                 break;
+            }
             case ':':
                 if FK_YAML_LIKELY (pos + 1 < sv.size()) {
                     switch (sv[pos + 1]) {
@@ -4142,6 +4557,16 @@ private:
                     case '\t':
                     case '\n':
                         ends_loop = true;
+                        break;
+                    case ',':
+                    case '[':
+                    case ']':
+                    case '{':
+                    case '}':
+                        // A flow indicator is not "safe" to follow a ":" in a flow context, so the ":" ends
+                        // the plain scalar and becomes a mapping value indicator instead.
+                        // See https://yaml.org/spec/1.2.2/#733-plain-style for more details.
+                        ends_loop = ((m_state & flow_context_bit) != 0);
                         break;
                     default:
                         break;
@@ -4176,10 +4601,11 @@ private:
     /// @brief Scan a block style string token either in the literal or folded style.
     /// @param base_indent The base indent level of the block scalar.
     /// @param indicated_indent The indicated indent level in the block scalar header. 0 means it's not indicated.
+    /// @param is_document_root Whether the block scalar is the root node of a document.
     /// @param token Storage for the scanned block scalar range.
     /// @return The content indentation level of the block scalar.
     str_view determine_block_scalar_content_range(
-        uint32_t base_indent, uint32_t indicated_indent, uint32_t& content_indent) {
+        uint32_t base_indent, uint32_t indicated_indent, bool is_document_root, uint32_t& content_indent) {
         const str_view sv {m_token_begin_itr, m_end_itr};
         const std::size_t remain_input_len = sv.size();
 
@@ -4202,6 +4628,9 @@ private:
                 stop_increment = true;
                 continue;
             case '\n':
+                if FK_YAML_UNLIKELY (!is_document_root && stop_increment && cur_indent <= base_indent) {
+                    emit_error("A tab character cannot be used as indentation.");
+                }
                 max_leading_indent = std::max(cur_indent, max_leading_indent);
                 cur_indent = 0;
                 stop_increment = false;
@@ -4225,20 +4654,35 @@ private:
             return sv;
         }
 
+        // A non-empty line at or below the parent indentation ends an otherwise empty block scalar.
+        if (!is_document_root && cur_indent <= base_indent) {
+            const auto content_end_pos = static_cast<std::size_t>(cur_itr - m_token_begin_itr - 1);
+            m_cur_itr = m_token_begin_itr + content_end_pos;
+            content_indent = indicated_indent == 0 ? max_leading_indent : base_indent + indicated_indent;
+            return sv.substr(0, content_end_pos);
+        }
+
         // Any leading empty line must not contain more spaces than the first non-empty line.
         if FK_YAML_UNLIKELY (cur_indent < max_leading_indent) {
             emit_error("Any leading empty line must not be more indented than the first non-empty line.");
         }
 
         if (indicated_indent == 0) {
-            FK_YAML_ASSERT(base_indent < cur_indent);
+            // A block scalar which is the root node of a document has no parent node to be more indented than, so
+            // its contents may begin at the first column.
+            // ```yaml
+            // --- >
+            // line1
+            // ```
             indicated_indent = cur_indent - base_indent;
         }
         else if FK_YAML_UNLIKELY (cur_indent < base_indent + indicated_indent) {
             emit_error("The first non-empty line in the block scalar is less indented.");
         }
 
-        std::size_t last_newline_pos = sv.find('\n', cur_itr - m_token_begin_itr + 1);
+        // cur_itr already points past the first character of the first non-empty line, so the newline
+        // which ends that line is at that very position when the line holds a single character.
+        std::size_t last_newline_pos = sv.find('\n', cur_itr - m_token_begin_itr);
         if (last_newline_pos == str_view::npos) {
             last_newline_pos = remain_input_len;
         }
@@ -4258,8 +4702,26 @@ private:
 
             FK_YAML_ASSERT(last_newline_pos < cur_line_content_begin_pos);
             cur_indent = static_cast<uint32_t>(cur_line_content_begin_pos - last_newline_pos - 1);
+
+            const bool line_starts_with_document_marker =
+                is_document_root && cur_indent == 0 && begins_document_marker(sv, cur_line_content_begin_pos);
+            if (line_starts_with_document_marker) {
+                // The content lines are forbidden to begin with document markers (`---` or `...`).
+                // https://yaml.org/spec/1.2.2/#912-document-markers
+                break;
+            }
+
             if (cur_indent < content_indent && sv[cur_line_content_begin_pos] != '\n') {
-                if FK_YAML_UNLIKELY (cur_indent > base_indent) {
+                // Trailing comments may be less indented than the contents, so they end the block scalar
+                // instead of being part of it.
+                // ```yaml
+                // foo: |
+                //   text
+                //  # comment
+                // ```
+                // https://yaml.org/spec/1.2.2/#8112-block-chomping-indicator
+                const bool begins_comment = sv[cur_line_content_begin_pos] == '#';
+                if FK_YAML_UNLIKELY (!begins_comment && cur_indent > base_indent) {
                     // This path assumes an input like the following:
                     // ```yaml
                     // foo: |
@@ -4488,12 +4950,20 @@ private:
     str_view m_tag_prefix;
     /// The last block scalar header.
     block_scalar_header m_block_scalar_header {};
+    /// The beginning of the last lexical token, used to inspect the indentation of its line.
+    const char* m_last_token_begin_itr;
+    /// The indentation which the lines of the current flow collection must have.
+    uint32_t m_flow_required_indent {0};
     /// The beginning position of the last lexical token. (zero origin)
     uint32_t m_last_token_begin_pos {0};
     /// The beginning line of the last lexical token. (zero origin)
     uint32_t m_last_token_begin_line {0};
+    /// The type of the last lexical token.
+    lexical_token_t m_last_token_type {lexical_token_t::END_OF_BUFFER};
     /// The current depth of flow context.
     uint32_t m_state {0};
+    /// The queue of pending tokens.
+    std::deque<token_info> m_pending_token_queue;
 };
 
 FK_YAML_DETAIL_NAMESPACE_END
@@ -4503,7 +4973,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/scalar_parser.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -4519,7 +4989,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/conversions/scalar_conv.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -5359,7 +5829,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/conversions/to_node.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -5368,6 +5838,8 @@ FK_YAML_DETAIL_NAMESPACE_END
 #ifndef FK_YAML_DETAIL_CONVERSIONS_TO_NODE_HPP
 #define FK_YAML_DETAIL_CONVERSIONS_TO_NODE_HPP
 
+#include <limits>
+#include <type_traits>
 #include <utility>
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
@@ -5383,7 +5855,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/node_attrs.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -5394,6 +5866,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 
 #include <cstdint>
 #include <limits>
+#include <utility>
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
 
@@ -5457,70 +5930,237 @@ constexpr node_attr_t alias_bit = 0x02000000u;
 /// A utility bit set for initialization.
 constexpr node_attr_t default_bits = null_bit;
 
-/// @brief Converts a node_type value to a node_attr_t value.
-/// @param t A type of node value.
-/// @return The associated node value bit.
-inline node_attr_t from_node_type(node_type t) noexcept {
-    switch (t) {
-    case node_type::SEQUENCE:
-        return seq_bit;
-    case node_type::MAPPING:
-        return map_bit;
-    case node_type::NULL_OBJECT:
-        return null_bit;
-    case node_type::BOOLEAN:
-        return bool_bit;
-    case node_type::INTEGER:
-        return int_bit;
-    case node_type::FLOAT:
-        return float_bit;
-    case node_type::STRING:
-        return string_bit;
-    default:                        // LCOV_EXCL_LINE
-        return node_attr_mask::all; // LCOV_EXCL_LINE
-    }
-}
-
-/// @brief Converts a node_attr_t value to a node_type value.
-/// @param bits node attribute bits
-/// @return An associated node value type with the given node value bit.
-inline node_type to_node_type(node_attr_t bits) noexcept {
-    switch (bits & node_attr_mask::value) {
-    case seq_bit:
-        return node_type::SEQUENCE;
-    case map_bit:
-        return node_type::MAPPING;
-    case null_bit:
-        return node_type::NULL_OBJECT;
-    case bool_bit:
-        return node_type::BOOLEAN;
-    case int_bit:
-        return node_type::INTEGER;
-    case float_bit:
-        return node_type::FLOAT;
-    case string_bit:
-        return node_type::STRING;
-    default:                   // LCOV_EXCL_LINE
-        detail::unreachable(); // LCOV_EXCL_LINE
-    }
-}
-
-/// @brief Get an anchor offset used to reference an anchor node from the given attribute bits.
-/// @param attrs node attribute bits
-/// @return An anchor offset value.
-inline uint32_t get_anchor_offset(node_attr_t attrs) noexcept {
-    return (attrs & node_attr_mask::anchor_offset) >> 26;
-}
-
-/// @brief Set an anchor offset value to the appropriate bits.
-/// @param offset An anchor offset value.
-/// @param attrs node attribute bit set into which the offset value is written.
-inline void set_anchor_offset(uint32_t offset, node_attr_t& attrs) noexcept {
-    attrs &= ~node_attr_mask::anchor_offset;
-    attrs |= (offset & 0x3Fu) << 26;
-}
-
 } // namespace node_attr_bits
+
+/// @brief The class which manages node attributes.
+/// @details This class provides an interface to manipulate and query the attributes of a node,
+/// including its type, style, and other properties. It encapsulates the underlying bit representation
+/// and provides utility functions to set, unset, and check specific attribute bits.
+class node_attrs {
+public:
+    /// @brief Creates a default-initialized node_attrs object.
+    node_attrs() noexcept = default;
+
+    /// @brief Creates a node_attrs object with the specified attribute bits.
+    /// @param attrs The initial attribute bits to set.
+    explicit node_attrs(node_attr_t attrs) noexcept
+        : m_attrs(attrs) {
+    }
+
+    /// @brief Creates a node_attrs object with the specified node type.
+    /// @param type The node type to set.
+    explicit node_attrs(node_type type) noexcept
+        : m_attrs(from_node_type(type)) {
+    }
+
+    /// @brief Creates a copy of the specified node_attrs object.
+    /// @param other The node_attrs object to copy.
+    node_attrs(const node_attrs&) noexcept = default;
+
+    /// @brief Moves the specified node_attrs object into a new one.
+    /// @param other The node_attrs object to move.
+    node_attrs(node_attrs&&) noexcept = default;
+
+    /// @brief Copy-assigns the specified node_attrs object.
+    /// @param other The node_attrs object to copy.
+    /// @return A reference to this node_attrs object.
+    node_attrs& operator=(const node_attrs&) noexcept = default;
+
+    /// @brief Move-assigns the specified node_attrs object.
+    /// @param other The node_attrs object to move.
+    /// @return A reference to this node_attrs object.
+    node_attrs& operator=(node_attrs&&) noexcept = default;
+
+    /// @brief Destroys the node_attrs object.
+    ~node_attrs() noexcept = default;
+
+    /// @brief Retrieves the raw attribute bits of the node.
+    /// @return The raw attribute bits.
+    node_attr_t get() const noexcept {
+        return m_attrs;
+    }
+
+    /// @brief Retrieves the value-related attribute bits of the node.
+    /// @return The value-related attribute bits.
+    node_attr_t get_value_bits() const noexcept {
+        return m_attrs & node_attr_mask::value;
+    }
+
+    /// @brief Sets the specified attribute bits.
+    /// @param mask The attribute bits to set.
+    void set(node_attr_t mask) noexcept {
+        m_attrs |= mask;
+    }
+
+    /// @brief Sets the specified value-related attribute bit, unsetting any existing value-related bits.
+    /// @param bit The value-related attribute bit to set.
+    void set_value_bit(node_attr_t bit) noexcept {
+        unset(node_attr_mask::value);
+        set(bit);
+    }
+
+    /// @brief Unsets the specified attribute bits.
+    /// @param mask The attribute bits to unset.
+    void unset(node_attr_t mask) noexcept {
+        m_attrs &= ~mask;
+    }
+
+    /// @brief Checks if all of the specified attribute bits are set.
+    /// @param mask The attribute bits to check.
+    /// @return True if all specified bits are set, false otherwise.
+    bool has(node_attr_t mask) const noexcept {
+        return (m_attrs & mask) == mask;
+    }
+
+    /// @brief Checks if any of the specified attribute bits are set.
+    /// @param mask The attribute bits to check.
+    /// @return True if any specified bit is set, false otherwise.
+    bool has_any(node_attr_t mask) const noexcept {
+        return (m_attrs & mask) != 0;
+    }
+
+    /// @brief Retrieves the node type based on the value-related attribute bits.
+    /// @return The node type.
+    node_type get_node_type() const noexcept {
+        switch (get_value_bits()) {
+        case node_attr_bits::seq_bit:
+            return node_type::SEQUENCE;
+        case node_attr_bits::map_bit:
+            return node_type::MAPPING;
+        case node_attr_bits::null_bit:
+            return node_type::NULL_OBJECT;
+        case node_attr_bits::bool_bit:
+            return node_type::BOOLEAN;
+        case node_attr_bits::int_bit:
+            return node_type::INTEGER;
+        case node_attr_bits::float_bit:
+            return node_type::FLOAT;
+        case node_attr_bits::string_bit:
+            return node_type::STRING;
+        default:                   // LCOV_EXCL_LINE
+            detail::unreachable(); // LCOV_EXCL_LINE
+        }
+    }
+
+    /// @brief Checks if the node is a sequence.
+    /// @return True if the node is a sequence, false otherwise.
+    bool is_sequence() const noexcept {
+        return has(node_attr_bits::seq_bit);
+    }
+
+    /// @brief Checks if the node is a mapping.
+    /// @return True if the node is a mapping, false otherwise.
+    bool is_mapping() const noexcept {
+        return has(node_attr_bits::map_bit);
+    }
+
+    /// @brief Checks if the node is null.
+    /// @return True if the node is null, false otherwise.
+    bool is_null() const noexcept {
+        return has(node_attr_bits::null_bit);
+    }
+
+    /// @brief Checks if the node is a boolean.
+    /// @return True if the node is a boolean, false otherwise.
+    bool is_boolean() const noexcept {
+        return has(node_attr_bits::bool_bit);
+    }
+
+    /// @brief Checks if the node is an integer.
+    /// @return True if the node is an integer, false otherwise.
+    bool is_integer() const noexcept {
+        return has(node_attr_bits::int_bit);
+    }
+
+    /// @brief Checks if the node is an unsigned integer.
+    /// @return True if the node is an unsigned integer, false otherwise.
+    bool is_uint() const noexcept {
+        return has(node_attr_bits::int_bit | node_attr_bits::uint_bit);
+    }
+
+    /// @brief Checks if the node is a floating-point number.
+    /// @return True if the node is a floating-point number, false otherwise.
+    bool is_float_number() const noexcept {
+        return has(node_attr_bits::float_bit);
+    }
+
+    /// @brief Checks if the node is a string.
+    /// @return True if the node is a string, false otherwise.
+    bool is_string() const noexcept {
+        return has(node_attr_bits::string_bit);
+    }
+
+    /// @brief Checks if the node is a scalar.
+    /// @return True if the node is a scalar, false otherwise.
+    bool is_scalar() const noexcept {
+        return has_any(node_attr_bits::scalar_bits);
+    }
+
+    /// @brief Checks if the node is an anchor.
+    /// @return True if the node is an anchor, false otherwise.
+    bool is_anchor() const noexcept {
+        return has(node_attr_bits::anchor_bit);
+    }
+
+    /// @brief Checks if the node is an alias.
+    /// @return True if the node is an alias, false otherwise.
+    bool is_alias() const noexcept {
+        return has(node_attr_bits::alias_bit);
+    }
+
+    /// @brief Retrieves the anchor offset of the node.
+    /// @return The anchor offset.
+    uint32_t get_anchor_offset() const noexcept {
+        return (m_attrs & node_attr_mask::anchor_offset) >> 26;
+    }
+
+    /// @brief Sets the anchor offset of the node.
+    /// @param offset The anchor offset to set.
+    void set_anchor_offset(uint32_t offset) noexcept {
+        m_attrs &= ~node_attr_mask::anchor_offset;
+        m_attrs |= (offset & 0x3Fu) << 26;
+    }
+
+    /// @brief Swaps the contents of this node_attrs object with another.
+    /// @param other The other node_attrs object to swap with.
+    void swap(node_attrs& other) noexcept {
+        std::swap(m_attrs, other.m_attrs);
+    }
+
+private:
+    /// @brief Converts a node_type value to a node_attr_t value.
+    /// @param t A type of node value.
+    /// @return The associated node value bit.
+    static node_attr_t from_node_type(node_type t) noexcept {
+        switch (t) {
+        case node_type::SEQUENCE:
+            return node_attr_bits::seq_bit;
+        case node_type::MAPPING:
+            return node_attr_bits::map_bit;
+        case node_type::NULL_OBJECT:
+            return node_attr_bits::null_bit;
+        case node_type::BOOLEAN:
+            return node_attr_bits::bool_bit;
+        case node_type::INTEGER:
+            return node_attr_bits::int_bit;
+        case node_type::FLOAT:
+            return node_attr_bits::float_bit;
+        case node_type::STRING:
+            return node_attr_bits::string_bit;
+        default:                   // LCOV_EXCL_LINE
+            detail::unreachable(); // LCOV_EXCL_LINE
+        }
+    }
+
+    node_attr_t m_attrs {node_attr_bits::default_bits};
+};
+
+/// @brief Swaps the contents of two node_attrs objects.
+/// @param lhs The first node_attrs object.
+/// @param rhs The second node_attrs object.
+inline void swap(node_attrs& lhs, node_attrs& rhs) noexcept {
+    lhs.swap(rhs);
+}
 
 FK_YAML_DETAIL_NAMESPACE_END
 
@@ -5546,32 +6186,32 @@ struct external_node_constructor {
     template <typename... Args>
     static void sequence(BasicNodeType& n, Args&&... args) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::seq_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::seq_bit);
         n.m_value.p_seq = create_object<typename BasicNodeType::sequence_type>(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void mapping(BasicNodeType& n, Args&&... args) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::map_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::map_bit);
         n.m_value.p_map = create_object<typename BasicNodeType::mapping_type>(std::forward<Args>(args)...);
     }
 
     static void null_scalar(BasicNodeType& n, std::nullptr_t) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::null_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::null_bit);
         n.m_value.p_map = nullptr;
     }
 
     static void boolean_scalar(BasicNodeType& n, const typename BasicNodeType::boolean_type b) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::bool_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::bool_bit);
         n.m_value.boolean = b;
     }
 
     static void integer_scalar(BasicNodeType& n, const typename BasicNodeType::integer_type i) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::int_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::int_bit);
         n.m_value.integer = i;
     }
 
@@ -5580,30 +6220,29 @@ struct external_node_constructor {
     /// get_value<uint64_t>() / as_uint() can recover the original unsigned value.
     static void unsigned_integer_scalar(BasicNodeType& n, const typename BasicNodeType::integer_type i) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::int_bit;
-        n.m_attrs |= node_attr_bits::uint_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::int_bit | node_attr_bits::uint_bit);
         n.m_value.integer = i;
     }
 
     static void float_scalar(BasicNodeType& n, const typename BasicNodeType::float_number_type f) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::float_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::float_bit);
         n.m_value.float_val = f;
     }
 
     template <typename... Args>
     static void string_scalar(BasicNodeType& n, Args&&... args) {
         destroy(n);
-        n.m_attrs |= node_attr_bits::string_bit;
+        n.m_attrs.set_value_bit(node_attr_bits::string_bit);
         n.m_value.p_str = create_object<typename BasicNodeType::string_type>(std::forward<Args>(args)...);
     }
 
 private:
     static void destroy(BasicNodeType& n) {
-        n.m_value.destroy(n.m_attrs & node_attr_mask::value);
+        n.m_value.destroy(n.m_attrs.get_value_bits());
         // Clear both the value-type bits and the uint_bit style flag so that any
         // subsequent reassignment starts from a clean state.
-        n.m_attrs &= ~(node_attr_mask::value | node_attr_bits::uint_bit);
+        n.m_attrs.unset(node_attr_mask::value | node_attr_bits::uint_bit);
     }
 };
 
@@ -5755,6 +6394,33 @@ inline void to_node(BasicNodeType& n, typename BasicNodeType::boolean_type b) no
     external_node_constructor<BasicNodeType>::boolean_scalar(n, b);
 }
 
+/// @brief Constructs an integer node from a value which fits in the integer type of the node.
+/// @tparam BasicNodeType A basic_node template instance type.
+/// @tparam T An integer type.
+/// @param n A basic_node object.
+/// @param i An integer object.
+template <typename BasicNodeType, typename T>
+inline void integer_to_node(BasicNodeType& n, T i, std::false_type /*unused*/) noexcept {
+    external_node_constructor<BasicNodeType>::integer_scalar(n, static_cast<typename BasicNodeType::integer_type>(i));
+}
+
+/// @brief Constructs an integer node from an unsigned value which may exceed the range of the integer type of the node.
+/// @note A value beyond the range keeps its bit pattern and is flagged as unsigned so that as_uint() can recover it.
+/// @tparam BasicNodeType A basic_node template instance type.
+/// @tparam T An unsigned integer type.
+/// @param n A basic_node object.
+/// @param i An unsigned integer object.
+template <typename BasicNodeType, typename T>
+inline void integer_to_node(BasicNodeType& n, T i, std::true_type /*unused*/) noexcept {
+    using integer_type = typename BasicNodeType::integer_type;
+    if (i > static_cast<T>((std::numeric_limits<integer_type>::max)())) {
+        external_node_constructor<BasicNodeType>::unsigned_integer_scalar(n, static_cast<integer_type>(i));
+    }
+    else {
+        external_node_constructor<BasicNodeType>::integer_scalar(n, static_cast<integer_type>(i));
+    }
+}
+
 /// @brief to_node function for integers.
 /// @tparam BasicNodeType A basic_node template instance type.
 /// @tparam T An integer type.
@@ -5764,7 +6430,12 @@ template <
     typename BasicNodeType, typename T,
     enable_if_t<conjunction<is_basic_node<BasicNodeType>, is_non_bool_integral<T>>::value, int> = 0>
 inline void to_node(BasicNodeType& n, T i) noexcept {
-    external_node_constructor<BasicNodeType>::integer_scalar(n, i);
+    using integer_type = typename BasicNodeType::integer_type;
+    // Only an unsigned integer as wide as the signed integer type can exceed its range.
+    using may_exceed_integer_type = std::integral_constant<
+        bool,
+        std::is_unsigned<T>::value && std::is_signed<integer_type>::value && sizeof(T) >= sizeof(integer_type)>;
+    integer_to_node(n, i, may_exceed_integer_type {});
 }
 
 /// @brief to_node function for floating point numbers.
@@ -5837,7 +6508,7 @@ FK_YAML_NAMESPACE_END
 // #include <fkYAML/detail/encodings/yaml_escaper.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -6191,7 +6862,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/scalar_scanner.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -6206,6 +6877,8 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/macros/define_macros.hpp>
 
 // #include <fkYAML/detail/assert.hpp>
+
+// #include <fkYAML/detail/char_class.hpp>
 
 // #include <fkYAML/node_type.hpp>
 
@@ -6500,24 +7173,6 @@ private:
         }
         return node_type::STRING;
     }
-
-    /// @brief Check if the given character is a digit.
-    /// @note This function is needed to avoid assertion failures in `std::isdigit()` especially when compiled with
-    /// MSVC.
-    /// @param c A character to be checked.
-    /// @return true if the given character is a digit, false otherwise.
-    static bool is_digit(char c) {
-        return ('0' <= c && c <= '9');
-    }
-
-    /// @brief Check if the given character is a hex-digit.
-    /// @note This function is needed to avoid assertion failures in `std::isxdigit()` especially when compiled with
-    /// MSVC.
-    /// @param c A character to be checked.
-    /// @return true if the given character is a hex-digit, false otherwise.
-    static bool is_xdigit(char c) {
-        return (('0' <= c && c <= '9') || ('A' <= c && c <= 'F') || ('a' <= c && c <= 'f'));
-    }
 };
 
 FK_YAML_DETAIL_NAMESPACE_END
@@ -6527,7 +7182,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/tag_t.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -6837,6 +7492,9 @@ private:
             }
 
             if (!has_newline_at_end) {
+                if (line.find_first_not_of(" \t") == str_view::npos) {
+                    m_buffer.push_back('\n');
+                }
                 break;
             }
 
@@ -6861,11 +7519,18 @@ private:
         m_use_owned_buffer = true;
         m_buffer.reserve(token.size());
 
-        constexpr str_view white_space_filter {" \t"};
+        constexpr str_view space_filter {" "};
+
+        enum class folding_state_t : std::uint8_t {
+            FOLDABLE,
+            EMPTY_AFTER_FOLDABLE,
+            EMPTY_AFTER_OTHER,
+            OTHER,
+        };
 
         std::size_t cur_line_begin_pos = 0;
         bool has_newline_at_end = true;
-        bool can_be_folded = false;
+        folding_state_t folding_state {folding_state_t::OTHER};
         do {
             std::size_t cur_line_end_pos = token.find('\n', cur_line_begin_pos);
             if (cur_line_end_pos == str_view::npos) {
@@ -6873,14 +7538,16 @@ private:
                 cur_line_end_pos = token.size();
             }
 
-            const std::size_t line_size = cur_line_end_pos - cur_line_begin_pos;
-            const str_view line = token.substr(cur_line_begin_pos, line_size);
-            const bool is_empty = line.find_first_not_of(white_space_filter) == str_view::npos;
+            const str_view line = token.substr(cur_line_begin_pos, cur_line_end_pos - cur_line_begin_pos);
+            const std::size_t non_space_pos = line.find_first_not_of(space_filter);
+            const bool is_empty = non_space_pos == str_view::npos;
+            const bool is_more_indented =
+                !is_empty &&
+                (non_space_pos > header.indent || (non_space_pos == header.indent && line[non_space_pos] == '\t'));
 
             if (line.size() <= header.indent) {
                 // A less-indented line is turned into a newline.
                 m_buffer.push_back('\n');
-                can_be_folded = false;
             }
             else if (is_empty) {
                 // more-indented empty lines are not folded.
@@ -6889,10 +7556,7 @@ private:
                 m_buffer.push_back('\n');
             }
             else {
-                const std::size_t non_space_pos = line.find_first_not_of(white_space_filter);
-                const bool is_more_indented = (non_space_pos != str_view::npos) && (non_space_pos > header.indent);
-
-                if (can_be_folded) {
+                if (folding_state == folding_state_t::FOLDABLE) {
                     if (is_more_indented) {
                         // The content line right before more-indented lines is not folded.
                         m_buffer.push_back('\n');
@@ -6900,8 +7564,18 @@ private:
                     else {
                         m_buffer.push_back(' ');
                     }
-
-                    can_be_folded = false;
+                }
+                else if (
+                    is_more_indented && folding_state == folding_state_t::EMPTY_AFTER_FOLDABLE && has_newline_at_end) {
+                    // Preserve the line break after an empty line before a more-indented line.
+                    // ```yaml
+                    // >
+                    //   foo
+                    //
+                    //    bar
+                    // ```
+                    // is parsed as "foo\n\n bar\n".
+                    m_buffer.push_back('\n');
                 }
 
                 m_buffer.append(line.begin() + header.indent, line.end());
@@ -6910,9 +7584,19 @@ private:
                     // more-indented lines are not folded.
                     m_buffer.push_back('\n');
                 }
-                else {
-                    can_be_folded = true;
-                }
+            }
+
+            if (is_empty && folding_state == folding_state_t::FOLDABLE) {
+                folding_state = folding_state_t::EMPTY_AFTER_FOLDABLE;
+            }
+            else if (is_empty) {
+                folding_state = folding_state_t::EMPTY_AFTER_OTHER;
+            }
+            else if (!has_newline_at_end || is_more_indented) {
+                folding_state = folding_state_t::OTHER;
+            }
+            else {
+                folding_state = folding_state_t::FOLDABLE;
             }
 
             if (!has_newline_at_end) {
@@ -6922,7 +7606,7 @@ private:
             cur_line_begin_pos = cur_line_end_pos + 1;
         } while (cur_line_begin_pos < token.size());
 
-        if (has_newline_at_end && can_be_folded) {
+        if (has_newline_at_end && folding_state == folding_state_t::FOLDABLE) {
             // The final content line break are not folded.
             m_buffer.push_back('\n');
         }
@@ -6982,11 +7666,8 @@ private:
     /// @param newline_pos Position of the target newline code.
     void process_line_folding(str_view& token, std::size_t newline_pos) noexcept {
         // discard trailing white spaces which precedes the line break in the current line.
-        const std::size_t last_non_space_pos = token.substr(0, newline_pos + 1).find_last_not_of(" \t");
-        if (last_non_space_pos == str_view::npos) {
-            m_buffer.append(token.begin(), newline_pos);
-        }
-        else {
+        const std::size_t last_non_space_pos = token.substr(0, newline_pos).find_last_not_of(" \t");
+        if (last_non_space_pos != str_view::npos) {
             m_buffer.append(token.begin(), last_non_space_pos + 1);
         }
         token.remove_prefix(newline_pos + 1); // move next to the LF
@@ -7152,7 +7833,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/tag_resolver.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -7347,7 +8028,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/meta/input_adapter_traits.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -7411,7 +8092,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/node_property.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -7478,14 +8159,19 @@ class basic_deserializer {
         FLOW_SEQUENCE_KEY,            //!< The underlying node is a flow sequence as a key.
         FLOW_MAPPING,                 //!< The underlying node is a flow mapping.
         FLOW_MAPPING_KEY,             //!< The underlying node is a flow mapping as a key.
+        FLOW_MAPPING_EXPLICIT_KEY,    //!< The underlying node is an explicit key in a flow collection.
     };
 
     /// @brief Context information set for parsing.
+    /// @note
+    /// A context either borrows a node which the result tree already owns, or owns a node of its own until that
+    /// node is grafted into the tree. Ownership is held by the owned_node member rather than derived from the
+    /// state member, which the parsing code rewrites while a node is still owned.
     struct parse_context {
         /// @brief Construct a new parse_context object.
         parse_context() = default;
 
-        /// @brief Construct a new parse_context object with non-default values for each parameter.
+        /// @brief Construct a new parse_context object which borrows a node owned by the result tree.
         /// @param line The current line. (count from zero)
         /// @param indent The indentation width in the current line. (count from zero)
         /// @param state The parse context type.
@@ -7494,26 +8180,35 @@ class basic_deserializer {
             : line(line),
               indent(indent),
               state(state),
-              p_node(p_node) {
+              p_node(p_node),
+              is_explicit_key(
+                  state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY ||
+                  state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
         }
 
-        parse_context(const parse_context&) noexcept = default;
-        parse_context& operator=(const parse_context&) noexcept = default;
+        /// @brief Construct a new parse_context object which owns its node.
+        /// @param line The current line. (count from zero)
+        /// @param indent The indentation width in the current line. (count from zero)
+        /// @param state The parse context type.
+        /// @param node The node owned by this context.
+        parse_context(
+            uint32_t line, uint32_t indent, context_state_t state, std::unique_ptr<basic_node_type> node) noexcept
+            : line(line),
+              indent(indent),
+              state(state),
+              p_node(node.get()),
+              owned_node(std::move(node)),
+              is_explicit_key(
+                  state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY ||
+                  state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
+        }
+
+        // Parse contexts are move-only so that the ownership of an owned node cannot be duplicated.
+        parse_context(const parse_context&) = delete;
+        parse_context& operator=(const parse_context&) = delete;
         parse_context(parse_context&&) noexcept = default;
         parse_context& operator=(parse_context&&) noexcept = default;
-
-        ~parse_context() {
-            switch (state) {
-            case context_state_t::BLOCK_MAPPING_EXPLICIT_KEY:
-            case context_state_t::FLOW_SEQUENCE_KEY:
-            case context_state_t::FLOW_MAPPING_KEY:
-                delete p_node;
-                p_node = nullptr;
-                break;
-            default:
-                break;
-            }
-        }
+        ~parse_context() = default;
 
         /// The current line. (count from zero)
         uint32_t line {0};
@@ -7523,6 +8218,10 @@ class basic_deserializer {
         context_state_t state {context_state_t::BLOCK_MAPPING};
         /// The pointer to the associated node to this context.
         basic_node_type* p_node {nullptr};
+        /// The node owned by this context, if any. Empty if p_node is owned by the result tree.
+        std::unique_ptr<basic_node_type> owned_node {};
+        /// Whether this context originated as an explicit mapping key.
+        bool is_explicit_key {false};
     };
 
     /// @brief Definitions of state types for expected flow token hints.
@@ -7565,9 +8264,31 @@ public:
 
         std::vector<basic_node_type> nodes {};
         lexical_token_t type {lexical_token_t::END_OF_BUFFER};
+        bool begun_by_marker = false;
 
         do {
-            nodes.emplace_back(deserialize_document(lexer, type));
+            basic_node_type doc = deserialize_document(lexer, type);
+            if (m_has_document || begun_by_marker) {
+                nodes.emplace_back(std::move(doc));
+            }
+            // A "---" which ends a document begins the next one, even if that one is empty.
+            begun_by_marker = (type == lexical_token_t::END_OF_DIRECTIVES);
+            // Break the loop if the last end-of-document marker is followed by the end-of-buffer token,
+            // which indicates that there are no more documents to parse.
+            // ```yaml
+            // foo: bar
+            // ... # the last end-of-document marker
+            // # no more documents after this line
+            // ```
+            if (type == lexical_token_t::END_OF_DOCUMENT) {
+                // A next document may start from the directive part. Ensure '%' is lexed as a directive token
+                // during the lookahead; otherwise it can be cached as a plain scalar and break parsing.
+                lexer.set_document_state(true);
+                const lexical_token_t next_type = lexer.peek_next_token().type;
+                if (next_type == lexical_token_t::END_OF_BUFFER) {
+                    break;
+                }
+            }
         } while (type != lexical_token_t::END_OF_BUFFER);
 
         return nodes;
@@ -7581,9 +8302,15 @@ private:
     basic_node_type deserialize_document(lexer_type& lexer, lexical_token_t& last_type) {
         lexical_token token {};
 
+        m_has_document = false;
+        m_expects_root_flow_key_separator = false;
+        m_has_explicit_document_start = last_type == lexical_token_t::END_OF_DIRECTIVES;
+
         basic_node_type root;
         mp_current_node = &root;
-        mp_meta = root.mp_meta;
+        // One metainfo object is created per document and shared by all of its nodes.
+        mp_meta = std::make_shared<doc_metainfo_type>();
+        root.mp_meta = mp_meta;
 
         // parse directives first.
         deserialize_directives(lexer, token);
@@ -7593,25 +8320,45 @@ private:
         uint32_t indent = lexer.get_last_token_begin_pos();
         const bool found_props = deserialize_node_properties(lexer, token, line, indent);
 
+        // A stream which only holds comments, white spaces or a bare "..." contains no document. Node
+        // properties on their own, however, do make up one: they belong to an empty scalar.
+        // ```yaml
+        // !
+        // # -> one document holding an empty scalar tagged with the non-specific tag
+        // ```
+        const bool has_contents =
+            token.type != lexical_token_t::END_OF_BUFFER && token.type != lexical_token_t::END_OF_DOCUMENT;
+        if (has_contents || found_props) {
+            m_has_document = true;
+        }
+
         switch (token.type) {
         case lexical_token_t::SEQUENCE_BLOCK_PREFIX: {
+            if FK_YAML_UNLIKELY (
+                m_has_explicit_document_start && m_explicit_document_start_line == lexer.get_lines_processed()) {
+                throw parse_error("A block sequence entry cannot be on the document start line.", line, indent);
+            }
+            if FK_YAML_UNLIKELY (found_props && line == lexer.get_lines_processed()) {
+                throw parse_error(
+                    "Node properties cannot precede a block sequence entry on the same line.", line, indent);
+            }
+            check_tab_in_indentation(lexer, lexer.get_lines_processed(), lexer.get_last_token_begin_pos());
             root = basic_node_type::sequence({basic_node_type()});
             apply_directive_set(root);
             if (found_props) {
                 // If node properties are found before the block sequence entry prefix, the properties belong to the
                 // root sequence node.
+                apply_deferred_properties(root);
                 apply_node_properties(root);
             }
 
-            parse_context context(
-                lexer.get_lines_processed(), lexer.get_last_token_begin_pos(), context_state_t::BLOCK_SEQUENCE, &root);
-            m_context_stack.emplace_back(context);
+            const uint32_t seq_line = lexer.get_lines_processed();
+            const uint32_t seq_indent = lexer.get_last_token_begin_pos();
+            m_context_stack.emplace_back(seq_line, seq_indent, context_state_t::BLOCK_SEQUENCE, &root);
 
             mp_current_node = &(root.as_seq().back());
             apply_directive_set(*mp_current_node);
-            context.state = context_state_t::BLOCK_SEQUENCE_ENTRY;
-            context.p_node = mp_current_node;
-            m_context_stack.emplace_back(std::move(context));
+            m_context_stack.emplace_back(seq_line, seq_indent, context_state_t::BLOCK_SEQUENCE_ENTRY, mp_current_node);
 
             token = lexer.get_next_token();
             line = lexer.get_lines_processed();
@@ -7623,6 +8370,7 @@ private:
             lexer.set_context_state(true);
             root = basic_node_type::sequence();
             apply_directive_set(root);
+            apply_deferred_properties(root);
             apply_node_properties(root);
             m_context_stack.emplace_back(
                 lexer.get_lines_processed(), lexer.get_last_token_begin_pos(), context_state_t::FLOW_SEQUENCE, &root);
@@ -7635,6 +8383,7 @@ private:
             lexer.set_context_state(true);
             root = basic_node_type::mapping();
             apply_directive_set(root);
+            apply_deferred_properties(root);
             apply_node_properties(root);
             m_context_stack.emplace_back(
                 lexer.get_lines_processed(), lexer.get_last_token_begin_pos(), context_state_t::FLOW_MAPPING, &root);
@@ -7648,6 +8397,7 @@ private:
             // No get_next_token() call here to handle the token event in the deserialize_node() function.
             root = basic_node_type::mapping();
             apply_directive_set(root);
+            apply_deferred_properties(root);
             apply_node_properties(root);
             parse_context context(
                 lexer.get_lines_processed(), lexer.get_last_token_begin_pos(), context_state_t::BLOCK_MAPPING, &root);
@@ -7659,13 +8409,10 @@ private:
         case lexical_token_t::KEY_SEPARATOR:
             root = basic_node_type::mapping();
             apply_directive_set(root);
-            apply_node_properties(root);
-            m_context_stack.emplace_back(
-                lexer.get_lines_processed(), lexer.get_last_token_begin_pos(), context_state_t::BLOCK_MAPPING, &root);
-            add_new_key(basic_node_type(""), line, indent);
-            token = lexer.get_next_token();
-            line = lexer.get_lines_processed();
-            indent = lexer.get_last_token_begin_pos();
+            apply_deferred_properties(root);
+            // apply_node_properties(root);
+            m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, &root);
+            add_empty_key_entry(lexer, token, line, indent);
             break;
         case lexical_token_t::BLOCK_LITERAL_SCALAR:
         case lexical_token_t::BLOCK_FOLDED_SCALAR:
@@ -7676,23 +8423,14 @@ private:
         case lexical_token_t::SINGLE_QUOTED_SCALAR:
         case lexical_token_t::DOUBLE_QUOTED_SCALAR:
         case lexical_token_t::ALIAS_PREFIX:
+        case lexical_token_t::ANCHOR_PREFIX:
+        case lexical_token_t::TAG_PREFIX:
             // Defer handling the above token events until the next call on the deserialize_scalar() function since the
             // meaning depends on subsequent events.
             if (found_props && line < lexer.get_lines_processed()) {
-                // If node properties and a followed node are on the different line, the properties belong to the root
-                // node.
-                if (m_needs_anchor_impl) {
-                    m_root_anchor_name = m_anchor_name;
-                    m_needs_anchor_impl = false;
-                    m_anchor_name = {};
-                }
-
-                if (m_needs_tag_impl) {
-                    m_root_tag_name = m_tag_name;
-                    m_needs_tag_impl = false;
-                    m_tag_name = {};
-                }
-
+                // If node properties and a followed node are on different lines, defer the properties until the root
+                // node type is known.
+                defer_node_properties();
                 line = lexer.get_lines_processed();
                 indent = lexer.get_last_token_begin_pos();
             }
@@ -7708,12 +8446,43 @@ private:
             last_type == lexical_token_t::END_OF_BUFFER || last_type == lexical_token_t::END_OF_DIRECTIVES ||
             last_type == lexical_token_t::END_OF_DOCUMENT);
 
+        if (m_needs_tag_impl) {
+            const tag_t tag_type = resolve_scalar_tag(line, indent);
+            materialize_tagged_empty_node(*mp_current_node, tag_type, line, indent);
+        }
+        if (m_defers_tag) {
+            const tag_t tag_type = tag_resolver_type::resolve_tag(m_deferred_tag_name, mp_meta);
+            ensure_scalar_tag(tag_type, line, indent);
+            materialize_tagged_empty_node(*mp_current_node, tag_type, line, indent);
+        }
+        // The current node may be an empty node which never received the document metainfo. An anchor
+        // name must be registered in the shared metainfo, or aliases cannot resolve it.
+        apply_directive_set(*mp_current_node);
+        apply_node_properties(*mp_current_node);
+        apply_deferred_properties(*mp_current_node);
+
+        // An explicit key at the end of a document has no value either. Its own contents may have left
+        // more contexts on the stack, so those are unwound first.
+        // ```yaml
+        // ? foo
+        // ? bar: baz
+        // # -> {foo: null, {bar: baz}: null}
+        // ```
+        while (!m_context_stack.empty()) {
+            if (m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+                add_explicit_key_with_null_value();
+                continue;
+            }
+            m_context_stack.pop_back();
+        }
+
         // reset parameters for the next call.
         mp_current_node = nullptr;
         mp_meta.reset();
         m_needs_tag_impl = false;
         m_needs_anchor_impl = false;
         m_flow_context_depth = 0;
+        m_flow_base_indent = -1;
         m_flow_token_state = flow_token_state_t::NEEDS_VALUE_OR_SUFFIX;
         m_context_stack.clear();
 
@@ -7794,7 +8563,24 @@ private:
                 // TODO: should output a warning log. Currently just ignore this case.
                 break;
             case lexical_token_t::END_OF_DIRECTIVES:
+                if (m_has_document) {
+                    // A "---" which follows another one ends the document that one began and begins the
+                    // next, even though the document it ends holds no node at all.
+                    // ```yaml
+                    // ---
+                    // ---
+                    // # -> two documents, both empty
+                    // ```
+                    m_explicit_document_start_line = lexer.get_lines_processed();
+                    last_token = token;
+                    lexer.set_document_state(false);
+                    return;
+                }
+
                 lacks_end_of_directives_marker = false;
+                m_has_document = true;
+                m_has_explicit_document_start = true;
+                m_explicit_document_start_line = lexer.get_lines_processed();
                 break;
             default:
                 if FK_YAML_UNLIKELY (lacks_end_of_directives_marker) {
@@ -7823,8 +8609,52 @@ private:
         uint32_t indent = first_indent;
 
         do {
+            if (m_flow_base_indent >= 0) {
+                // The contents of a flow context nested in a block context must be more indented than the block
+                // context it belongs to.
+                // ```yaml
+                // foo: [bar,
+                // baz]
+                // # ^ this line is not indented enough.
+                // ```
+                const auto token_indent = static_cast<int32_t>(lexer.get_last_token_begin_pos());
+                if FK_YAML_UNLIKELY (token_indent <= m_flow_base_indent) {
+                    throw parse_error(
+                        "Contents of a flow context must be more indented than its parent block context.",
+                        lexer.get_lines_processed(),
+                        lexer.get_last_token_begin_pos());
+                }
+            }
+
             switch (token.type) {
             case lexical_token_t::EXPLICIT_KEY_PREFIX: {
+                if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                    throw parse_error("An explicit key is not allowed in this context.", line, indent);
+                }
+
+                if (m_flow_context_depth > 0) {
+                    if FK_YAML_UNLIKELY (m_flow_token_state == flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX) {
+                        throw parse_error("An explicit key is found without separated with a comma.", line, indent);
+                    }
+
+                    token = lexer.get_next_token();
+                    m_context_stack.emplace_back(
+                        line,
+                        indent,
+                        context_state_t::FLOW_MAPPING_EXPLICIT_KEY,
+                        std::unique_ptr<basic_node_type>(new basic_node_type()));
+                    mp_current_node = m_context_stack.back().p_node;
+                    apply_directive_set(*mp_current_node);
+                    indent = lexer.get_last_token_begin_pos();
+                    line = lexer.get_lines_processed();
+                    continue;
+                }
+
+                if (indent == m_context_stack.back().indent) {
+                    // The preceding explicit key, if any, has no value at this point.
+                    add_explicit_key_with_null_value();
+                }
+
                 const bool needs_to_move_back = indent == 0 || indent < m_context_stack.back().indent;
                 if (needs_to_move_back) {
                     pop_to_parent_node(line, indent, [indent](const parse_context& c) {
@@ -7856,31 +8686,34 @@ private:
 
                 token = lexer.get_next_token();
                 if (token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX) {
-                    // heap-allocated node will be freed in handling the corresponding KEY_SEPARATOR event
-                    auto* p_node = new basic_node_type(node_type::SEQUENCE);
-                    m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING_EXPLICIT_KEY, p_node);
+                    check_tab_in_indentation(lexer, lexer.get_lines_processed(), lexer.get_last_token_begin_pos());
+
+                    // The key node is owned by its context until the corresponding KEY_SEPARATOR event.
+                    std::unique_ptr<basic_node_type> key_node(new basic_node_type(node_type::SEQUENCE));
+                    basic_node_type* p_node = key_node.get();
+                    m_context_stack.emplace_back(
+                        line, indent, context_state_t::BLOCK_MAPPING_EXPLICIT_KEY, std::move(key_node));
 
                     apply_directive_set(*p_node);
-                    parse_context context(
-                        lexer.get_lines_processed(),
-                        lexer.get_last_token_begin_pos(),
-                        context_state_t::BLOCK_SEQUENCE,
-                        p_node);
-                    m_context_stack.emplace_back(context);
+                    const uint32_t seq_line = lexer.get_lines_processed();
+                    const uint32_t seq_indent = lexer.get_last_token_begin_pos();
+                    m_context_stack.emplace_back(seq_line, seq_indent, context_state_t::BLOCK_SEQUENCE, p_node);
 
                     p_node->as_seq().emplace_back(basic_node_type());
                     mp_current_node = &(p_node->as_seq().back());
                     apply_directive_set(*mp_current_node);
-                    context.state = context_state_t::BLOCK_SEQUENCE_ENTRY;
-                    context.p_node = mp_current_node;
-                    m_context_stack.emplace_back(std::move(context));
+                    m_context_stack.emplace_back(
+                        seq_line, seq_indent, context_state_t::BLOCK_SEQUENCE_ENTRY, mp_current_node);
 
                     break;
                 }
 
-                // heap-allocated node will be freed in handling the corresponding KEY_SEPARATOR event
+                // The key node is owned by its context until the corresponding KEY_SEPARATOR event.
                 m_context_stack.emplace_back(
-                    line, indent, context_state_t::BLOCK_MAPPING_EXPLICIT_KEY, new basic_node_type());
+                    line,
+                    indent,
+                    context_state_t::BLOCK_MAPPING_EXPLICIT_KEY,
+                    std::unique_ptr<basic_node_type>(new basic_node_type()));
                 mp_current_node = m_context_stack.back().p_node;
                 apply_directive_set(*mp_current_node);
                 indent = lexer.get_last_token_begin_pos();
@@ -7889,15 +8722,103 @@ private:
                 continue;
             }
             case lexical_token_t::KEY_SEPARATOR: {
-                if FK_YAML_UNLIKELY (m_context_stack.back().state == context_state_t::BLOCK_SEQUENCE_ENTRY) {
-                    // empty mapping keys are not supported.
+                if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                    throw parse_error("A key separator is not allowed in this context.", line, indent);
+                }
+                if (m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
+                    add_explicit_flow_key(line, indent);
+                    break;
+                }
+                {
+                    // A key separator after node properties on a line of their own begins an entry whose empty key
+                    // the properties are for.
+                    const parse_context& last_context = m_context_stack.back();
+                    const bool begins_entry_with_empty_key =
+                        m_flow_context_depth == 0 && (m_needs_tag_impl || m_needs_anchor_impl) &&
+                        last_context.line < line &&
+                        (last_context.state == context_state_t::BLOCK_MAPPING ||
+                         last_context.state == context_state_t::MAPPING_VALUE ||
+                         last_context.state == context_state_t::BLOCK_SEQUENCE_ENTRY) &&
+                        !has_explicit_key_context_at(indent);
+                    if (begins_entry_with_empty_key && indent <= last_context.indent) {
+                        // ```yaml
+                        // foo: 1
+                        // &anchor : bar
+                        // # -> {foo: 1, &anchor null: bar}
+                        // ```
+                        pop_to_parent_node(line, indent, [indent](const parse_context& c) {
+                            return c.state == context_state_t::BLOCK_MAPPING && indent == c.indent;
+                        });
+                        add_empty_key_entry(lexer, token, line, indent);
+                        continue;
+                    }
+                    if (begins_entry_with_empty_key && last_context.state == context_state_t::MAPPING_VALUE) {
+                        // The mapping value is a mapping whose first key is empty.
+                        // ```yaml
+                        // foo:
+                        //   &anchor : bar
+                        // # -> {foo: {&anchor null: bar}}
+                        // ```
+                        *mp_current_node = basic_node_type::mapping();
+                        apply_directive_set(*mp_current_node);
+                        apply_deferred_properties(*mp_current_node);
+                        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                        add_empty_key_entry(lexer, token, line, indent);
+                        continue;
+                    }
+                }
+
+                if (m_context_stack.back().state == context_state_t::BLOCK_SEQUENCE_ENTRY) {
+                    // The entry is a mapping whose first key is empty.
                     // ```yaml
                     // - : foo
+                    // # -> [{null: foo}]
                     // ```
-                    throw parse_error("mapping key should not be empty.", line, indent);
+                    *mp_current_node = basic_node_type::mapping();
+                    apply_directive_set(*mp_current_node);
+                    m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                    add_empty_key_entry(lexer, token, line, indent);
+                    continue;
+                }
+
+                if (m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_VALUE) {
+                    *mp_current_node = basic_node_type::mapping();
+                    apply_directive_set(*mp_current_node);
+                    m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                    add_empty_key_entry(lexer, token, line, indent);
+                    continue;
+                }
+
+                {
+                    const parse_context& cur_context = m_context_stack.back();
+                    const bool is_explicit_key_content =
+                        cur_context.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && cur_context.line == line;
+                    if (is_explicit_key_content) {
+                        // The contents of an explicit key begin with a key separator, so the key is a mapping
+                        // whose first entry has an empty key. Whether that entry has a value, and whether the
+                        // explicit key itself has one, is not known yet.
+                        // ```yaml
+                        // ? : foo
+                        // #  ^ this key separator begins the contents of the explicit key
+                        // ```
+                        *mp_current_node = basic_node_type::mapping();
+                        apply_directive_set(*mp_current_node);
+                        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                        add_empty_key_entry(lexer, token, line, indent);
+                        continue;
+                    }
                 }
 
                 if (m_flow_context_depth > 0) {
+                    if (m_context_stack.back().state != context_state_t::MAPPING_VALUE) {
+                        // No key precedes this separator, so the entry has an empty key.
+                        // ```yaml
+                        // { : foo }
+                        // # -> {null: foo}
+                        // ```
+                        add_empty_key_entry(lexer, token, line, indent);
+                        continue;
+                    }
                     break;
                 }
 
@@ -7910,8 +8831,42 @@ private:
                 indent = lexer.get_last_token_begin_pos();
 
                 const bool found_props = deserialize_node_properties(lexer, token, line, indent);
-                if (found_props && line == lexer.get_lines_processed()) {
+                if (found_props && line == lexer.get_lines_processed() &&
+                    token.type != lexical_token_t::KEY_SEPARATOR) {
+                    settle_explicit_key_value_with_props(old_line, old_indent);
                     // defer applying node properties for the subsequent node on the same line.
+                    continue;
+                }
+                if (found_props && line > old_line && line == lexer.get_lines_processed()) {
+                    // The properties are followed by a key separator on their line (any other token is handled
+                    // above), so they are for the empty key of an entry which begins there, and the key separator
+                    // is handled at the position of the properties.
+                    // ```yaml
+                    // foo:
+                    // &anchor : bar
+                    // ```
+                    continue;
+                }
+
+                const bool has_explicit_key_context = has_explicit_key_context_at(old_indent);
+
+                if (found_props && line < lexer.get_lines_processed() && !has_explicit_key_context) {
+                    // The properties belong to whatever begins on the following line, which the token
+                    // after it decides.
+                    // ```yaml
+                    // foo: &anchor
+                    //   bar: baz   # the anchor is for the mapping, not for the "bar" key.
+                    // foo: &anchor
+                    // : bar        # the anchor is for the empty value of "foo", not for the empty key.
+                    // ```
+                    defer_node_properties();
+                }
+
+                if (found_props && has_explicit_key_context) {
+                    // The properties follow the separator of an explicit key, so they belong to its
+                    // value. They must not be deferred here, or they would overwrite the properties
+                    // of the key which are already deferred.
+                    settle_explicit_key_value_with_props(old_line, old_indent);
                     continue;
                 }
 
@@ -7922,46 +8877,42 @@ private:
                     (line == old_line) && (m_context_stack.empty() || old_indent > m_context_stack.back().indent);
                 if (is_implicit_same_line) {
                     // a key separator for an implicit key with its value on the same line.
+                    if FK_YAML_UNLIKELY (token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX) {
+                        // ```yaml
+                        // foo: - bar   # error: a block sequence cannot begin on the line of its mapping key.
+                        // ```
+                        throw parse_error("A block sequence cannot begin on the line of a mapping key.", line, indent);
+                    }
                     continue;
                 }
 
                 if (line > old_line) {
-                    if (m_needs_tag_impl) {
-                        const tag_t tag_type = tag_resolver_type::resolve_tag(m_tag_name, mp_meta);
-                        if (tag_type == tag_t::MAPPING || tag_type == tag_t::CUSTOM_TAG) {
-                            // set YAML node properties here to distinguish them from those for the first key node
-                            // as shown in the following snippet:
-                            //
-                            // ```yaml
-                            // foo: !!map
-                            //   !!str 123: true
-                            //   ^
-                            //   this !!str tag overwrites the preceding !!map tag.
-                            // ```
-                            *mp_current_node = basic_node_type::mapping();
-                            apply_directive_set(*mp_current_node);
-                            apply_node_properties(*mp_current_node);
-                            m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
-                            continue;
-                        }
+                    const bool is_explicit_value_begin =
+                        m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY &&
+                        (token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX ||
+                         indent > m_context_stack.back().indent);
+                    if (is_explicit_value_begin) {
+                        // The value of an explicit key can begin on a line after its key separator.
+                        // ```yaml
+                        // ? foo
+                        // :
+                        //   bar
+                        // # -> {foo: bar}
+                        // ```
+                        add_explicit_key_with_empty_value(old_line, old_indent);
                     }
 
                     if (token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX) {
-                        // a key separator preceding block sequence entries
-                        *mp_current_node = basic_node_type::sequence({basic_node_type()});
-                        apply_directive_set(*mp_current_node);
-                        apply_node_properties(*mp_current_node);
-                        auto& cur_context = m_context_stack.back();
-                        cur_context.line = line;
-                        cur_context.indent = indent;
-                        cur_context.state = context_state_t::BLOCK_SEQUENCE;
+                        if (m_context_stack.back().state == context_state_t::MAPPING_VALUE && defers_props() &&
+                            indent < m_context_stack.back().indent) {
+                            pop_to_parent_node(line, indent, [indent](const parse_context& c) {
+                                return c.state == context_state_t::BLOCK_SEQUENCE && indent == c.indent;
+                            });
+                            continue;
+                        }
 
-                        mp_current_node = &(mp_current_node->as_seq().back());
-                        apply_directive_set(*mp_current_node);
-                        parse_context entry_context = cur_context;
-                        entry_context.state = context_state_t::BLOCK_SEQUENCE_ENTRY;
-                        entry_context.p_node = mp_current_node;
-                        m_context_stack.emplace_back(std::move(entry_context));
+                        // a key separator preceding block sequence entries
+                        initialize_block_sequence_value(line, indent, true);
 
                         token = lexer.get_next_token();
                         line = lexer.get_lines_processed();
@@ -7991,26 +8942,104 @@ private:
                             m_context_stack.emplace_back(
                                 line_after_props, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
                             apply_directive_set(*mp_current_node);
+                            apply_deferred_properties(*mp_current_node);
                             apply_node_properties(*mp_current_node);
                         }
 
                         continue;
                     }
 
-                    if (indent <= m_context_stack.back().indent) {
-                        FK_YAML_ASSERT(m_context_stack.back().state == context_state_t::MAPPING_VALUE);
+                    // A key separator on a following line may be the value separator of an explicit
+                    // key whose contents were mapping entries, rather than a separator in the current
+                    // mapping:
+                    // ```yaml
+                    // ? foo: !!str # the tag belongs to this omitted value
+                    // : foo: !!str # this separator begins the explicit key's value
+                    // ```
+                    // Defer the properties of the omitted value and leave the separator to the next
+                    // iteration, which closes the explicit key and applies them.
+                    if (token.type == lexical_token_t::KEY_SEPARATOR) {
+                        const auto is_explicit_key_at_indent = [indent](const parse_context& c) {
+                            return c.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && indent == c.indent;
+                        };
+                        const bool closes_explicit_key =
+                            indent < m_context_stack.back().indent &&
+                            std::any_of(m_context_stack.rbegin(), m_context_stack.rend(), is_explicit_key_at_indent);
+                        if (closes_explicit_key) {
+                            defer_node_properties();
+                            continue;
+                        }
 
-                        // Mapping values can be omitted and are considered to be null.
+                        const bool begins_entry_with_empty_key =
+                            m_context_stack.back().state == context_state_t::MAPPING_VALUE &&
+                            !has_explicit_key_context_at(indent);
+                        if (begins_entry_with_empty_key) {
+                            // Nothing but properties, if any, is between this key separator and the one of the
+                            // preceding key, so the preceding value is omitted and this separator begins an entry
+                            // with an empty key. The deferred properties are for the omitted value.
+                            if (indent <= m_context_stack.back().indent) {
+                                // ```yaml
+                                // foo: &anchor
+                                // : bar
+                                // # -> {foo: &anchor null, null: bar}
+                                // ```
+                                pop_to_parent_node(line, indent, [indent](const parse_context& c) {
+                                    return c.state == context_state_t::BLOCK_MAPPING && indent == c.indent;
+                                });
+                            }
+                            else {
+                                // ```yaml
+                                // foo: &anchor
+                                //   : bar
+                                // # -> {foo: &anchor {null: bar}}
+                                // ```
+                                *mp_current_node = basic_node_type::mapping();
+                                apply_directive_set(*mp_current_node);
+                                apply_deferred_properties(*mp_current_node);
+                                m_context_stack.emplace_back(
+                                    line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                            }
+                            add_empty_key_entry(lexer, token, line, indent);
+                            continue;
+                        }
+                    }
+
+                    const bool is_omitted_mapping_value_without_properties =
+                        (token.type != lexical_token_t::KEY_SEPARATOR || !defers_props()) &&
+                        indent <= m_context_stack.back().indent;
+                    if (is_omitted_mapping_value_without_properties) {
+                        // An explicit key can omit its value as well, in which case the entry must still be
+                        // added to the parent mapping.
                         // ```yaml
-                        // foo:
-                        // bar:
-                        //   baz:
-                        // qux:
-                        // # -> {foo: null, bar: {baz: null}, qux: null}
+                        // ? foo
+                        // :
+                        // bar: baz
+                        // # -> {foo: null, bar: baz}
                         // ```
-                        pop_to_parent_node(line, indent, [indent](const parse_context& c) {
-                            return (c.state == context_state_t::BLOCK_MAPPING) && (indent == c.indent);
-                        });
+                        const bool is_entry_added = add_explicit_key_with_null_value();
+                        if (!is_entry_added) {
+                            if FK_YAML_UNLIKELY (m_context_stack.back().state != context_state_t::MAPPING_VALUE) {
+                                // The key separator does not follow a mapping key, for example:
+                                // ```yaml
+                                // ? foo
+                                // :
+                                // :
+                                // ```
+                                throw parse_error("A key separator is not allowed in this context.", line, indent);
+                            }
+
+                            // Mapping values can be omitted and are considered to be null.
+                            // ```yaml
+                            // foo:
+                            // bar:
+                            //   baz:
+                            // qux:
+                            // # -> {foo: null, bar: {baz: null}, qux: null}
+                            // ```
+                            pop_to_parent_node(line, indent, [indent](const parse_context& c) {
+                                return (c.state == context_state_t::BLOCK_MAPPING) && (indent == c.indent);
+                            });
+                        }
                     }
 
                     // defer checking the existence of a key separator after the following scalar until the next
@@ -8019,34 +9048,55 @@ private:
                 }
 
                 // handle explicit mapping key separators.
-                FK_YAML_ASSERT(m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY);
+                if (m_context_stack.back().state != context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+                    // The contents of the explicit key may have left their own contexts on the stack.
+                    // ```yaml
+                    // ? :
+                    // : v
+                    // # -> {{null: null}: v}
+                    // ```
+                    // old_indent is the position of this key separator, while indent already refers to the
+                    // token which follows it.
+                    const auto is_key_context = [old_indent](const parse_context& c) {
+                        return c.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && old_indent == c.indent;
+                    };
+                    const bool has_key_context =
+                        std::any_of(m_context_stack.rbegin(), m_context_stack.rend(), is_key_context);
+                    if FK_YAML_UNLIKELY (!has_key_context) {
+                        throw parse_error("Unexpected explicit mapping key separator is found.", line, indent);
+                    }
 
-                basic_node_type key_node = std::move(*m_context_stack.back().p_node);
-                m_context_stack.pop_back();
-                m_context_stack.back().p_node->as_map().emplace(key_node, basic_node_type());
-                mp_current_node = &(m_context_stack.back().p_node->operator[](std::move(key_node)));
-                m_context_stack.emplace_back(
-                    old_line, old_indent, context_state_t::BLOCK_MAPPING_EXPLICIT_VALUE, mp_current_node);
+                    pop_to_parent_node(old_line, old_indent, is_key_context);
+                }
+
+                add_explicit_key_with_empty_value(old_line, old_indent);
 
                 if (token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX) {
-                    *mp_current_node = basic_node_type::sequence({basic_node_type()});
-                    apply_directive_set(*mp_current_node);
-                    apply_node_properties(*mp_current_node);
-                    m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_SEQUENCE, mp_current_node);
-
-                    mp_current_node = &(mp_current_node->as_seq().back());
-                    parse_context entry_context = m_context_stack.back();
-                    entry_context.state = context_state_t::BLOCK_SEQUENCE_ENTRY;
-                    entry_context.p_node = mp_current_node;
-                    m_context_stack.emplace_back(std::move(entry_context));
+                    initialize_block_sequence_value(line, indent, false);
                     break;
                 }
 
                 continue;
             }
             case lexical_token_t::ANCHOR_PREFIX:
-            case lexical_token_t::TAG_PREFIX:
+            case lexical_token_t::TAG_PREFIX: {
+                const uint32_t props_line = lexer.get_lines_processed();
                 deserialize_node_properties(lexer, token, line, indent);
+
+                if (m_flow_context_depth == 0 && lexer.get_lines_processed() > props_line) {
+                    // The properties belong to whatever begins on the following line. Which node that
+                    // is depends on the token after it, so the binding waits until that is known.
+                    // In the flow context, line breaks do not change the node which properties belong to.
+                    // ```yaml
+                    // - !circle
+                    //   center: 1   # the tag is for the mapping, not for the "center" key.
+                    // ```
+                    defer_node_properties();
+                    line = lexer.get_lines_processed();
+                    indent = lexer.get_last_token_begin_pos();
+                    continue;
+                }
+
                 // Skip updating the current indent to avoid stacking a wrong indentation.
                 // Note that node properties for block sequences as a mapping value are processed when a
                 // `lexical_token_t::KEY_SEPARATOR` token is processed.
@@ -8057,8 +9107,26 @@ private:
                 // the correct indent width for the "bar" node key.
                 // ```
                 continue;
+            }
             case lexical_token_t::SEQUENCE_BLOCK_PREFIX: {
-                FK_YAML_ASSERT(!m_context_stack.empty());
+                check_tab_in_indentation(lexer, lexer.get_lines_processed(), lexer.get_last_token_begin_pos());
+                if FK_YAML_UNLIKELY (m_flow_context_depth > 0) {
+                    throw parse_error("A block sequence entry is not allowed in the flow context.", line, indent);
+                }
+
+                if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                    throw parse_error("invalid block sequence entry is found.", line, indent);
+                }
+
+                // A block sequence cannot begin on the line of its node properties.
+                // ```yaml
+                // foo: &anchor - bar   # error
+                // ```
+                if FK_YAML_UNLIKELY (m_needs_anchor_impl || m_needs_tag_impl) {
+                    throw parse_error(
+                        "Node properties cannot precede a block sequence entry on the same line.", line, indent);
+                }
+
                 const uint32_t parent_indent = m_context_stack.back().indent;
                 if (indent == parent_indent) {
                     // If the previous block sequence entry is empty, just move to the parent context.
@@ -8092,6 +9160,7 @@ private:
                     *mp_current_node = basic_node_type::sequence();
                     m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_SEQUENCE, mp_current_node);
                     apply_directive_set(*mp_current_node);
+                    apply_deferred_properties(*mp_current_node);
                     apply_node_properties(*mp_current_node);
                 }
 
@@ -8106,6 +9175,17 @@ private:
                 if (m_flow_context_depth == 0) {
                     lexer.set_context_state(true);
 
+                    if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                        if (!defers_props()) {
+                            throw parse_error("invalid flow sequence beginning is found.", line, indent);
+                        }
+                        *mp_current_node = basic_node_type::mapping();
+                        apply_directive_set(*mp_current_node);
+                        apply_deferred_properties(*mp_current_node);
+                        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                        m_expects_root_flow_key_separator = true;
+                    }
+
                     if (indent <= m_context_stack.back().indent) {
                         pop_to_parent_node(line, indent, [indent](const parse_context& c) {
                             switch (c.state) {
@@ -8117,6 +9197,8 @@ private:
                             }
                         });
                     }
+
+                    m_flow_base_indent = static_cast<int32_t>(current_context(line, indent).indent);
                 }
                 else if FK_YAML_UNLIKELY (m_flow_token_state == flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX) {
                     throw parse_error("Flow sequence beginning is found without separated with a comma.", line, indent);
@@ -8124,7 +9206,7 @@ private:
 
                 ++m_flow_context_depth;
 
-                switch (m_context_stack.back().state) {
+                switch (current_context(line, indent).state) {
                 case context_state_t::BLOCK_SEQUENCE:
                 case context_state_t::FLOW_SEQUENCE:
                     mp_current_node->as_seq().emplace_back(basic_node_type::sequence());
@@ -8133,9 +9215,12 @@ private:
                     break;
                 case context_state_t::BLOCK_MAPPING:
                 case context_state_t::FLOW_MAPPING:
-                    // heap-allocated node will be freed in handling the corresponding SEQUENCE_FLOW_END event.
+                    // The key node is owned by its context until the corresponding SEQUENCE_FLOW_END event.
                     m_context_stack.emplace_back(
-                        line, indent, context_state_t::FLOW_SEQUENCE_KEY, new basic_node_type(node_type::SEQUENCE));
+                        line,
+                        indent,
+                        context_state_t::FLOW_SEQUENCE_KEY,
+                        std::unique_ptr<basic_node_type>(new basic_node_type(node_type::SEQUENCE)));
                     mp_current_node = m_context_stack.back().p_node;
                     break;
                 default: {
@@ -8149,6 +9234,7 @@ private:
                 }
 
                 apply_directive_set(*mp_current_node);
+                apply_deferred_properties(*mp_current_node);
                 apply_node_properties(*mp_current_node);
 
                 m_flow_token_state = flow_token_state_t::NEEDS_VALUE_OR_SUFFIX;
@@ -8158,42 +9244,73 @@ private:
                     throw parse_error("Flow sequence ending is found outside the flow context.", line, indent);
                 }
 
-                if (--m_flow_context_depth == 0) {
-                    lexer.set_context_state(false);
+                const bool is_flow_explicit_key =
+                    !m_context_stack.empty() &&
+                    m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY;
+                if (is_flow_explicit_key) {
+                    add_explicit_flow_key(line, indent);
                 }
 
-                // find the corresponding flow sequence beginning.
-                auto itr = std::find_if( // LCOV_EXCL_LINE
-                    m_context_stack.rbegin(),
-                    m_context_stack.rend(),
-                    [](const parse_context& c) {
-                        switch (c.state) {
-                        case context_state_t::FLOW_SEQUENCE_KEY:
-                        case context_state_t::FLOW_SEQUENCE:
-                            return true;
-                        default:
-                            return false;
-                        }
-                    });
+                if (--m_flow_context_depth == 0) {
+                    lexer.set_context_state(false);
+                    m_flow_base_indent = -1;
+                }
 
-                const bool is_valid = itr != m_context_stack.rend();
-                if FK_YAML_UNLIKELY (!is_valid) {
+                close_empty_flow_sequence_entry(line, indent);
+                close_omitted_mapping_value(line, indent);
+                close_single_pair_mapping(line, indent);
+
+                const bool has_valid_beginning =
+                    !m_context_stack.empty() && (m_context_stack.back().state == context_state_t::FLOW_SEQUENCE ||
+                                                 m_context_stack.back().state == context_state_t::FLOW_SEQUENCE_KEY);
+                if FK_YAML_UNLIKELY (!has_valid_beginning) {
                     throw parse_error("No corresponding flow sequence beginning is found.", line, indent);
                 }
 
                 // keep the last state for later processing.
                 parse_context& last_context = m_context_stack.back();
                 mp_current_node = last_context.p_node;
-                last_context.p_node = nullptr;
-                indent = last_context.indent;
-                const context_state_t state = last_context.state;
+                const uint32_t collection_begin_line = last_context.line;
+                const uint32_t collection_begin_indent = last_context.indent;
+                indent = collection_begin_indent;
+                const bool is_multiline_collection = collection_begin_line != lexer.get_lines_processed();
+                const bool is_explicit_key = last_context.is_explicit_key;
+                // The node stays alive until its value is either moved into the tree below or dropped here.
+                std::unique_ptr<basic_node_type> owned_node = std::move(last_context.owned_node);
                 m_context_stack.pop_back();
 
-                // handle cases where the flow sequence is a mapping key node.
+                // handle cases where the flow sequence is a mapping key node. A context owns its node only
+                // while that node is a key which has not been added to its parent mapping yet.
 
-                if (!m_context_stack.empty() && state == context_state_t::FLOW_SEQUENCE_KEY) {
-                    basic_node_type key_node = std::move(*mp_current_node);
-                    delete mp_current_node;
+                if (!m_context_stack.empty() && owned_node != nullptr) {
+                    if (is_explicit_key) {
+                        restore_explicit_flow_collection_key(
+                            lexer,
+                            std::move(owned_node),
+                            collection_begin_line,
+                            collection_begin_indent,
+                            is_multiline_collection,
+                            token,
+                            line,
+                            indent);
+                        continue;
+                    }
+                    if FK_YAML_UNLIKELY (is_multiline_collection) {
+                        throw parse_error(
+                            "An implicit mapping key cannot span multiple lines.",
+                            lexer.get_lines_processed(),
+                            lexer.get_last_token_begin_pos());
+                    }
+                    if (m_expects_root_flow_key_separator) {
+                        const lexical_token_t next_type = lexer.peek_next_token().type;
+                        if FK_YAML_UNLIKELY (next_type != lexical_token_t::KEY_SEPARATOR) {
+                            throw parse_error(
+                                "A flow collection key must be followed by a key separator.", line, indent);
+                        }
+                        m_expects_root_flow_key_separator = false;
+                    }
+                    basic_node_type key_node = std::move(*owned_node);
+                    owned_node.reset();
                     mp_current_node = m_context_stack.back().p_node;
                     m_flow_token_state = flow_token_state_t::NEEDS_VALUE_OR_SUFFIX;
 
@@ -8203,6 +9320,12 @@ private:
 
                 token = lexer.get_next_token();
                 if (token.type == lexical_token_t::KEY_SEPARATOR) {
+                    if FK_YAML_UNLIKELY (is_multiline_collection) {
+                        throw parse_error(
+                            "An implicit mapping key cannot span multiple lines.",
+                            lexer.get_lines_processed(),
+                            lexer.get_last_token_begin_pos());
+                    }
                     basic_node_type key_node = basic_node_type::mapping();
                     apply_directive_set(key_node);
                     mp_current_node->swap(key_node);
@@ -8229,6 +9352,17 @@ private:
                 if (m_flow_context_depth == 0) {
                     lexer.set_context_state(true);
 
+                    if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                        if (!defers_props()) {
+                            throw parse_error("invalid flow mapping beginning is found.", line, indent);
+                        }
+                        *mp_current_node = basic_node_type::mapping();
+                        apply_directive_set(*mp_current_node);
+                        apply_deferred_properties(*mp_current_node);
+                        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                        m_expects_root_flow_key_separator = true;
+                    }
+
                     if (indent <= m_context_stack.back().indent) {
                         pop_to_parent_node(line, indent, [indent](const parse_context& c) {
                             switch (c.state) {
@@ -8240,6 +9374,8 @@ private:
                             }
                         });
                     }
+
+                    m_flow_base_indent = static_cast<int32_t>(current_context(line, indent).indent);
                 }
                 else if FK_YAML_UNLIKELY (m_flow_token_state == flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX) {
                     throw parse_error("Flow mapping beginning is found without separated with a comma.", line, indent);
@@ -8247,7 +9383,7 @@ private:
 
                 ++m_flow_context_depth;
 
-                switch (m_context_stack.back().state) {
+                switch (current_context(line, indent).state) {
                 case context_state_t::BLOCK_SEQUENCE:
                 case context_state_t::FLOW_SEQUENCE:
                     mp_current_node->as_seq().emplace_back(basic_node_type::mapping());
@@ -8256,9 +9392,12 @@ private:
                     break;
                 case context_state_t::BLOCK_MAPPING:
                 case context_state_t::FLOW_MAPPING:
-                    // heap-allocated node will be freed in handling the corresponding MAPPING_FLOW_END event.
+                    // The key node is owned by its context until the corresponding MAPPING_FLOW_END event.
                     m_context_stack.emplace_back(
-                        line, indent, context_state_t::FLOW_MAPPING_KEY, new basic_node_type(node_type::MAPPING));
+                        line,
+                        indent,
+                        context_state_t::FLOW_MAPPING_KEY,
+                        std::unique_ptr<basic_node_type>(new basic_node_type(node_type::MAPPING)));
                     mp_current_node = m_context_stack.back().p_node;
                     break;
                 default: {
@@ -8272,6 +9411,7 @@ private:
                 }
 
                 apply_directive_set(*mp_current_node);
+                apply_deferred_properties(*mp_current_node);
                 apply_node_properties(*mp_current_node);
 
                 line = lexer.get_lines_processed();
@@ -8284,42 +9424,71 @@ private:
                     throw parse_error("Flow mapping ending is found outside the flow context.", line, indent);
                 }
 
-                if (--m_flow_context_depth == 0) {
-                    lexer.set_context_state(false);
+                const bool is_flow_explicit_key =
+                    !m_context_stack.empty() &&
+                    m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY;
+                if (is_flow_explicit_key) {
+                    add_explicit_flow_key(line, indent);
                 }
 
-                // find the corresponding flow mapping beginning.
-                auto itr = std::find_if( // LCOV_EXCL_LINE
-                    m_context_stack.rbegin(),
-                    m_context_stack.rend(),
-                    [](const parse_context& c) {
-                        switch (c.state) {
-                        case context_state_t::FLOW_MAPPING_KEY:
-                        case context_state_t::FLOW_MAPPING:
-                            return true;
-                        default:
-                            return false;
-                        }
-                    });
+                if (--m_flow_context_depth == 0) {
+                    lexer.set_context_state(false);
+                    m_flow_base_indent = -1;
+                }
 
-                const bool is_valid = itr != m_context_stack.rend();
-                if FK_YAML_UNLIKELY (!is_valid) {
+                close_omitted_mapping_value(line, indent);
+
+                const bool has_valid_beginning =
+                    !m_context_stack.empty() && (m_context_stack.back().state == context_state_t::FLOW_MAPPING ||
+                                                 m_context_stack.back().state == context_state_t::FLOW_MAPPING_KEY);
+                if FK_YAML_UNLIKELY (!has_valid_beginning) {
                     throw parse_error("No corresponding flow mapping beginning is found.", line, indent);
                 }
 
                 // keep the last state for later processing.
                 parse_context& last_context = m_context_stack.back();
                 mp_current_node = last_context.p_node;
-                last_context.p_node = nullptr;
-                indent = last_context.indent;
-                const context_state_t state = last_context.state;
+                const uint32_t collection_begin_line = last_context.line;
+                const uint32_t collection_begin_indent = last_context.indent;
+                indent = collection_begin_indent;
+                const bool is_multiline_collection = collection_begin_line != lexer.get_lines_processed();
+                const bool is_explicit_key = last_context.is_explicit_key;
+                // The node stays alive until its value is either moved into the tree below or dropped here.
+                std::unique_ptr<basic_node_type> owned_node = std::move(last_context.owned_node);
                 m_context_stack.pop_back();
 
-                // handle cases where the flow mapping is a mapping key node.
+                // handle cases where the flow mapping is a mapping key node. A context owns its node only
+                // while that node is a key which has not been added to its parent mapping yet.
 
-                if (!m_context_stack.empty() && state == context_state_t::FLOW_MAPPING_KEY) {
-                    basic_node_type key_node = std::move(*mp_current_node);
-                    delete mp_current_node;
+                if (!m_context_stack.empty() && owned_node != nullptr) {
+                    if (is_explicit_key) {
+                        restore_explicit_flow_collection_key(
+                            lexer,
+                            std::move(owned_node),
+                            collection_begin_line,
+                            collection_begin_indent,
+                            is_multiline_collection,
+                            token,
+                            line,
+                            indent);
+                        continue;
+                    }
+                    if FK_YAML_UNLIKELY (is_multiline_collection) {
+                        throw parse_error(
+                            "An implicit mapping key cannot span multiple lines.",
+                            lexer.get_lines_processed(),
+                            lexer.get_last_token_begin_pos());
+                    }
+                    if (m_expects_root_flow_key_separator) {
+                        const lexical_token_t next_type = lexer.peek_next_token().type;
+                        if FK_YAML_UNLIKELY (next_type != lexical_token_t::KEY_SEPARATOR) {
+                            throw parse_error(
+                                "A flow collection key must be followed by a key separator.", line, indent);
+                        }
+                        m_expects_root_flow_key_separator = false;
+                    }
+                    basic_node_type key_node = std::move(*owned_node);
+                    owned_node.reset();
                     mp_current_node = m_context_stack.back().p_node;
                     m_flow_token_state = flow_token_state_t::NEEDS_VALUE_OR_SUFFIX;
 
@@ -8329,6 +9498,12 @@ private:
 
                 token = lexer.get_next_token();
                 if (token.type == lexical_token_t::KEY_SEPARATOR) {
+                    if FK_YAML_UNLIKELY (is_multiline_collection) {
+                        throw parse_error(
+                            "An implicit mapping key cannot span multiple lines.",
+                            lexer.get_lines_processed(),
+                            lexer.get_last_token_begin_pos());
+                    }
                     basic_node_type key_node = basic_node_type::mapping();
                     apply_directive_set(key_node);
                     mp_current_node->swap(key_node);
@@ -8352,14 +9527,24 @@ private:
                 continue;
             }
             case lexical_token_t::VALUE_SEPARATOR:
-                FK_YAML_ASSERT(m_flow_context_depth > 0);
+                if FK_YAML_UNLIKELY (m_flow_context_depth == 0) {
+                    throw parse_error("invalid value separator is found.", line, indent);
+                }
+                if (!m_context_stack.empty() &&
+                    m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
+                    add_explicit_flow_key(line, indent);
+                }
+                close_empty_flow_sequence_entry(line, indent);
+                close_omitted_mapping_value(line, indent);
                 if FK_YAML_UNLIKELY (m_flow_token_state != flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX) {
                     throw parse_error("invalid value separator is found.", line, indent);
                 }
+                close_single_pair_mapping(line, indent);
                 m_flow_token_state = flow_token_state_t::NEEDS_VALUE_OR_SUFFIX;
                 break;
             case lexical_token_t::ALIAS_PREFIX: {
-                // An alias node must not specify any properties (tag, anchor).
+                // An alias node must not specify any properties (tag, anchor), but deferred ones are
+                // for the collection which this alias begins rather than for the alias itself.
                 // https://yaml.org/spec/1.2.2/#71-alias-nodes
                 if FK_YAML_UNLIKELY (m_needs_tag_impl) {
                     throw parse_error("Tag cannot be specified to an alias node", line, indent);
@@ -8368,51 +9553,55 @@ private:
                     throw parse_error("Anchor cannot be specified to an alias node.", line, indent);
                 }
 
-                std::string token_str = std::string(token.str.begin(), token.str.end());
+                const std::string anchor_name = std::string(token.str.begin(), token.str.end());
 
-                const auto anchor_counts = static_cast<uint32_t>(mp_meta->anchor_table.count(token_str));
+                const auto anchor_counts = static_cast<uint32_t>(mp_meta->anchor_table.count(anchor_name));
                 if FK_YAML_UNLIKELY (anchor_counts == 0) {
                     throw parse_error("The given anchor name must appear prior to the alias node.", line, indent);
                 }
 
                 basic_node_type node {};
-                node.m_attrs |= detail::node_attr_bits::alias_bit;
-                node.m_prop.anchor = std::move(token_str);
-                detail::node_attr_bits::set_anchor_offset(anchor_counts - 1, node.m_attrs);
+                node.m_attrs.set(detail::node_attr_bits::alias_bit);
+                node.prop().anchor = anchor_name;
+                node.m_attrs.set_anchor_offset(anchor_counts - 1);
 
                 apply_directive_set(node);
                 apply_node_properties(node);
 
                 deserialize_scalar(lexer, std::move(node), indent, line, token);
+
+                // Check if the alias node is self-referential.
+                // If so, throw a parse error to avoid infinite recursion and stack overflow during deserialization.
+                auto itr = mp_meta->anchor_table.equal_range(anchor_name).first;
+                std::advance(itr, anchor_counts - 1);
+                const auto& anchor = itr->second;
+                const bool is_self_referential = anchor.contains_self_referential_alias(anchor_name, anchor_counts - 1);
+                if FK_YAML_UNLIKELY (is_self_referential) {
+                    const std::string msg = format("Self-referential alias (*%s) is found.", anchor_name.c_str());
+                    throw parse_error(msg.c_str(), line, indent);
+                }
+
                 continue;
             }
             case lexical_token_t::PLAIN_SCALAR:
             case lexical_token_t::SINGLE_QUOTED_SCALAR:
             case lexical_token_t::DOUBLE_QUOTED_SCALAR: {
-                tag_t tag_type {tag_t::NONE};
-                if (m_needs_tag_impl) {
-                    tag_type = tag_resolver_type::resolve_tag(m_tag_name, mp_meta);
-                }
+                const tag_t tag_type = resolve_scalar_tag(line, indent);
 
                 basic_node_type node = scalar_parser_type(line, indent).parse_flow(token.type, tag_type, token.str);
                 apply_directive_set(node);
-                apply_node_properties(node);
 
                 deserialize_scalar(lexer, std::move(node), indent, line, token);
                 continue;
             }
             case lexical_token_t::BLOCK_LITERAL_SCALAR:
             case lexical_token_t::BLOCK_FOLDED_SCALAR: {
-                tag_t tag_type {tag_t::NONE};
-                if (m_needs_tag_impl) {
-                    tag_type = tag_resolver_type::resolve_tag(m_tag_name, mp_meta);
-                }
+                const tag_t tag_type = resolve_scalar_tag(line, indent);
 
                 basic_node_type node =
                     scalar_parser_type(line, indent)
                         .parse_block(token.type, tag_type, token.str, lexer.get_block_scalar_header());
                 apply_directive_set(node);
-                apply_node_properties(node);
 
                 deserialize_scalar(lexer, std::move(node), indent, line, token);
                 continue;
@@ -8427,6 +9616,9 @@ private:
                 if FK_YAML_UNLIKELY (m_flow_context_depth > 0) {
                     throw parse_error("An invalid document marker found in a flow collection", line, indent);
                 }
+                if (token.type == lexical_token_t::END_OF_DIRECTIVES) {
+                    m_explicit_document_start_line = line;
+                }
                 last_type = token.type;
                 return;
             // no way to come here while lexically analyzing document contents.
@@ -8440,6 +9632,10 @@ private:
             indent = lexer.get_last_token_begin_pos();
             line = lexer.get_lines_processed();
         } while (token.type != lexical_token_t::END_OF_BUFFER);
+
+        if FK_YAML_UNLIKELY (m_flow_context_depth > 0) {
+            throw parse_error("An unclosed flow collection found at the end of input", line, indent);
+        }
 
         last_type = token.type;
     }
@@ -8510,8 +9706,36 @@ private:
             line = lexer.get_lines_processed();
             indent = lexer.get_last_token_begin_pos();
         }
+        else if FK_YAML_UNLIKELY (
+            line < lexer.get_lines_processed() && m_flow_context_depth == 0 && !m_context_stack.empty() &&
+            indent <= m_context_stack.back().indent) {
+            // Node properties which end their line belong to a node nested in the current block collection, so
+            // they must be more indented than it.
+            // ```yaml
+            // - item1
+            // &node   # error: not more indented than the sequence.
+            // - item2
+            // ```
+            throw parse_error("Node properties are not indented enough.", line, indent);
+        }
 
         return prop_specified;
+    }
+
+    /// @brief Reject a tab character used as the indentation of a block collection.
+    /// @note Indentation must consist of spaces only, while a tab which follows it is valid separation
+    /// white space. See https://yaml.org/spec/1.2.2/#61-indentation-spaces for more details.
+    /// ```yaml
+    /// -\t-    # the nested sequence is indented with a tab, which is an error
+    /// -\t-1   # the tab only separates the entry from its scalar, which is valid
+    /// ```
+    /// @param lexer The lexical analyzer to be used.
+    /// @param line The line of the node which begins the block collection.
+    /// @param indent The indentation width of the node which begins the block collection.
+    void check_tab_in_indentation(lexer_type& lexer, const uint32_t line, const uint32_t indent) const {
+        if FK_YAML_UNLIKELY (m_flow_context_depth == 0 && lexer.has_tab_in_indentation(indent)) {
+            throw parse_error("A tab character cannot be used as indentation.", line, indent);
+        }
     }
 
     /// @brief Add new key string to the current YAML node.
@@ -8520,6 +9744,9 @@ private:
     /// @param indent The indentation width in the current line where the key is found.
     void add_new_key(basic_node_type&& key, const uint32_t line, const uint32_t indent) {
         if (m_flow_context_depth == 0) {
+            if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+                throw parse_error("A mapping key is not allowed in this context.", line, indent);
+            }
             if FK_YAML_UNLIKELY (m_context_stack.back().indent < indent) {
                 // bad indentation like the following YAML:
                 // ```yaml
@@ -8535,10 +9762,6 @@ private:
             });
         }
         else {
-            if FK_YAML_UNLIKELY (m_flow_token_state != flow_token_state_t::NEEDS_VALUE_OR_SUFFIX) {
-                throw parse_error("Flow mapping entry is found without separated with a comma.", line, indent);
-            }
-
             if (mp_current_node->is_sequence()) {
                 mp_current_node->as_seq().emplace_back(basic_node_type::mapping());
                 mp_current_node = &(mp_current_node->operator[](mp_current_node->size() - 1));
@@ -8552,16 +9775,62 @@ private:
         }
 
         mp_current_node = &(itr.first->second);
-        const parse_context& key_context = m_context_stack.back();
+        const parse_context& key_context = current_context(line, indent);
         m_context_stack.emplace_back(
             key_context.line, key_context.indent, context_state_t::MAPPING_VALUE, mp_current_node);
+    }
+
+    void restore_explicit_flow_collection_key(
+        lexer_type& lexer, std::unique_ptr<basic_node_type>&& owned_node, const uint32_t collection_begin_line,
+        const uint32_t collection_begin_indent, const bool is_multiline_collection, lexical_token& token,
+        uint32_t& line, uint32_t& indent) {
+        const context_state_t explicit_key_state = m_flow_context_depth > 0
+                                                       ? context_state_t::FLOW_MAPPING_EXPLICIT_KEY
+                                                       : context_state_t::BLOCK_MAPPING_EXPLICIT_KEY;
+        m_context_stack.emplace_back(
+            collection_begin_line, collection_begin_indent, explicit_key_state, std::move(owned_node));
+        mp_current_node = m_context_stack.back().p_node;
+
+        const uint32_t collection_end_line = lexer.get_lines_processed();
+        token = lexer.get_next_token();
+        line = lexer.get_lines_processed();
+        indent = lexer.get_last_token_begin_pos();
+
+        if (m_flow_context_depth > 0) {
+            return;
+        }
+
+        const bool begins_compact_mapping = token.type == lexical_token_t::KEY_SEPARATOR && line == collection_end_line;
+        if (!begins_compact_mapping) {
+            return;
+        }
+        if FK_YAML_UNLIKELY (is_multiline_collection) {
+            throw parse_error(
+                "An implicit mapping key cannot span multiple lines.",
+                lexer.get_lines_processed(),
+                lexer.get_last_token_begin_pos());
+        }
+
+        basic_node_type collection_key = std::move(*mp_current_node);
+        *mp_current_node = basic_node_type::mapping();
+        apply_directive_set(*mp_current_node);
+        auto itr = mp_current_node->as_map().emplace(std::move(collection_key), basic_node_type());
+        mp_current_node = &(itr.first->second);
+        apply_directive_set(*mp_current_node);
+        m_context_stack.emplace_back(line, indent, context_state_t::MAPPING_VALUE, mp_current_node);
+
+        token = lexer.get_next_token();
+        line = lexer.get_lines_processed();
+        indent = lexer.get_last_token_begin_pos();
     }
 
     /// @brief Assign node value to the current node.
     /// @param node_value A rvalue basic_node_type object to be assigned to the current node.
     void assign_node_value(basic_node_type&& node_value, const uint32_t line, const uint32_t indent) {
         if (mp_current_node->is_sequence()) {
-            FK_YAML_ASSERT(m_flow_context_depth > 0);
+            if FK_YAML_UNLIKELY (m_flow_context_depth == 0) {
+                throw parse_error("invalid block sequence entry is found.", line, indent);
+            }
 
             if FK_YAML_UNLIKELY (m_flow_token_state != flow_token_state_t::NEEDS_VALUE_OR_SUFFIX) {
                 // Flow sequence entries are not allowed to be empty.
@@ -8583,9 +9852,11 @@ private:
             return;
         }
 
-        if FK_YAML_LIKELY (m_context_stack.back().state != context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+        if FK_YAML_LIKELY (
+            m_context_stack.back().state != context_state_t::BLOCK_MAPPING_EXPLICIT_KEY &&
+            m_context_stack.back().state != context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
             m_context_stack.pop_back();
-            mp_current_node = m_context_stack.back().p_node;
+            mp_current_node = current_context(line, indent).p_node;
 
             if (m_flow_context_depth > 0) {
                 m_flow_token_state = flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX;
@@ -8603,15 +9874,53 @@ private:
     void deserialize_scalar(
         lexer_type& lexer, basic_node_type&& node, uint32_t& indent, uint32_t& line, lexical_token& token) {
         token = lexer.get_next_token();
-        if (mp_current_node->is_mapping()) {
-            const bool is_key_sep_followed =
-                (token.type == lexical_token_t::KEY_SEPARATOR) && (line == lexer.get_lines_processed());
-            if FK_YAML_UNLIKELY (!is_key_sep_followed) {
-                throw parse_error(
-                    "The \":\" mapping value indicator must be followed after a mapping key.",
-                    lexer.get_lines_processed(),
-                    lexer.get_last_token_begin_pos());
+        const bool is_mapping_key = mp_current_node->is_mapping() || token.type == lexical_token_t::KEY_SEPARATOR;
+        if (is_mapping_key) {
+            apply_node_properties(node);
+        }
+        else if (!node.is_alias()) {
+            if FK_YAML_UNLIKELY (m_defers_anchor && m_needs_anchor_impl) {
+                throw parse_error("anchor name cannot be specified more than once to the same node.", line, indent);
             }
+            if FK_YAML_UNLIKELY (m_defers_tag && m_needs_tag_impl) {
+                throw parse_error("tag name cannot be specified more than once to the same node.", line, indent);
+            }
+            apply_deferred_properties(node);
+            apply_node_properties(node);
+        }
+
+        if (!m_context_stack.empty() && m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY) {
+            assign_node_value(std::move(node), line, indent);
+            indent = lexer.get_last_token_begin_pos();
+            line = lexer.get_lines_processed();
+            return;
+        }
+
+        if (mp_current_node->is_mapping()) {
+            // An implicit key in the block context must be followed by the ":" indicator on the same line, while in
+            // the flow context the two can be separated by line breaks.
+            // ```yaml
+            // {"foo"
+            // : "bar"}
+            // ```
+            const bool is_key_sep_followed = (token.type == lexical_token_t::KEY_SEPARATOR) &&
+                                             (line == lexer.get_lines_processed() || m_flow_context_depth > 0);
+            if (!is_key_sep_followed) {
+                // A flow mapping entry may consist of a key alone, with both the ":" indicator and the
+                // value omitted. The entry then ends at the separator or the suffix which follows it.
+                // ```yaml
+                // {foo, bar: baz}
+                // ```
+                const bool ends_omitted_entry = (token.type == lexical_token_t::VALUE_SEPARATOR) ||
+                                                (token.type == lexical_token_t::MAPPING_FLOW_END);
+                if FK_YAML_UNLIKELY (!ends_omitted_entry) {
+                    throw parse_error(
+                        "The \":\" mapping value indicator must be followed after a mapping key.",
+                        lexer.get_lines_processed(),
+                        lexer.get_last_token_begin_pos());
+                }
+            }
+            check_tab_in_indentation(lexer, line, indent);
             add_new_key(std::move(node), line, indent);
         }
         else if (token.type == lexical_token_t::KEY_SEPARATOR) {
@@ -8626,7 +9935,23 @@ private:
                 indent = lexer.get_last_token_begin_pos();
                 line = lexer.get_lines_processed();
 
+                if (m_context_stack.empty()) {
+                    throw parse_error("invalid explicit mapping key separator is found.", line, indent);
+                }
+
                 if (m_context_stack.back().state != context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+                    const parse_context& cur_context = m_context_stack.back();
+                    if (cur_context.state == context_state_t::BLOCK_MAPPING && cur_context.indent == indent) {
+                        // A key separator which begins a line belongs to an entry with an empty key.
+                        // ```yaml
+                        // foo: bar
+                        // : baz
+                        // # -> {foo: bar, null: baz}
+                        // ```
+                        add_empty_key_entry(lexer, token, line, indent);
+                        return;
+                    }
+
                     pop_to_parent_node(line, indent, [indent](const parse_context& c) {
                         return c.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && indent == c.indent;
                     });
@@ -8637,8 +9962,40 @@ private:
             if (mp_current_node->is_scalar()) {
                 if FK_YAML_LIKELY (!m_context_stack.empty()) {
                     parse_context& cur_context = m_context_stack.back();
+
+                    const bool is_omitted_mapping_value_with_properties =
+                        cur_context.state == context_state_t::MAPPING_VALUE && cur_context.indent == indent &&
+                        defers_props();
+                    if (is_omitted_mapping_value_with_properties) {
+                        pop_to_parent_node(line, indent, [indent](const parse_context& c) {
+                            return c.state == context_state_t::BLOCK_MAPPING && indent == c.indent;
+                        });
+                        check_tab_in_indentation(lexer, line, indent);
+                        add_new_key(std::move(node), line, indent);
+                        indent = lexer.get_last_token_begin_pos();
+                        line = lexer.get_lines_processed();
+                        return;
+                    }
+
                     switch (cur_context.state) {
                     case context_state_t::BLOCK_MAPPING_EXPLICIT_KEY:
+                        if (cur_context.indent == indent) {
+                            // A mapping entry which follows an explicit key without its value, for example:
+                            // ```yaml
+                            // ? foo
+                            // bar: 123
+                            // # -> {foo: null, bar: 123}
+                            // ```
+                            add_explicit_key_with_null_value();
+                            check_tab_in_indentation(lexer, line, indent);
+                            add_new_key(std::move(node), line, indent);
+                            indent = lexer.get_last_token_begin_pos();
+                            line = lexer.get_lines_processed();
+                            return;
+                        }
+
+                        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
+                        break;
                     case context_state_t::BLOCK_MAPPING_EXPLICIT_VALUE:
                         m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
                         break;
@@ -8656,6 +10013,7 @@ private:
                             pop_to_parent_node(line, indent, [indent](const parse_context& c) {
                                 return c.state == context_state_t::BLOCK_MAPPING && indent == c.indent;
                             });
+                            check_tab_in_indentation(lexer, line, indent);
                             add_new_key(std::move(node), line, indent);
                             indent = lexer.get_last_token_begin_pos();
                             line = lexer.get_lines_processed();
@@ -8664,6 +10022,7 @@ private:
 
                         m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
                         break;
+                    case context_state_t::MAPPING_VALUE:
                     default:
                         if FK_YAML_UNLIKELY (cur_context.line == line) {
                             throw parse_error("Multiple mapping keys are specified on the same line.", line, indent);
@@ -8676,34 +10035,217 @@ private:
 
                     *mp_current_node = basic_node_type::mapping();
                     apply_directive_set(*mp_current_node);
+                    // The scalar turned out to be a key, so any deferred properties are for the mapping
+                    // which it begins rather than for the key itself.
+                    apply_deferred_properties(*mp_current_node);
                 }
                 else {
                     // root mapping node
+                    if FK_YAML_UNLIKELY (m_has_explicit_document_start && line == m_explicit_document_start_line) {
+                        throw parse_error("A block mapping entry cannot be on the document start line.", line, indent);
+                    }
 
                     m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING, mp_current_node);
                     *mp_current_node = basic_node_type::mapping();
                     apply_directive_set(*mp_current_node);
-
-                    // apply node properties if any to the root mapping node.
-                    if (!m_root_anchor_name.empty()) {
-                        mp_current_node->add_anchor_name(
-                            std::string(m_root_anchor_name.begin(), m_root_anchor_name.end()));
-                        m_root_anchor_name = {};
-                    }
-                    if (!m_root_tag_name.empty()) {
-                        mp_current_node->add_tag_name(std::string(m_root_tag_name.begin(), m_root_tag_name.end()));
-                        m_root_tag_name = {};
-                    }
+                    apply_deferred_properties(*mp_current_node);
                 }
             }
+            check_tab_in_indentation(lexer, line, indent);
             add_new_key(std::move(node), line, indent);
         }
         else {
+            if (defers_props()) {
+                // Non-alias values consume deferred properties before reaching this point. An alias
+                // cannot carry properties, which is only known once it turns out not to be a key.
+                // https://yaml.org/spec/1.2.2/#71-alias-nodes
+                throw parse_error("Node properties cannot be specified to an alias node.", line, indent);
+            }
+            const bool ends_document = token.type == lexical_token_t::END_OF_BUFFER ||
+                                       token.type == lexical_token_t::END_OF_DIRECTIVES ||
+                                       token.type == lexical_token_t::END_OF_DOCUMENT;
+            if FK_YAML_UNLIKELY (m_context_stack.empty() && !ends_document) {
+                throw parse_error("Multiple root nodes are not allowed in the same document.", line, indent);
+            }
             assign_node_value(std::move(node), line, indent);
         }
 
         indent = lexer.get_last_token_begin_pos();
         line = lexer.get_lines_processed();
+    }
+
+    /// @brief Returns the parse context on the top of the context stack.
+    /// @note
+    /// Accessing an empty context stack is undefined behavior, so the emptiness is checked before the access.
+    /// No known input reaches the throw now that a parse context owns its key node, which is why it is left out
+    /// of the coverage measurement. The check stays because the alternative for a caller is dereferencing an
+    /// invalid iterator.
+    /// @param line The current line count.
+    /// @param indent The current indentation width.
+    /// @return The parse context on the top of the context stack.
+    parse_context& current_context(const uint32_t line, const uint32_t indent) {
+        // LCOV_EXCL_START
+        if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+            throw parse_error("No parent context is found.", line, indent);
+        }
+        // LCOV_EXCL_STOP
+        return m_context_stack.back();
+    }
+
+    /// @brief Adds a mapping entry whose key is empty and moves to the token which follows it.
+    /// @note
+    /// An empty key is a null node. Its value can be omitted as well, in which case the following token
+    /// belongs to the parent mapping rather than to this entry.
+    /// ```yaml
+    /// :
+    /// foo: bar
+    /// # -> {null: null, foo: bar}
+    /// ```
+    /// @param lexer The lexical analyzer to be used.
+    /// @param token The storage for the token which follows the key separator.
+    /// @param line The line of the key separator. Updated to the line of the following token.
+    /// @param indent The indentation width of the key separator. Updated for the following token.
+    void add_empty_key_entry(lexer_type& lexer, lexical_token& token, uint32_t& line, uint32_t& indent) {
+        const uint32_t key_line = line;
+        const uint32_t key_indent = indent;
+        basic_node_type key_node;
+        if (m_needs_tag_impl) {
+            const tag_t tag_type = resolve_scalar_tag(line, indent);
+            materialize_tagged_empty_node(key_node, tag_type, line, indent);
+        }
+        apply_directive_set(key_node);
+        apply_node_properties(key_node);
+        add_new_key(std::move(key_node), line, indent);
+
+        token = lexer.get_next_token();
+        line = lexer.get_lines_processed();
+        indent = lexer.get_last_token_begin_pos();
+
+        const bool is_block_sequence_entry =
+            token.type == lexical_token_t::SEQUENCE_BLOCK_PREFIX && line > key_line && indent <= key_indent;
+        if (is_block_sequence_entry) {
+            initialize_block_sequence_value(line, indent, false);
+
+            token = lexer.get_next_token();
+            line = lexer.get_lines_processed();
+            indent = lexer.get_last_token_begin_pos();
+            return;
+        }
+
+        if (line > key_line && indent <= key_indent) {
+            pop_to_parent_node(line, indent, [key_indent](const parse_context& c) {
+                return c.state == context_state_t::BLOCK_MAPPING && key_indent == c.indent;
+            });
+        }
+    }
+
+    /// @brief Initializes a block sequence as the current mapping value.
+    /// @param line The line where the sequence begins.
+    /// @param indent The indentation width where the sequence begins.
+    /// @param apply_properties Whether pending node properties belong to the sequence.
+    void initialize_block_sequence_value(const uint32_t line, const uint32_t indent, const bool apply_properties) {
+        *mp_current_node = basic_node_type::sequence({basic_node_type()});
+        apply_directive_set(*mp_current_node);
+        if (apply_properties) {
+            apply_deferred_properties(*mp_current_node);
+            apply_node_properties(*mp_current_node);
+        }
+
+        auto& cur_context = m_context_stack.back();
+        cur_context.line = line;
+        cur_context.indent = indent;
+        cur_context.state = context_state_t::BLOCK_SEQUENCE;
+
+        mp_current_node = &(mp_current_node->as_seq().back());
+        apply_directive_set(*mp_current_node);
+        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_SEQUENCE_ENTRY, mp_current_node);
+    }
+
+    /// @brief Checks whether an explicit key context exists at the given indentation.
+    /// @param indent The indentation width of the explicit key context to look for.
+    /// @return true if such a context is on the context stack, false otherwise.
+    bool has_explicit_key_context_at(const uint32_t indent) const noexcept {
+        const auto is_explicit_key_context = [indent](const parse_context& c) {
+            return c.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && indent == c.indent;
+        };
+        return std::any_of(m_context_stack.rbegin(), m_context_stack.rend(), is_explicit_key_context);
+    }
+
+    /// @brief Settles an explicit key into its value context when properties follow its separator.
+    /// @note As in `? key` followed by `: &anchor`, the value context of the explicit key is settled
+    /// before its node is known so that the properties which follow the separator are bound to the
+    /// (empty) value node. Does nothing when no matching explicit key context exists.
+    /// @param line The line of the key separator.
+    /// @param indent The indentation width of the key separator.
+    void settle_explicit_key_value_with_props(const uint32_t line, const uint32_t indent) {
+        if (!has_explicit_key_context_at(indent)) {
+            return;
+        }
+        if (m_context_stack.back().state != context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+            const auto is_explicit_key_context = [indent](const parse_context& c) {
+                return c.state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY && indent == c.indent;
+            };
+            pop_to_parent_node(line, indent, is_explicit_key_context);
+        }
+        add_explicit_key_with_empty_value(line, indent);
+    }
+
+    /// @brief Adds an entry for an explicit key and makes its value node the current node.
+    /// @note The current context must be the context of the explicit key.
+    /// @param line The line where the value of the explicit key begins.
+    /// @param indent The indentation width where the value of the explicit key begins.
+    void add_explicit_key_with_empty_value(const uint32_t line, const uint32_t indent) {
+        FK_YAML_ASSERT(m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY);
+
+        // Deferred properties precede the key, so they belong to the key rather than to its value.
+        apply_deferred_properties(*m_context_stack.back().p_node);
+
+        basic_node_type key_node = std::move(*m_context_stack.back().p_node);
+        m_context_stack.pop_back();
+        basic_node_type* p_parent_node = current_context(line, indent).p_node;
+        auto itr = p_parent_node->as_map().emplace(std::move(key_node), basic_node_type());
+        mp_current_node = &(itr.first->second);
+        m_context_stack.emplace_back(line, indent, context_state_t::BLOCK_MAPPING_EXPLICIT_VALUE, mp_current_node);
+    }
+
+    /// @brief Adds an explicit flow mapping key and makes its value node the current node.
+    /// @param line The line where the value separator or entry ending is found.
+    /// @param indent The indentation width where the value separator or entry ending is found.
+    void add_explicit_flow_key(const uint32_t line, const uint32_t indent) {
+        FK_YAML_ASSERT(m_context_stack.back().state == context_state_t::FLOW_MAPPING_EXPLICIT_KEY);
+
+        apply_deferred_properties(*m_context_stack.back().p_node);
+        basic_node_type key_node = std::move(*m_context_stack.back().p_node);
+        m_context_stack.pop_back();
+        mp_current_node = current_context(line, indent).p_node;
+        add_new_key(std::move(key_node), line, indent);
+    }
+
+    /// @brief Adds an entry with a null value for an explicit key which is not followed by its value.
+    /// @note
+    /// An explicit key is kept in its own context until its value is found. If no value follows the key, the
+    /// entry must still be added to the parent mapping since an omitted value is a null value.
+    /// ```yaml
+    /// ? foo
+    /// ? bar
+    /// # -> {foo: null, bar: null}
+    /// ```
+    /// @return true if an entry has been added, false if the current context is not an explicit key.
+    bool add_explicit_key_with_null_value() {
+        const bool is_explicit_key =
+            m_context_stack.size() > 1 && m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY;
+        if (!is_explicit_key) {
+            return false;
+        }
+
+        // Deferred properties precede the key, so they belong to the key rather than to its value.
+        apply_deferred_properties(*m_context_stack.back().p_node);
+
+        basic_node_type key_node = std::move(*m_context_stack.back().p_node);
+        m_context_stack.pop_back();
+        m_context_stack.back().p_node->as_map().emplace(std::move(key_node), basic_node_type());
+        mp_current_node = m_context_stack.back().p_node;
+        return true;
     }
 
     /// @brief Pops parent contexts to a block mapping with the given indentation.
@@ -8712,29 +10254,237 @@ private:
     /// @param indent The indentation level of the target parent block mapping.
     template <typename Pred>
     void pop_to_parent_node(uint32_t line, uint32_t indent, Pred&& pred) {
-        FK_YAML_ASSERT(!m_context_stack.empty());
-
         // LCOV_EXCL_START
-        auto itr = std::find_if(m_context_stack.rbegin(), m_context_stack.rend(), std::forward<Pred>(pred));
-        // LCOV_EXCL_STOP
-        const bool is_indent_valid = (itr != m_context_stack.rend());
-        if FK_YAML_UNLIKELY (!is_indent_valid) {
-            throw parse_error("Detected invalid indentation.", line, indent);
+        if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+            throw parse_error("No parent block mapping is found.", line, indent);
         }
+        // LCOV_EXCL_STOP
 
-        const auto pop_num = static_cast<uint32_t>(std::distance(m_context_stack.rbegin(), itr));
+        for (;;) {
+            // LCOV_EXCL_START
+            auto itr = std::find_if(m_context_stack.rbegin(), m_context_stack.rend(), std::forward<Pred>(pred));
+            // LCOV_EXCL_STOP
+            const bool is_indent_valid = (itr != m_context_stack.rend());
+            if FK_YAML_UNLIKELY (!is_indent_valid) {
+                throw parse_error("Detected invalid indentation.", line, indent);
+            }
 
-        // move back to the parent block mapping.
-        for (uint32_t i = 0; i < pop_num; i++) {
+            const auto pop_num = static_cast<uint32_t>(std::distance(m_context_stack.rbegin(), itr));
+            if (pop_num == 0) {
+                mp_current_node = m_context_stack.back().p_node;
+                return;
+            }
+
+            if (m_context_stack.back().state == context_state_t::BLOCK_MAPPING_EXPLICIT_KEY) {
+                // Simply popping an explicit key context would drop the entry for the `? key`
+                // entirely. Settle it as an entry with a null value before moving to the parent.
+                add_explicit_key_with_null_value();
+                continue;
+            }
+
+            if (defers_props()) {
+                // The entry which the properties preceded ends here without a node of its own, so they
+                // belong to its empty value. Any node which did follow them would have taken them before
+                // its context could be popped, so the current node is still the empty one.
+                // ```yaml
+                // foo: &anchor
+                // bar: 1        # the anchor is for the empty value of "foo".
+                // ```
+                if (m_defers_tag) {
+                    const tag_t tag_type = tag_resolver_type::resolve_tag(m_deferred_tag_name, mp_meta);
+                    ensure_scalar_tag(tag_type, line, indent);
+                    materialize_tagged_empty_node(*mp_current_node, tag_type, line, indent);
+                }
+                // The empty node never received the document metainfo, in which an anchor name must be
+                // registered for aliases to resolve it.
+                apply_directive_set(*mp_current_node);
+                apply_deferred_properties(*mp_current_node);
+            }
+
             m_context_stack.pop_back();
         }
-        mp_current_node = m_context_stack.back().p_node;
     }
 
     /// @brief Set YAML directive properties to the given node.
     /// @param node A basic_node_type object to be set YAML directive properties.
     void apply_directive_set(basic_node_type& node) noexcept {
         node.mp_meta = mp_meta;
+    }
+
+    /// @brief Closes the implicit single pair mapping wrapping a flow sequence entry, if one is open.
+    /// @note
+    /// A flow sequence entry may be a mapping entry written without braces, e.g. `[foo: 1]` meaning
+    /// `[{foo: 1}]`. Such an entry is wrapped in a mapping when its key separator is found, and that
+    /// wrapper must be closed once the entry ends, either at a separator or at the sequence suffix.
+    /// Block content cannot appear inside a flow collection, so a block mapping context found here can
+    /// only be that wrapper.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    void close_single_pair_mapping(const uint32_t line, const uint32_t indent) {
+        // LCOV_EXCL_START
+        if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+            throw parse_error("No parent flow collection is found.", line, indent);
+        }
+        // LCOV_EXCL_STOP
+
+        if (m_context_stack.back().state == context_state_t::BLOCK_MAPPING) {
+            m_context_stack.pop_back();
+            mp_current_node = current_context(line, indent).p_node;
+        }
+    }
+
+    /// @brief Adds a flow sequence entry which has node properties only, if one is pending.
+    /// @note
+    /// A flow sequence entry may consist of node properties only, in which case the entry is an empty node
+    /// with those properties, e.g. `[foo, &anchor]` meaning `[foo, &anchor null]`. The entry is added once it
+    /// ends, either at a separator or at the sequence suffix.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    void close_empty_flow_sequence_entry(const uint32_t line, const uint32_t indent) {
+        // LCOV_EXCL_START
+        if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+            throw parse_error("No parent flow collection is found.", line, indent);
+        }
+        // LCOV_EXCL_STOP
+
+        const parse_context& last_context = m_context_stack.back();
+        const bool is_sequence_entry = last_context.state == context_state_t::FLOW_SEQUENCE ||
+                                       last_context.state == context_state_t::FLOW_SEQUENCE_KEY;
+        if (is_sequence_entry && (m_needs_anchor_impl || m_needs_tag_impl)) {
+            basic_node_type entry;
+            if (m_needs_tag_impl) {
+                const tag_t tag_type = resolve_scalar_tag(line, indent);
+                materialize_tagged_empty_node(entry, tag_type, line, indent);
+            }
+            apply_directive_set(entry);
+            apply_node_properties(entry);
+            last_context.p_node->as_seq().emplace_back(std::move(entry));
+            m_flow_token_state = flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX;
+        }
+    }
+
+    /// @brief Completes a flow mapping entry whose value was omitted, if one is pending.
+    /// @note
+    /// A flow mapping entry may leave its value empty, in which case the value is null, e.g. `{foo: }`
+    /// meaning `{foo: null}`. The value node is already null since `add_new_key` default constructs it,
+    /// so the entry only needs its context closed once it ends, either at a separator or at the mapping
+    /// suffix.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    void close_omitted_mapping_value(const uint32_t line, const uint32_t indent) {
+        // LCOV_EXCL_START
+        if FK_YAML_UNLIKELY (m_context_stack.empty()) {
+            throw parse_error("No parent flow collection is found.", line, indent);
+        }
+        // LCOV_EXCL_STOP
+
+        if (m_context_stack.back().state == context_state_t::MAPPING_VALUE) {
+            if (m_needs_tag_impl) {
+                const tag_t tag_type = resolve_scalar_tag(line, indent);
+                materialize_tagged_empty_node(*mp_current_node, tag_type, line, indent);
+            }
+            apply_directive_set(*mp_current_node);
+            apply_node_properties(*mp_current_node);
+            m_context_stack.pop_back();
+            mp_current_node = current_context(line, indent).p_node;
+            m_flow_token_state = flow_token_state_t::NEEDS_SEPARATOR_OR_SUFFIX;
+        }
+    }
+
+    /// @brief Materializes an empty node with the specified tag type.
+    /// @param tag_type The tag type to apply to the empty node.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    void materialize_tagged_empty_node(
+        basic_node_type& node, tag_t tag_type, const uint32_t line, const uint32_t indent) {
+        switch (tag_type) {
+        case tag_t::STRING:
+        case tag_t::NON_SPECIFIC:
+        case tag_t::CUSTOM_TAG:
+            node = basic_node_type(typename basic_node_type::string_type());
+            break;
+        case tag_t::NULL_VALUE:
+            // A null value is already represented by a default-constructed node.
+            break;
+        default: {
+            auto msg = format("Unsupported tag (%s) for an empty node.", m_tag_name.data());
+            throw parse_error(msg.c_str(), line, indent);
+            break;
+        }
+        }
+    }
+
+    /// @brief Resolves the tag for a scalar node, if any is pending.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    /// @return The resolved tag type, or tag_t::NONE if no tag is pending.
+    tag_t resolve_scalar_tag(const uint32_t line, const uint32_t indent) const {
+        if (!m_needs_tag_impl) {
+            return tag_t::NONE;
+        }
+
+        const tag_t tag_type = tag_resolver_type::resolve_tag(m_tag_name, mp_meta);
+        ensure_scalar_tag(tag_type, line, indent);
+
+        return tag_type;
+    }
+
+    /// @brief Ensure that the given tag type is valid for a scalar node.
+    /// @param tag_type The tag type to check.
+    /// @param line Current line.
+    /// @param indent Current indentation.
+    static void ensure_scalar_tag(tag_t tag_type, const uint32_t line, const uint32_t indent) {
+        // A collection tag denotes a sequence or a mapping, so it cannot apply to a scalar node.
+        // Such an input is a syntax error rather than an internal inconsistency.
+        if FK_YAML_UNLIKELY (tag_type == tag_t::SEQUENCE || tag_type == tag_t::MAPPING) {
+            throw parse_error("A sequence or mapping tag cannot be specified to a scalar node.", line, indent);
+        }
+    }
+
+    /// @brief Move the pending node properties aside until the node they belong to is known.
+    /// @note They precede their node by a line, so the node which follows may carry properties of its
+    /// own. Keeping the two apart lets both be bound to the right node.
+    /// ```yaml
+    /// foo: &map
+    ///   &key bar: baz   # &map is for the mapping, &key is for the "bar" key.
+    /// ```
+    void defer_node_properties() {
+        if (m_needs_anchor_impl) {
+            m_deferred_anchor_name = m_anchor_name;
+            m_defers_anchor = true;
+            m_needs_anchor_impl = false;
+            m_anchor_name = {};
+        }
+        if (m_needs_tag_impl) {
+            m_deferred_tag_name = m_tag_name;
+            m_defers_tag = true;
+            m_needs_tag_impl = false;
+            m_tag_name = {};
+        }
+    }
+
+    /// @brief Check whether any node properties are waiting to be bound.
+    /// @return true if properties precede a node whose kind is not known yet, false otherwise.
+    bool defers_props() const noexcept {
+        return m_defers_anchor || m_defers_tag;
+    }
+
+    /// @brief Set the node properties which precede their node to the given node.
+    /// @param node A node type object the deferred properties belong to.
+    void apply_deferred_properties(basic_node_type& node) {
+        if (m_defers_anchor) {
+            node.add_anchor_name(std::string(m_deferred_anchor_name.begin(), m_deferred_anchor_name.end()));
+            m_defers_anchor = false;
+            m_deferred_anchor_name = {};
+        }
+
+        if (m_defers_tag) {
+            // Ensure the tag is valid in the current document before applying it.
+            tag_resolver_type::resolve_tag(m_deferred_tag_name, mp_meta);
+            node.add_tag_name(std::string(m_deferred_tag_name.begin(), m_deferred_tag_name.end()));
+            m_defers_tag = false;
+            m_deferred_tag_name = {};
+        }
     }
 
     /// @brief Set YAML node properties (anchor and/or tag names) to the given node.
@@ -8747,6 +10497,8 @@ private:
         }
 
         if (m_needs_tag_impl) {
+            // Ensure the tag is valid in the current document before applying it.
+            tag_resolver_type::resolve_tag(m_tag_name, mp_meta);
             node.add_tag_name(std::string(m_tag_name.begin(), m_tag_name.end()));
             m_needs_tag_impl = false;
             m_tag_name = {};
@@ -8766,8 +10518,26 @@ private:
     std::deque<parse_context> m_context_stack {};
     /// The current depth of flow contexts.
     uint32_t m_flow_context_depth {0};
+    /// The indentation the contents of the outermost flow context must exceed, or -1 if unconstrained.
+    int32_t m_flow_base_indent {-1};
     /// The set of YAML directives.
     std::shared_ptr<doc_metainfo_type> mp_meta {};
+    /// Whether the document being parsed exists at all: it has contents or an explicit "---".
+    bool m_has_document {false};
+    /// Whether a provisional root mapping still requires a separator after its flow collection key.
+    bool m_expects_root_flow_key_separator {false};
+    /// Whether the current document begins with an explicit document start marker.
+    bool m_has_explicit_document_start {false};
+    /// The line where the explicit document start marker was found.
+    uint32_t m_explicit_document_start_line {0};
+    /// Whether the pending node properties precede their node and are not bound yet.
+    bool m_defers_anchor {false};
+    /// Whether a tag which precedes its node is waiting to be bound.
+    bool m_defers_tag {false};
+    /// The anchor name which precedes its node.
+    str_view m_deferred_anchor_name;
+    /// The tag name which precedes its node.
+    str_view m_deferred_tag_name;
     /// A flag to determine the need for YAML anchor node implementation.
     bool m_needs_anchor_impl {false};
     /// A flag to determine the need for a corresponding node with the last YAML tag.
@@ -8778,10 +10548,6 @@ private:
     str_view m_anchor_name;
     /// The last tag name.
     str_view m_tag_name;
-    /// The root YAML anchor name. (maybe empty and unused)
-    str_view m_root_anchor_name;
-    /// The root tag name. (maybe empty and unused)
-    str_view m_root_tag_name;
 };
 
 FK_YAML_DETAIL_NAMESPACE_END
@@ -8791,7 +10557,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/input/input_adapter.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -8815,7 +10581,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/encodings/utf_encode_detector.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -8832,7 +10598,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/encodings/utf_encode_t.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -8955,27 +10721,40 @@ struct utf_encode_detector<ItrType, enable_if_t<is_iterator_of<ItrType, char>::v
         std::array<uint8_t, 4> bytes {{}};
         bytes.fill(0xFFu);
         auto current = begin;
+        int num_read = 0;
         for (int i = 0; i < 4 && current != end; i++, ++current) {
             bytes[i] = static_cast<uint8_t>(*current); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+            ++num_read;
         }
 
         bool has_bom = false;
         const utf_encode_t encode_type = detect_encoding_type(bytes, has_bom);
 
         if (has_bom) {
-            // skip reading the BOM.
+            // Skip reading the BOM, but only when it is fully present in the input. The probe above pads
+            // unread positions with 0xFF, so an input shorter than the BOM (e.g. a lone 0xFE) can spuriously
+            // match a BOM pattern; advancing past the bytes actually read would move `begin` past `end`.
+            int bom_size = 0;
             switch (encode_type) {
             case utf_encode_t::UTF_8:
-                std::advance(begin, 3);
+                bom_size = 3;
                 break;
             case utf_encode_t::UTF_16BE:
             case utf_encode_t::UTF_16LE:
-                std::advance(begin, 2);
+                bom_size = 2;
                 break;
             case utf_encode_t::UTF_32BE:
             case utf_encode_t::UTF_32LE:
-                std::advance(begin, 4);
+                bom_size = 4;
                 break;
+            }
+            if (num_read >= bom_size) {
+                std::advance(begin, bom_size);
+            }
+            else {
+                // The match was against the padding, not a real BOM; treat the input as UTF-8 so the
+                // spurious encoding is not propagated.
+                return utf_encode_t::UTF_8;
             }
         }
 
@@ -10375,7 +12154,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/iterator.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -10807,7 +12586,7 @@ struct tuple_element<I, ::fkyaml::detail::iterator<ValueType>> {
 // #include <fkYAML/detail/map_range_proxy.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11011,7 +12790,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/node_ref_storage.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11126,7 +12905,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/output/serializer.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11135,9 +12914,12 @@ FK_YAML_DETAIL_NAMESPACE_END
 #ifndef FK_YAML_DETAIL_OUTPUT_SERIALIZER_HPP
 #define FK_YAML_DETAIL_OUTPUT_SERIALIZER_HPP
 
+#include <algorithm>
 #include <cmath>
+#include <deque>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // #include <fkYAML/detail/macros/define_macros.hpp>
@@ -11145,7 +12927,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/conversions/to_string.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11245,6 +13027,8 @@ FK_YAML_DETAIL_NAMESPACE_END
 
 // #include <fkYAML/detail/meta/node_traits.hpp>
 
+// #include <fkYAML/detail/node_attrs.hpp>
+
 // #include <fkYAML/exception.hpp>
 
 // #include <fkYAML/node_type.hpp>
@@ -11259,6 +13043,46 @@ FK_YAML_DETAIL_NAMESPACE_BEGIN
 template <typename BasicNodeType>
 class basic_serializer {
     static_assert(detail::is_basic_node<BasicNodeType>::value, "basic_serializer only accepts basic_node<...>");
+
+    using map_iterator = typename BasicNodeType::const_map_range::const_iterator;
+
+    struct anchor_reference_event {
+        anchor_reference_event(std::string name, const uint32_t offset, const std::size_t position, bool is_anchor)
+            : name(std::move(name)),
+              offset(offset),
+              position(position),
+              is_anchor(is_anchor) {
+        }
+
+        std::string name;
+        uint32_t offset {0};
+        std::size_t position {0};
+        bool is_anchor {false};
+    };
+
+    struct anchor_reference_span {
+        anchor_reference_span() = default;
+
+        anchor_reference_span(uint32_t first_index, uint32_t count)
+            : first_index(first_index),
+              count(count) {
+        }
+
+        uint32_t first_index {0};
+        uint32_t count {0};
+    };
+
+    struct mapping_item_span {
+        mapping_item_span() = default;
+
+        mapping_item_span(uint32_t first_item_reference_index, uint32_t item_count)
+            : first_item_reference_index(first_item_reference_index),
+              item_count(item_count) {
+        }
+
+        uint32_t first_item_reference_index {0};
+        uint32_t item_count {0};
+    };
 
 public:
     /// @brief Construct a new basic_serializer object.
@@ -11290,6 +13114,19 @@ public:
 
 private:
     void serialize_document(const BasicNodeType& node, std::string& str) {
+        m_has_anchor_table = (node.mp_meta && !node.mp_meta->anchor_table.empty());
+
+        m_anchor_reference_events.clear();
+        m_mapping_item_references.clear();
+        m_anchor_reference_cache.clear();
+
+        // Collect the anchor/alias events of the whole document once. Only mappings which do contain
+        // any are cached, so a mapping missing from the cache needs no reordering at all.
+        if (m_has_anchor_table) {
+            std::size_t position = 0;
+            collect_anchor_alias_names(node, position);
+        }
+
         const bool dirs_serialized = serialize_directives(node, str);
 
         // the root node cannot be an alias node.
@@ -11312,6 +13149,11 @@ private:
     /// @return bool true if any directive is serialized, false otherwise.
     bool serialize_directives(const BasicNodeType& node, std::string& str) {
         const auto& p_meta = node.mp_meta;
+        if (!p_meta) {
+            // A node which was never part of a parsed document carries no directives.
+            return false;
+        }
+
         bool needs_directive_end = false;
 
         if (p_meta->is_version_specified) {
@@ -11412,66 +13254,16 @@ private:
                 str += "{}\n";
                 return;
             }
-            for (auto itr : node.map_items()) {
-                insert_indentation(cur_indent, str);
 
-                // serialize a mapping key node.
-                const auto& key_node = itr.key();
+            // If there is any anchor defined for this document and the mapping has more than one entry,
+            // reorder the mapping entries so the anchor resolution order is preserved.
+            // Only a document which defines an anchor can ever need its mapping entries reordered.
+            if (m_has_anchor_table && node.size() > 1 && serialize_reordered_mapping(node, cur_indent, str)) {
+                break;
+            }
 
-                bool is_appended = try_append_alias(key_node, false, str);
-                if (is_appended) {
-                    // The trailing white space is necessary since anchor names can contain a colon (:) at its end.
-                    str += " ";
-                }
-                else {
-                    const bool is_anchor_appended = try_append_anchor(key_node, false, str);
-                    const bool is_tag_appended = try_append_tag(key_node, is_anchor_appended, str);
-                    if (is_anchor_appended || is_tag_appended) {
-                        str += " ";
-                    }
-
-                    const bool is_container = !key_node.is_scalar();
-                    if (is_container) {
-                        str += "? ";
-                    }
-                    const auto indent = static_cast<uint32_t>(get_cur_indent(str));
-                    serialize_node(key_node, indent, str);
-                    if (is_container) {
-                        // a newline code is already inserted in the above serialize_node() call.
-                        insert_indentation(indent - 2, str);
-                    }
-                }
-
-                str += ":";
-
-                // serialize a mapping value node.
-                const auto& value_node = itr.value();
-
-                is_appended = try_append_alias(value_node, true, str);
-                if (is_appended) {
-                    str += "\n";
-                    continue;
-                }
-
-                try_append_anchor(value_node, true, str);
-                try_append_tag(value_node, true, str);
-
-                const bool is_scalar = itr->is_scalar();
-                if (is_scalar) {
-                    str += " ";
-                    serialize_node(value_node, cur_indent, str);
-                    str += "\n";
-                    continue;
-                }
-
-                const bool is_empty = itr->empty();
-                if (is_empty) {
-                    str += " ";
-                }
-                else {
-                    str += "\n";
-                }
-                serialize_node(value_node, cur_indent + 2, str);
+            for (const auto& itr : node.map_items()) {
+                serialize_mapping_entry(itr, cur_indent, str);
             }
             break;
         case node_type::NULL_OBJECT:
@@ -11483,7 +13275,13 @@ private:
             str += m_tmp_str_buff;
             break;
         case node_type::INTEGER:
-            to_string(node.template get_value<typename BasicNodeType::integer_type>(), m_tmp_str_buff);
+            if (node.is_uint()) {
+                // An unsigned integer may exceed the range of the signed integer type.
+                to_string(node.as_uint(), m_tmp_str_buff);
+            }
+            else {
+                to_string(node.template get_value<typename BasicNodeType::integer_type>(), m_tmp_str_buff);
+            }
             str += m_tmp_str_buff;
             break;
         case node_type::FLOAT:
@@ -11522,6 +13320,380 @@ private:
             break;
         }
         }
+    }
+
+    void serialize_mapping_entry(const map_iterator& itr, const uint32_t cur_indent, std::string& str) {
+        insert_indentation(cur_indent, str);
+
+        // serialize a mapping key node.
+        const auto& key_node = itr.key();
+
+        bool is_appended = try_append_alias(key_node, false, str);
+        if (is_appended) {
+            // The trailing white space is necessary since anchor names can contain a colon (:) at its end.
+            str += " ";
+        }
+        else {
+            const bool is_anchor_appended = try_append_anchor(key_node, false, str);
+            const bool is_tag_appended = try_append_tag(key_node, is_anchor_appended, str);
+            if (is_anchor_appended || is_tag_appended) {
+                str += " ";
+            }
+
+            const bool is_container = !key_node.is_scalar();
+            if (is_container) {
+                str += "? ";
+            }
+            const auto indent = static_cast<uint32_t>(get_cur_indent(str));
+            serialize_node(key_node, indent, str);
+            if (is_container) {
+                // a newline code is already inserted in the above serialize_node() call.
+                insert_indentation(indent - 2, str);
+            }
+        }
+
+        str += ":";
+
+        // serialize a mapping value node.
+        const auto& value_node = itr.value();
+
+        is_appended = try_append_alias(value_node, true, str);
+        if (is_appended) {
+            str += "\n";
+            return;
+        }
+
+        try_append_anchor(value_node, true, str);
+        try_append_tag(value_node, true, str);
+
+        const bool is_scalar = value_node.is_scalar();
+        if (is_scalar) {
+            str += " ";
+            serialize_node(value_node, cur_indent, str);
+            str += "\n";
+            return;
+        }
+
+        const bool is_empty = value_node.empty();
+        if (is_empty) {
+            str += " ";
+        }
+        else {
+            str += "\n";
+        }
+        serialize_node(value_node, cur_indent + 2, str);
+    }
+
+    /// @brief Check whether two anchor references identify the same anchor.
+    /// @param lhs The first anchor reference.
+    /// @param rhs The second anchor reference.
+    /// @return true if both references identify the same anchor, false otherwise.
+    static bool is_same_anchor(const anchor_reference_event& lhs, const anchor_reference_event& rhs) noexcept {
+        // Compare the offset first, since it rules out most candidates without touching the name.
+        return lhs.offset == rhs.offset && lhs.name == rhs.name;
+    }
+
+    /// @brief Check whether an anchor is present in a collection.
+    /// @param anchors The collection of anchor references.
+    /// @param target The anchor reference to find.
+    /// @return true if the target is present, false otherwise.
+    bool has_anchor(const anchor_reference_span& anchors, const anchor_reference_event& target) const {
+        const auto last_event_index = anchors.first_index + anchors.count;
+        for (uint32_t i = anchors.first_index; i < last_event_index; ++i) {
+            const auto& anchor = m_anchor_reference_events[i];
+            if (anchor.is_anchor && is_same_anchor(anchor, target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool has_anchor(const std::vector<uint32_t>& anchor_indices, const anchor_reference_event& target) const {
+        for (const auto anchor_index : anchor_indices) {
+            if (is_same_anchor(m_anchor_reference_events[anchor_index], target)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// @brief Check whether an anchor was defined earlier in the same mapping item.
+    /// @param anchors The anchor references in the mapping item.
+    /// @param target The anchor reference whose preceding definition is checked.
+    /// @return true if a preceding definition exists, false otherwise.
+    bool has_prior_anchor_definition(
+        const anchor_reference_span& item_reference, const anchor_reference_event& target) const {
+        const auto last_event_index = item_reference.first_index + item_reference.count;
+        for (uint32_t i = item_reference.first_index; i < last_event_index; ++i) {
+            const auto& anchor = m_anchor_reference_events[i];
+            const bool is_anchor_defined_prior_to_target =
+                anchor.is_anchor && anchor.position < target.position && is_same_anchor(anchor, target);
+            if (is_anchor_defined_prior_to_target) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// @brief Check whether an earlier anchor required by an item remains unemitted.
+    /// @param anchors The anchor references in the mapping item.
+    /// @param anchors_in_mapping The anchor references that have not been emitted.
+    /// @return true if an earlier anchor definition remains unemitted, false otherwise.
+    bool has_unemitted_prior_anchor_definition(
+        const anchor_reference_span& item_reference, const std::vector<uint32_t>& anchor_indices) const {
+        const auto last_event_index = item_reference.first_index + item_reference.count;
+        for (uint32_t i = item_reference.first_index; i < last_event_index; ++i) {
+            const auto& anchor = m_anchor_reference_events[i];
+            if (!anchor.is_anchor) {
+                continue;
+            }
+            for (const auto anchor_index : anchor_indices) {
+                const auto& mapping_anchor = m_anchor_reference_events[anchor_index];
+                if (mapping_anchor.name == anchor.name && mapping_anchor.offset < anchor.offset) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /// @brief Check whether an alias requires an anchor definition that remains unemitted.
+    /// @param anchors The anchor references in the mapping item.
+    /// @param aliases The alias references in the mapping item.
+    /// @param anchors_in_mapping The anchor references that have not been emitted.
+    /// @return true if an aliased anchor remains unemitted, false otherwise.
+    bool has_unemitted_anchor_definition(
+        const anchor_reference_span& item_reference, const std::vector<uint32_t>& anchor_indices) const {
+        const auto last_event_index = item_reference.first_index + item_reference.count;
+        for (uint32_t i = item_reference.first_index; i < last_event_index; ++i) {
+            const auto& alias = m_anchor_reference_events[i];
+            if (alias.is_anchor) {
+                continue;
+            }
+            if (!has_prior_anchor_definition(item_reference, alias) && has_anchor(anchor_indices, alias)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// @brief Check whether a mapping item can be emitted without violating anchor dependencies.
+    /// @param anchors The anchor references in the mapping item.
+    /// @param aliases The alias references in the mapping item.
+    /// @param anchors_in_mapping The anchor references that have not been emitted.
+    /// @return true if the mapping item is ready to be emitted, false otherwise.
+    bool is_ready_to_emit(
+        const anchor_reference_span& item_reference, const std::vector<uint32_t>& anchor_indices) const {
+        return !has_unemitted_prior_anchor_definition(item_reference, anchor_indices) &&
+               !has_unemitted_anchor_definition(item_reference, anchor_indices);
+    }
+
+    /// @brief Remove the anchors defined by an emitted mapping item.
+    /// @param anchors The anchor references defined by the emitted mapping item.
+    /// @param anchors_in_mapping The anchor references that have not been emitted.
+    void remove_anchors(const anchor_reference_span& anchors, std::vector<uint32_t>& anchor_indices) const {
+        const auto last_event_index = anchors.first_index + anchors.count;
+        for (uint32_t i = anchors.first_index; i < last_event_index; ++i) {
+            const auto& anchor = m_anchor_reference_events[i];
+            if (!anchor.is_anchor) {
+                continue;
+            }
+            auto itr = anchor_indices.begin();
+            while (itr != anchor_indices.end()) {
+                const auto& mapping_anchor = m_anchor_reference_events[*itr];
+                itr = is_same_anchor(mapping_anchor, anchor) ? anchor_indices.erase(itr) : std::next(itr);
+            }
+        }
+    }
+
+    /// @brief Reorder mapping items so that their anchor dependencies are emitted first.
+    /// @note This function uses stable topological sorting and thus changes the order of mapping items only when
+    /// necessary to satisfy anchor dependencies.
+    /// @param items The mapping items to reorder.
+    /// @param item_anchors The anchor references grouped by mapping item.
+    /// @param item_aliases The alias references grouped by mapping item.
+    /// @param anchors_in_mapping The anchor references defined in the mapping.
+    /// @return The mapping items in dependency-respecting serialization order.
+    std::vector<map_iterator> reorder_mapping_items_by_dependencies(
+        const std::vector<map_iterator>& items, const std::vector<anchor_reference_span>& item_references,
+        std::vector<uint32_t> anchor_indices) const {
+        std::vector<bool> emitted(items.size(), false);
+        std::vector<map_iterator> ordered_items;
+        ordered_items.reserve(items.size());
+
+        std::size_t emitted_count = 0;
+        // Every item before this index has already been emitted, so the scan below can skip them.
+        std::size_t first_unemitted_index = 0;
+        while (emitted_count < items.size()) {
+            std::size_t ready_item_index = items.size();
+            for (std::size_t i = first_unemitted_index; i < items.size(); ++i) {
+                const bool is_item_emitted = emitted[i];
+                if (is_item_emitted) {
+                    continue;
+                }
+
+                const bool is_item_ready = is_ready_to_emit(item_references[i], anchor_indices);
+                if (is_item_ready) {
+                    ready_item_index = i;
+                    break;
+                }
+            }
+
+            emitted[ready_item_index] = true;
+            ordered_items.emplace_back(items[ready_item_index]);
+            remove_anchors(item_references[ready_item_index], anchor_indices);
+            ++emitted_count;
+            while (first_unemitted_index < items.size() && emitted[first_unemitted_index]) {
+                ++first_unemitted_index;
+            }
+        }
+
+        return ordered_items;
+    }
+
+    /// @brief Serialize a mapping whose entries have to be reordered for anchor resolution.
+    /// @param node The mapping to serialize.
+    /// @param cur_indent The current indent width.
+    /// @param str A string to hold the serialization result.
+    /// @return true if the mapping was serialized here, false if it needs no reordering.
+    bool serialize_reordered_mapping(const BasicNodeType& node, const uint32_t cur_indent, std::string& str) {
+        std::vector<map_iterator> ordered_items;
+        const bool is_reordered = get_mapping_items_in_serialization_order(node, ordered_items);
+        if (!is_reordered) {
+            return false;
+        }
+
+        for (const auto& itr : ordered_items) {
+            serialize_mapping_entry(itr, cur_indent, str);
+        }
+        return true;
+    }
+    /// @brief Collect the mapping items in the order they have to be serialized in.
+    /// @param node The mapping to serialize.
+    /// @param ordered_items Receives the reordered items, untouched unless reordering is needed.
+    /// @return true if the items were reordered, false if the mapping keeps its own order.
+    bool get_mapping_items_in_serialization_order(const BasicNodeType& node, std::vector<map_iterator>& ordered_items) {
+        const auto mapping_reference_itr = m_anchor_reference_cache.find(&node);
+        if (mapping_reference_itr == m_anchor_reference_cache.end()) {
+            return false;
+        }
+
+        const mapping_item_span mapping_reference = mapping_reference_itr->second;
+        const auto& first_item_reference = m_mapping_item_references[mapping_reference.first_item_reference_index];
+        const auto& last_item_reference =
+            m_mapping_item_references[mapping_reference.first_item_reference_index + mapping_reference.item_count - 1];
+        const anchor_reference_span mapping_event_reference {
+            first_item_reference.first_index,
+            last_item_reference.first_index + last_item_reference.count - first_item_reference.first_index};
+
+        bool has_any_anchor = false;
+        bool has_any_alias = false;
+        const auto last_index = mapping_event_reference.first_index + mapping_event_reference.count;
+        for (uint32_t event_index = mapping_event_reference.first_index; event_index < last_index; ++event_index) {
+            has_any_anchor = has_any_anchor || m_anchor_reference_events[event_index].is_anchor;
+            has_any_alias = has_any_alias || !m_anchor_reference_events[event_index].is_anchor;
+        }
+
+        // If there are no anchors (no resolving needed) or aliases (no anchor is referenced), return the items in the
+        // order `node.map_items()` returns them.
+        const bool needs_reordering = has_any_anchor && has_any_alias;
+        if (!needs_reordering) {
+            return false;
+        }
+
+        std::vector<map_iterator> items;
+        std::vector<anchor_reference_span> item_references;
+        items.reserve(mapping_reference.item_count);
+        item_references.reserve(mapping_reference.item_count);
+        std::vector<uint32_t> anchor_indices;
+
+        auto itr = node.map_items().begin();
+        for (uint32_t i = 0; i < mapping_reference.item_count; ++i, ++itr) {
+            items.emplace_back(itr);
+            const auto& item_reference = m_mapping_item_references[mapping_reference.first_item_reference_index + i];
+            item_references.emplace_back(item_reference);
+
+            const auto last_event_index = item_reference.first_index + item_reference.count;
+            for (uint32_t event_index = item_reference.first_index; event_index < last_event_index; ++event_index) {
+                if (m_anchor_reference_events[event_index].is_anchor) {
+                    anchor_indices.emplace_back(event_index);
+                }
+            }
+        }
+
+        for (std::size_t i = 0; i < items.size(); ++i) {
+            const auto& item_reference = item_references[i];
+            const auto last_event_index = item_reference.first_index + item_reference.count;
+            for (uint32_t event_index = item_reference.first_index; event_index < last_event_index; ++event_index) {
+                const auto& alias = m_anchor_reference_events[event_index];
+                if (alias.is_anchor) {
+                    continue;
+                }
+                const bool is_anchor_defined_in_different_item =
+                    has_anchor(anchor_indices, alias) && !has_anchor(item_reference, alias);
+                if (is_anchor_defined_in_different_item) {
+                    ordered_items =
+                        reorder_mapping_items_by_dependencies(items, item_references, std::move(anchor_indices));
+                    return true;
+                }
+            }
+        }
+
+        // Reordering is only needed when an alias refers to an anchor in another mapping item.
+        return false;
+    }
+
+    anchor_reference_span collect_anchor_alias_names(const BasicNodeType& node, std::size_t& position) {
+        const auto first_event_index = static_cast<uint32_t>(m_anchor_reference_events.size());
+        if (node.is_alias()) {
+            anchor_reference_event alias_event(
+                node.get_anchor_name(), node.m_attrs.get_anchor_offset(), position++, false);
+            m_anchor_reference_events.emplace_back(std::move(alias_event));
+        }
+        else if (node.is_anchor()) {
+            anchor_reference_event anchor_event(
+                node.get_anchor_name(), node.m_attrs.get_anchor_offset(), position++, true);
+            m_anchor_reference_events.emplace_back(std::move(anchor_event));
+        }
+
+        if (!node.is_alias()) {
+            switch (node.get_type()) {
+            case node_type::SEQUENCE:
+                for (const auto& item : node) {
+                    collect_anchor_alias_names(item, position);
+                }
+                break;
+            case node_type::MAPPING: {
+                std::vector<anchor_reference_span> item_references;
+                item_references.reserve(node.size());
+                for (auto itr : node.map_items()) {
+                    const auto key_reference = collect_anchor_alias_names(itr.key(), position);
+                    const auto value_reference = collect_anchor_alias_names(itr.value(), position);
+                    const auto event_count =
+                        value_reference.first_index + value_reference.count - key_reference.first_index;
+                    item_references.emplace_back(anchor_reference_span {key_reference.first_index, event_count});
+                }
+                const auto first_item_reference_index = static_cast<uint32_t>(m_mapping_item_references.size());
+                m_mapping_item_references.insert(
+                    m_mapping_item_references.end(), item_references.begin(), item_references.end());
+                const mapping_item_span reference {
+                    first_item_reference_index, static_cast<uint32_t>(item_references.size())};
+                if (m_anchor_reference_events.size() > first_event_index) {
+                    m_anchor_reference_cache.emplace(&node, reference);
+                }
+                break;
+            }
+            default:
+                break;
+            }
+        }
+
+        if (node.is_mapping()) {
+            const auto event_count = static_cast<uint32_t>(m_anchor_reference_events.size()) - first_event_index;
+            return anchor_reference_span {first_event_index, event_count};
+        }
+        return anchor_reference_span {
+            first_event_index, static_cast<uint32_t>(m_anchor_reference_events.size()) - first_event_index};
     }
 
     /// @brief Get the current indentation width.
@@ -11611,7 +13783,7 @@ private:
             return false;
         }
 
-        typedef typename BasicNodeType::string_type string_type;
+        using string_type = typename BasicNodeType::string_type;
         if (s.find_first_of(" \t\n\r,[]{}") != string_type::npos) {
             return false;
         }
@@ -11640,6 +13812,16 @@ private:
     }
 
 private:
+    /// Indicates whether any anchor is present in the YAML document.
+    bool m_has_anchor_table {false};
+    /// A queue to hold anchor reference events.
+    std::deque<anchor_reference_event> m_anchor_reference_events;
+    /// Anchor reference spans for mapping items.
+    /// Each entry represents an anchor reference span for a mapping item.
+    std::vector<anchor_reference_span> m_mapping_item_references;
+    /// Anchor reference cache for quick lookup of mapping reference spans.
+    /// Each entry maps a YAML node to its corresponding mapping reference span.
+    std::unordered_map<const BasicNodeType*, mapping_item_span> m_anchor_reference_cache;
     /// A temporal buffer for conversion from a scalar to a string.
     std::string m_tmp_str_buff;
 };
@@ -11651,7 +13833,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/reverse_iterator.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11906,59 +14088,6 @@ FK_YAML_DETAIL_NAMESPACE_END
 
 #endif /* FK_YAML_DETAIL_REVERSE_ITERATOR_HPP */
 
-// #include <fkYAML/detail/types/node_t.hpp>
-
-// #include <fkYAML/detail/types/yaml_version_t.hpp>
-//  _______   __ __   __  _____   __  __  __
-// |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
-// |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
-//
-// SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
-// SPDX-License-Identifier: MIT
-
-#ifndef FK_YAML_DETAIL_TYPES_YAML_VERSION_T_HPP
-#define FK_YAML_DETAIL_TYPES_YAML_VERSION_T_HPP
-
-#include <cstdint>
-
-// #include <fkYAML/detail/macros/define_macros.hpp>
-
-// #include <fkYAML/yaml_version_type.hpp>
-
-
-FK_YAML_DETAIL_NAMESPACE_BEGIN
-
-/// @brief Definition of YAML version types.
-enum class yaml_version_t : std::uint8_t {
-    VER_1_1, //!< YAML version 1.1
-    VER_1_2, //!< YAML version 1.2
-};
-
-inline yaml_version_t convert_from_yaml_version_type(yaml_version_type t) noexcept {
-    switch (t) {
-    case yaml_version_type::VERSION_1_1:
-        return yaml_version_t::VER_1_1;
-    case yaml_version_type::VERSION_1_2:
-    default:
-        return yaml_version_t::VER_1_2;
-    }
-}
-
-inline yaml_version_type convert_to_yaml_version_type(yaml_version_t t) noexcept {
-    switch (t) {
-    case yaml_version_t::VER_1_1:
-        return yaml_version_type::VERSION_1_1;
-    case yaml_version_t::VER_1_2:
-    default:
-        return yaml_version_type::VERSION_1_2;
-    }
-}
-
-FK_YAML_DETAIL_NAMESPACE_END
-
-#endif /* FK_YAML_DETAIL_TYPES_YAML_VERSION_T_HPP */
-
 // #include <fkYAML/exception.hpp>
 
 // #include <fkYAML/node_type.hpp>
@@ -11966,7 +14095,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/node_value_converter.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -11982,7 +14111,7 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/conversions/from_node.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -12005,8 +14134,6 @@ FK_YAML_DETAIL_NAMESPACE_END
 // #include <fkYAML/detail/meta/stl_supplement.hpp>
 
 // #include <fkYAML/detail/meta/type_traits.hpp>
-
-// #include <fkYAML/detail/types/node_t.hpp>
 
 // #include <fkYAML/exception.hpp>
 
@@ -12712,7 +14839,7 @@ FK_YAML_NAMESPACE_END
 // #include <fkYAML/ordered_map.hpp>
 //  _______   __ __   __  _____   __  __  __
 // |   __| |_/  |  \_/  |/  _  \ /  \/  \|  |     fkYAML: A C++ header-only YAML library
-// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.4.3
+// |   __|  _  < \_   _/|  ___  |    _   |  |___  version 0.5.0
 // |__|  |_| \__|  |_|  |_|   |_|___||___|______| https://github.com/fktn-k/fkYAML
 //
 // SPDX-FileCopyrightText: 2023-2026 Kensuke Fukutani <fktn.dev@gmail.com>
@@ -12744,8 +14871,8 @@ FK_YAML_NAMESPACE_BEGIN
 /// @sa https://fktn-k.github.io/fkYAML/api/ordered_map/
 template <
     typename Key, typename Value, typename IgnoredCompare = std::less<Key>,
-    typename Allocator = std::allocator<std::pair<const Key, Value>>>
-class ordered_map : public std::vector<std::pair<const Key, Value>, Allocator> {
+    typename Allocator = std::allocator<std::pair<Key, Value>>>
+class ordered_map : public std::vector<std::pair<Key, Value>, Allocator> {
 public:
     /// @brief A type for keys.
     /// @sa https://fktn-k.github.io/fkYAML/api/ordered_map/
@@ -12757,7 +14884,7 @@ public:
 
     /// @brief A type for internal key-value containers.
     /// @sa https://fktn-k.github.io/fkYAML/api/ordered_map/
-    using Container = std::vector<std::pair<const Key, Value>, Allocator>;
+    using Container = std::vector<std::pair<Key, Value>, Allocator>;
 
     /// @brief A type for key-value pairs.
     /// @sa https://fktn-k.github.io/fkYAML/api/ordered_map/
@@ -12988,16 +15115,6 @@ public:
     template <typename T, typename SFINAE>
     using value_converter_type = ConverterType<T, SFINAE>;
 
-    /// @brief Definition of node value types.
-    /// @deprecated Use fkyaml::node_type enum class. (since 0.3.12)
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/node_t/
-    using node_t = detail::node_t;
-
-    /// @brief Definition of YAML version types.
-    /// @deprecated Use fkyaml::yaml_version_type enum class. (since 0.3.12)
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/yaml_version_t/
-    using yaml_version_t = detail::yaml_version_t;
-
     /// @brief A type for mapping range objects for the map_items() function.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/map_range/
     using map_range = fkyaml::detail::map_range_proxy<basic_node>;
@@ -13105,17 +15222,9 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/constructor/
     basic_node() = default;
 
-    /// @brief Constructs a new basic_node object with a specified type.
-    /// @param[in] type A YAML node type.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/constructor/
-    FK_YAML_DEPRECATED("Since 0.3.12; Use explicit basic_node(const node_type)")
-    explicit basic_node(const node_t type)
-        : basic_node(detail::convert_to_node_type(type)) {
-    }
-
     explicit basic_node(const node_type type)
-        : m_attrs(detail::node_attr_bits::from_node_type(type)),
-          m_value(m_attrs & detail::node_attr_mask::value) {
+        : m_attrs(type),
+          m_value(m_attrs.get_value_bits()) {
     }
 
     /// @brief Copy constructor of the basic_node class.
@@ -13124,9 +15233,9 @@ public:
     basic_node(const basic_node& rhs)
         : m_attrs(rhs.m_attrs),
           mp_meta(rhs.mp_meta),
-          m_prop(rhs.m_prop) {
+          mp_prop(rhs.mp_prop ? new detail::node_property(*rhs.mp_prop) : nullptr) {
         if FK_YAML_LIKELY (!has_anchor_name()) {
-            switch (m_attrs & detail::node_attr_mask::value) {
+            switch (m_attrs.get_value_bits()) {
             case detail::node_attr_bits::seq_bit:
                 m_value.p_seq = detail::create_object<sequence_type>(*(rhs.m_value.p_seq));
                 break;
@@ -13160,9 +15269,9 @@ public:
     basic_node(basic_node&& rhs) noexcept
         : m_attrs(rhs.m_attrs),
           mp_meta(std::move(rhs.mp_meta)),
-          m_prop(std::move(rhs.m_prop)) {
+          mp_prop(std::move(rhs.mp_prop)) {
         if FK_YAML_LIKELY (!has_anchor_name()) {
-            switch (m_attrs & detail::node_attr_mask::value) {
+            switch (m_attrs.get_value_bits()) {
             case detail::node_attr_bits::seq_bit:
                 FK_YAML_ASSERT(rhs.m_value.p_seq != nullptr);
                 m_value.p_seq = rhs.m_value.p_seq;
@@ -13199,7 +15308,7 @@ public:
             }
         }
 
-        rhs.m_attrs = detail::node_attr_bits::default_bits;
+        rhs.m_attrs = detail::node_attrs {};
         rhs.m_value.p_map = nullptr;
     }
 
@@ -13247,12 +15356,12 @@ public:
 
         bool is_mapping =
             std::all_of(init.begin(), init.end(), [](const detail::node_ref_storage<basic_node>& node_ref) {
-                // Do not use is_sequence_impl() since node_ref may be an anchor or alias.
+                // Do not use m_attrs.is_sequence() since node_ref may be an anchor or alias.
                 return node_ref->is_sequence() && node_ref->size() == 2;
             });
 
         if (is_mapping) {
-            m_attrs = detail::node_attr_bits::map_bit;
+            m_attrs.set_value_bit(detail::node_attr_bits::map_bit);
             m_value.p_map = detail::create_object<mapping_type>();
 
             auto& map = *m_value.p_map;
@@ -13263,7 +15372,7 @@ public:
             }
         }
         else {
-            m_attrs = detail::node_attr_bits::seq_bit;
+            m_attrs.set_value_bit(detail::node_attr_bits::seq_bit);
             m_value.p_seq = detail::create_object<sequence_type>();
 
             auto& seq = *m_value.p_seq;
@@ -13278,20 +15387,20 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/destructor/
     ~basic_node() noexcept // NOLINT(bugprone-exception-escape)
     {
-        if (m_attrs & detail::node_attr_mask::anchoring) {
-            if (m_attrs & detail::node_attr_bits::anchor_bit) {
-                auto itr = mp_meta->anchor_table.equal_range(m_prop.anchor).first;
-                std::advance(itr, detail::node_attr_bits::get_anchor_offset(m_attrs));
-                itr->second.m_value.destroy(itr->second.m_attrs & detail::node_attr_mask::value);
-                itr->second.m_attrs = detail::node_attr_bits::default_bits;
+        if (m_attrs.has_any(detail::node_attr_mask::anchoring)) {
+            if (m_attrs.has(detail::node_attr_bits::anchor_bit)) {
+                auto itr = mp_meta->anchor_table.equal_range(anchor_prop()).first;
+                std::advance(itr, m_attrs.get_anchor_offset());
+                itr->second.m_value.destroy(itr->second.m_attrs.get_value_bits());
+                itr->second.m_attrs = detail::node_attrs {};
                 itr->second.mp_meta.reset();
             }
         }
-        else if ((m_attrs & detail::node_attr_bits::null_bit) == 0) {
-            m_value.destroy(m_attrs & detail::node_attr_mask::value);
+        else if (!m_attrs.has(detail::node_attr_bits::null_bit)) {
+            m_value.destroy(m_attrs.get_value_bits());
         }
 
-        m_attrs = detail::node_attr_bits::default_bits;
+        m_attrs = detail::node_attrs {};
         mp_meta.reset();
     }
 
@@ -13364,7 +15473,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/sequence/
     static basic_node sequence() {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::seq_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::seq_bit);
         node.m_value.p_seq = detail::create_object<sequence_type>();
         return node;
     } // LCOV_EXCL_LINE
@@ -13375,7 +15484,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/sequence/
     static basic_node sequence(const sequence_type& seq) {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::seq_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::seq_bit);
         node.m_value.p_seq = detail::create_object<sequence_type>(seq);
         return node;
     } // LCOV_EXCL_LINE
@@ -13386,7 +15495,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/sequence/
     static basic_node sequence(sequence_type&& seq) {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::seq_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::seq_bit);
         node.m_value.p_seq = detail::create_object<sequence_type>(std::move(seq));
         return node;
     } // LCOV_EXCL_LINE
@@ -13396,7 +15505,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/mapping/
     static basic_node mapping() {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::map_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::map_bit);
         node.m_value.p_map = detail::create_object<mapping_type>();
         return node;
     } // LCOV_EXCL_LINE
@@ -13407,7 +15516,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/mapping/
     static basic_node mapping(const mapping_type& map) {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::map_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::map_bit);
         node.m_value.p_map = detail::create_object<mapping_type>(map);
         return node;
     } // LCOV_EXCL_LINE
@@ -13418,7 +15527,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/mapping/
     static basic_node mapping(mapping_type&& map) {
         basic_node node;
-        node.m_attrs = detail::node_attr_bits::map_bit;
+        node.m_attrs.set_value_bit(detail::node_attr_bits::map_bit);
         node.m_value.p_map = detail::create_object<mapping_type>(std::move(map));
         return node;
     } // LCOV_EXCL_LINE
@@ -13431,13 +15540,13 @@ public:
     static basic_node alias_of(const basic_node& anchor_node) {
         constexpr detail::node_attr_t anchor_bit = detail::node_attr_bits::anchor_bit;
 
-        if FK_YAML_UNLIKELY (!anchor_node.has_anchor_name() || !(anchor_node.m_attrs & anchor_bit)) {
+        if FK_YAML_UNLIKELY (!anchor_node.has_anchor_name() || !anchor_node.m_attrs.has(anchor_bit)) {
             throw fkyaml::exception("Cannot create an alias without anchor name.");
         }
 
         basic_node node = anchor_node;
-        node.m_attrs &= ~detail::node_attr_mask::anchoring;
-        node.m_attrs |= detail::node_attr_bits::alias_bit;
+        node.m_attrs.unset(detail::node_attr_mask::anchoring);
+        node.m_attrs.set(detail::node_attr_bits::alias_bit);
         return node;
     } // LCOV_EXCL_LINE
 
@@ -13474,14 +15583,14 @@ public:
     basic_node& operator[](KeyType&& key) {
         basic_node& act_node = resolve_reference();
 
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("operator[] is unavailable for a scalar node.", get_type());
         }
 
         basic_node key_node = std::forward<KeyType>(key);
 
-        if (act_node.is_sequence_impl()) {
-            // Do not use is_integer_impl() since n may be an anchor or alias.
+        if (act_node.m_attrs.is_sequence()) {
+            // Do not use m_attrs.is_integer() since n may be an anchor or alias.
             if FK_YAML_UNLIKELY (!key_node.is_integer()) {
                 throw fkyaml::type_error(
                     "An argument of operator[] for sequence nodes must be an integer.", get_type());
@@ -13508,14 +15617,14 @@ public:
     const basic_node& operator[](KeyType&& key) const {
         const basic_node& act_node = resolve_reference();
 
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("operator[] is unavailable for a scalar node.", get_type());
         }
 
         basic_node key_node = std::forward<KeyType>(key);
 
-        if (act_node.is_sequence_impl()) {
-            if FK_YAML_UNLIKELY (!key_node.is_integer_impl()) {
+        if (act_node.m_attrs.is_sequence()) {
+            if FK_YAML_UNLIKELY (!key_node.m_attrs.is_integer()) {
                 throw fkyaml::type_error(
                     "An argument of operator[] for sequence nodes must be an integer.", get_type());
             }
@@ -13583,12 +15692,12 @@ public:
     /// @param rhs A basic_node object to be compared with this basic_node object.
     /// @return true if both types and values are equal, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/operator_eq/
-    bool operator==(const basic_node& rhs) const noexcept {
+    bool operator==(const basic_node& rhs) const {
         const basic_node& lhs = resolve_reference();
         const basic_node& act_rhs = rhs.resolve_reference();
 
-        const detail::node_attr_t lhs_val_bit = lhs.m_attrs & detail::node_attr_mask::value;
-        if (lhs_val_bit != (act_rhs.m_attrs & detail::node_attr_mask::value)) {
+        const detail::node_attr_t lhs_val_bit = lhs.m_attrs.get_value_bits();
+        if (lhs_val_bit != (act_rhs.m_attrs.get_value_bits())) {
             return false;
         }
 
@@ -13637,7 +15746,7 @@ public:
     /// @param rhs A basic_node object to be compared with this basic_node object.
     /// @return true this basic_node object is less than `rhs`.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/operator_lt/
-    bool operator<(const basic_node& rhs) const noexcept {
+    bool operator<(const basic_node& rhs) const {
         if (operator==(rhs)) {
             return false;
         }
@@ -13645,8 +15754,8 @@ public:
         const basic_node& lhs = resolve_reference();
         const basic_node& act_rhs = rhs.resolve_reference();
 
-        const detail::node_attr_t lhs_val_bit = lhs.m_attrs & detail::node_attr_mask::value;
-        const detail::node_attr_t rhs_val_bit = act_rhs.m_attrs & detail::node_attr_mask::value;
+        const detail::node_attr_t lhs_val_bit = lhs.m_attrs.get_value_bits();
+        const detail::node_attr_t rhs_val_bit = act_rhs.m_attrs.get_value_bits();
 
         if (lhs_val_bit < rhs_val_bit) {
             return true;
@@ -13716,87 +15825,77 @@ public:
     /// @return The type of the YAML node value.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_type/
     node_type get_type() const noexcept {
-        return detail::node_attr_bits::to_node_type(resolve_reference().m_attrs);
-    }
-
-    /// @brief Returns the type of the current basic_node value.
-    /// @deprecated Use get_type() function. (since 0.3.12)
-    /// @return The type of the YAML node value.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/type/
-    FK_YAML_DEPRECATED("Since 0.3.12; Use get_type()")
-    node_t type() const noexcept {
-        node_type tmp_type = get_type();
-        return detail::convert_from_node_type(tmp_type);
+        return resolve_reference().m_attrs.get_node_type();
     }
 
     /// @brief Tests whether the current basic_node value is of sequence type.
     /// @return true if the type is sequence, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_sequence/
     bool is_sequence() const noexcept {
-        return resolve_reference().is_sequence_impl();
+        return resolve_reference().m_attrs.is_sequence();
     }
 
     /// @brief Tests whether the current basic_node value is of mapping type.
     /// @return true if the type is mapping, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_mapping/
     bool is_mapping() const noexcept {
-        return resolve_reference().is_mapping_impl();
+        return resolve_reference().m_attrs.is_mapping();
     }
 
     /// @brief Tests whether the current basic_node value is of null type.
     /// @return true if the type is null, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_null/
     bool is_null() const noexcept {
-        return resolve_reference().is_null_impl();
+        return resolve_reference().m_attrs.is_null();
     }
 
     /// @brief Tests whether the current basic_node value is of boolean type.
     /// @return true if the type is boolean, false otherwise
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_boolean/
     bool is_boolean() const noexcept {
-        return resolve_reference().is_boolean_impl();
+        return resolve_reference().m_attrs.is_boolean();
     }
 
     /// @brief Tests whether the current basic_node value is of integer type.
     /// @return true if the type is integer, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_integer/
     bool is_integer() const noexcept {
-        return resolve_reference().is_integer_impl();
+        return resolve_reference().m_attrs.is_integer();
     }
 
     /// @brief Tests whether the current basic_node value is of float number type.
     /// @return true if the type is floating point number, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_float_number/
     bool is_float_number() const noexcept {
-        return resolve_reference().is_float_number_impl();
+        return resolve_reference().m_attrs.is_float_number();
     }
 
     /// @brief Tests whether the current basic_node value is of string type.
     /// @return true if the type is string, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_string/
     bool is_string() const noexcept {
-        return resolve_reference().is_string_impl();
+        return resolve_reference().m_attrs.is_string();
     }
 
     /// @brief Tests whether the current basic_node value is of scalar types.
     /// @return true if the type is scalar, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_scalar/
     bool is_scalar() const noexcept {
-        return resolve_reference().is_scalar_impl();
+        return resolve_reference().m_attrs.is_scalar();
     }
 
     /// @brief Tests whether the current basic_node is an anchor node.
     /// @return true if the current basic_node is an anchor node, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_anchor/
     bool is_anchor() const noexcept {
-        return m_attrs & detail::node_attr_bits::anchor_bit;
+        return m_attrs.has(detail::node_attr_bits::anchor_bit);
     }
 
     /// @brief Tests whether the current basic_node is an alias node.
     /// @return true if the current basic_node is an alias node, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/is_alias/
     bool is_alias() const noexcept {
-        return m_attrs & detail::node_attr_bits::alias_bit;
+        return m_attrs.has(detail::node_attr_bits::alias_bit);
     }
 
     /// @brief Tests whether the current basic_node value (sequence, mapping, string) is empty.
@@ -13804,7 +15903,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/empty/
     bool empty() const {
         const basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit: {
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return act_node.m_value.p_seq->empty();
@@ -13827,7 +15926,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/size/
     std::size_t size() const {
         const basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit:
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return act_node.m_value.p_seq->size();
@@ -13855,7 +15954,7 @@ public:
                               int> = 0>
     bool contains(KeyType&& key) const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.m_attrs & detail::node_attr_bits::map_bit) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_mapping()) {
             FK_YAML_ASSERT(act_node.m_value.p_map != nullptr);
             const auto& map = *act_node.m_value.p_map;
             return map.find(std::forward<KeyType>(key)) != map.end();
@@ -13878,14 +15977,14 @@ public:
     basic_node& at(KeyType&& key) {
         basic_node& act_node = resolve_reference();
 
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("at() is unavailable for a scalar node.", get_type());
         }
 
         basic_node node_key = std::forward<KeyType>(key);
 
-        if (act_node.is_sequence_impl()) {
-            if FK_YAML_UNLIKELY (!node_key.is_integer_impl()) {
+        if (act_node.m_attrs.is_sequence()) {
+            if FK_YAML_UNLIKELY (!node_key.m_attrs.is_integer()) {
                 throw fkyaml::type_error("An argument of at() for sequence nodes must be an integer.", get_type());
             }
 
@@ -13922,13 +16021,13 @@ public:
     const basic_node& at(KeyType&& key) const {
         const basic_node& act_node = resolve_reference();
 
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("at() is unavailable for a scalar node.", get_type());
         }
 
         basic_node node_key = std::forward<KeyType>(key);
 
-        if (act_node.is_sequence_impl()) {
+        if (act_node.m_attrs.is_sequence()) {
             if FK_YAML_UNLIKELY (!node_key.is_integer()) {
                 throw fkyaml::type_error("An argument of at() for sequence nodes must be an integer.", get_type());
             }
@@ -13960,11 +16059,11 @@ public:
     template <typename KeyType, detail::enable_if_t<detail::is_basic_node<KeyType>::value, int> = 0>
     basic_node& at(KeyType&& key) {
         basic_node& act_node = resolve_reference();
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("at() is unavailable for a scalar node.", get_type());
         }
 
-        if (act_node.is_sequence_impl()) {
+        if (act_node.m_attrs.is_sequence()) {
             if FK_YAML_UNLIKELY (!key.is_integer()) {
                 throw fkyaml::type_error("An argument of at() for sequence nodes must be an integer.", get_type());
             }
@@ -13996,11 +16095,11 @@ public:
     template <typename KeyType, detail::enable_if_t<detail::is_basic_node<KeyType>::value, int> = 0>
     const basic_node& at(KeyType&& key) const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_UNLIKELY (act_node.is_scalar_impl()) {
+        if FK_YAML_UNLIKELY (act_node.m_attrs.is_scalar()) {
             throw fkyaml::type_error("at() is unavailable for a scalar node.", get_type());
         }
 
-        if (act_node.is_sequence_impl()) {
+        if (act_node.m_attrs.is_sequence()) {
             if FK_YAML_UNLIKELY (!key.is_integer()) {
                 throw fkyaml::type_error("An argument of at() for sequence nodes must be an integer.", get_type());
             }
@@ -14028,41 +16127,23 @@ public:
     /// @return The YAML version if already set, `yaml_version_type::VERSION_1_2` otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_yaml_version_type/
     yaml_version_type get_yaml_version_type() const noexcept {
-        return mp_meta->is_version_specified ? mp_meta->version : yaml_version_type::VERSION_1_2;
+        return (mp_meta && mp_meta->is_version_specified) ? mp_meta->version : yaml_version_type::VERSION_1_2;
     }
 
     /// @brief Set the YAML version for this basic_node object.
     /// @param[in] version The target YAML version.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/set_yaml_version_type/
-    void set_yaml_version_type(const yaml_version_type version) noexcept {
-        mp_meta->version = version;
-        mp_meta->is_version_specified = true;
-    }
-
-    /// @brief Get the YAML version for this basic_node object.
-    /// @deprecated Use get_yaml_version_type() function. (since 0.3.12)
-    /// @return The YAML version if already set, `yaml_version_t::VER_1_2` otherwise.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_yaml_version/
-    FK_YAML_DEPRECATED("Since 0.3.12; Use get_yaml_version_type()")
-    yaml_version_t get_yaml_version() const noexcept {
-        yaml_version_type tmp_type = get_yaml_version_type();
-        return detail::convert_from_yaml_version_type(tmp_type);
-    }
-
-    /// @brief Set the YAML version for this basic_node object.
-    /// @deprecated Use set_yaml_version_type(yaml_version_type) function. (since 0.3.12)
-    /// @param[in] version The target YAML version.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/set_yaml_version/
-    FK_YAML_DEPRECATED("Since 0.3.12; Use set_yaml_version_type(const yaml_version_type)")
-    void set_yaml_version(const yaml_version_t version) noexcept {
-        set_yaml_version_type(detail::convert_to_yaml_version_type(version));
+    void set_yaml_version_type(const yaml_version_type version) {
+        auto& directives = *meta();
+        directives.version = version;
+        directives.is_version_specified = true;
     }
 
     /// @brief Check whether this basic_node object has already had any anchor name.
     /// @return true if ths basic_node has an anchor name, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/has_anchor_name/
     bool has_anchor_name() const noexcept {
-        return (m_attrs & detail::node_attr_mask::anchoring) && !m_prop.anchor.empty();
+        return m_attrs.has_any(detail::node_attr_mask::anchoring) && mp_prop && !mp_prop->anchor.empty();
     }
 
     /// @brief Get the anchor name associated with this basic_node object.
@@ -14074,7 +16155,7 @@ public:
         if FK_YAML_UNLIKELY (!has_anchor_name()) {
             throw fkyaml::exception("No anchor name has been set.");
         }
-        return m_prop.anchor;
+        return mp_prop->anchor;
     }
 
     /// @brief Add an anchor name to this basic_node object.
@@ -14082,27 +16163,7 @@ public:
     /// @param[in] anchor_name An anchor name. This should not be empty.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/add_anchor_name/
     void add_anchor_name(const std::string& anchor_name) {
-        if (is_anchor()) {
-            m_attrs &= ~detail::node_attr_mask::anchoring;
-            auto itr = mp_meta->anchor_table.equal_range(m_prop.anchor).first;
-            std::advance(itr, detail::node_attr_bits::get_anchor_offset(m_attrs));
-            mp_meta.reset();
-            itr->second.swap(*this);
-            mp_meta->anchor_table.erase(itr);
-        }
-
-        auto p_meta = mp_meta;
-
-        basic_node node;
-        node.swap(*this);
-        p_meta->anchor_table.emplace(anchor_name, std::move(node));
-
-        m_attrs &= ~detail::node_attr_mask::anchoring;
-        m_attrs |= detail::node_attr_bits::anchor_bit;
-        mp_meta = p_meta;
-        const auto offset = static_cast<uint32_t>(mp_meta->anchor_table.count(anchor_name) - 1);
-        detail::node_attr_bits::set_anchor_offset(offset, m_attrs);
-        m_prop.anchor = anchor_name;
+        anchor_this_node(anchor_name);
     }
 
     /// @brief Add an anchor name to this basic_node object.
@@ -14110,46 +16171,77 @@ public:
     /// @param[in] anchor_name An anchor name. This should not be empty.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/add_anchor_name/
     void add_anchor_name(std::string&& anchor_name) {
-        if (is_anchor()) {
-            m_attrs &= ~detail::node_attr_mask::anchoring;
-            auto itr = mp_meta->anchor_table.equal_range(m_prop.anchor).first;
-            std::advance(itr, detail::node_attr_bits::get_anchor_offset(m_attrs));
-            mp_meta.reset();
-            itr->second.swap(*this);
-            mp_meta->anchor_table.erase(itr);
-        }
-
-        auto p_meta = mp_meta;
-
-        basic_node node;
-        node.swap(*this);
-        p_meta->anchor_table.emplace(anchor_name, std::move(node));
-
-        m_attrs &= ~detail::node_attr_mask::anchoring;
-        m_attrs |= detail::node_attr_bits::anchor_bit;
-        mp_meta = p_meta;
-        auto offset = static_cast<uint32_t>(mp_meta->anchor_table.count(anchor_name) - 1);
-        detail::node_attr_bits::set_anchor_offset(offset, m_attrs);
-        m_prop.anchor = std::move(anchor_name);
+        anchor_this_node(std::move(anchor_name));
     }
 
     /// @brief Check whether this basic_node object has already had any tag name.
     /// @return true if ths basic_node has a tag name, false otherwise.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/has_tag_name/
     bool has_tag_name() const noexcept {
-        return !m_prop.tag.empty();
+        return mp_prop && !mp_prop->tag.empty();
     }
 
     /// @brief Get the tag name associated with this basic_node object.
     /// @note Some tag name must be set before calling this method. Call has_tag_name() to see if this basic_node
     /// object has any tag name.
-    /// @return The tag name associated with the node. It may be empty.
+    /// @return The tag name associated with the node.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_tag_name/
     const std::string& get_tag_name() const {
         if FK_YAML_UNLIKELY (!has_tag_name()) {
             throw fkyaml::exception("No tag name has been set.");
         }
-        return m_prop.tag;
+        return mp_prop->tag;
+    }
+
+    /// @brief Get the resolved tag name associated with this basic_node object.
+    /// @note Some tag name must be set before calling this method. Call has_tag_name() to see if this basic_node object
+    /// has any tag name.
+    /// @return The resolved tag name associated with the node.
+    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_resolved_tag_name/
+    std::string get_resolved_tag_name() const {
+        if FK_YAML_UNLIKELY (!has_tag_name()) {
+            throw fkyaml::exception("No tag name has been set.");
+        }
+
+        const auto& tag = mp_prop->tag;
+
+        // non-specific tag
+        if (tag == "!") {
+            return tag;
+        }
+
+        static const detail::document_metainfo<basic_node> NO_DIRECTIVES {};
+        const auto& directives = mp_meta ? *mp_meta : NO_DIRECTIVES;
+
+        // secondary tag handle
+        if (tag.rfind("!!", 0) == 0) {
+            if (directives.secondary_handle_prefix.empty()) {
+                return "tag:yaml.org,2002:" + tag.substr(2);
+            }
+            return directives.secondary_handle_prefix + tag.substr(2);
+        }
+
+        // named handles
+        for (const auto& named_handle_itr : directives.named_handle_map) {
+            if (tag.rfind(named_handle_itr.first, 0) == 0) {
+                return named_handle_itr.second + tag.substr(named_handle_itr.first.size());
+            }
+        }
+
+        // vertabim tags
+        const bool is_verbatim = tag.rfind("!<", 0) == 0 && tag.back() == '>';
+        if (is_verbatim) {
+            // Verbatim tags (!<...>) are not subject to tag resolution.
+            // Anything in ... must not be expanded.
+            // https://yaml.org/spec/1.2.2/#691-node-tags
+            return tag.substr(2, tag.size() - 3);
+        }
+
+        // primary tag handle
+        if (directives.primary_handle_prefix.empty()) {
+            return "!" + tag.substr(1);
+        }
+        return directives.primary_handle_prefix + tag.substr(1);
     }
 
     /// @brief Add a tag name to this basic_node object.
@@ -14157,7 +16249,7 @@ public:
     /// @param[in] tag_name A tag name to get associated with this basic_node object.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/add_tag_name/
     void add_tag_name(const std::string& tag_name) {
-        m_prop.tag = tag_name;
+        prop().tag = tag_name;
     }
 
     /// @brief Add a tag name to this basic_node object.
@@ -14165,7 +16257,7 @@ public:
     /// @param[in] tag_name A tag name to get associated with this basic_node object.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/add_tag_name/
     void add_tag_name(std::string&& tag_name) {
-        m_prop.tag = std::move(tag_name);
+        prop().tag = std::move(tag_name);
     }
 
     /// @brief Get the node value object converted into a given type.
@@ -14247,38 +16339,13 @@ public:
         }
     }
 
-    /// @brief Explicit reference access to the internally stored YAML node value.
-    /// @tparam ReferenceType Reference type to the target YAML node value.
-    /// @return Reference to the internally stored YAML node value.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_value_ref/
-    template <typename ReferenceType, detail::enable_if_t<std::is_reference<ReferenceType>::value, int> = 0>
-    FK_YAML_DEPRECATED("Since 0.4.3; Use one of as_seq(), as_map(), as_bool(), as_int(), as_float() or as_str()")
-    ReferenceType get_value_ref() {
-        return get_value_ref_impl(static_cast<detail::add_pointer_t<ReferenceType>>(nullptr));
-    }
-
-    /// @brief Explicit reference access to the internally stored YAML node value.
-    /// @tparam ReferenceType Constant reference type to the target YAML node value.
-    /// @return Constant reference to the internally stored YAML node value.
-    /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/get_value_ref/
-    template <
-        typename ReferenceType,
-        detail::enable_if_t<
-            detail::conjunction<
-                std::is_reference<ReferenceType>, std::is_const<detail::remove_reference_t<ReferenceType>>>::value,
-            int> = 0>
-    FK_YAML_DEPRECATED("Since 0.4.3; Use one of as_seq(), as_map(), as_bool(), as_int(), as_float() or as_str()")
-    ReferenceType get_value_ref() const {
-        return get_value_ref_impl(static_cast<detail::add_pointer_t<ReferenceType>>(nullptr));
-    }
-
     /// @brief Returns reference to the sequence node value.
     /// @throw fkyaml::type_error The node value is not a sequence.
     /// @return Reference to the sequence node value.
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_seq/
     sequence_type& as_seq() {
         basic_node& act_node = resolve_reference(); // NOLINT(misc-const-correctness)
-        if FK_YAML_LIKELY (act_node.is_sequence_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_sequence()) {
             return *act_node.m_value.p_seq;
         }
         throw fkyaml::type_error("The node value is not a sequence.", get_type());
@@ -14290,7 +16357,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_seq/
     const sequence_type& as_seq() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_sequence_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_sequence()) {
             return *act_node.m_value.p_seq;
         }
         throw fkyaml::type_error("The node value is not a sequence.", get_type());
@@ -14302,7 +16369,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_map/
     mapping_type& as_map() {
         basic_node& act_node = resolve_reference(); // NOLINT(misc-const-correctness)
-        if FK_YAML_LIKELY (act_node.is_mapping_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_mapping()) {
             return *act_node.m_value.p_map;
         }
         throw fkyaml::type_error("The node value is not a mapping.", get_type());
@@ -14314,7 +16381,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_map/
     const mapping_type& as_map() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_mapping_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_mapping()) {
             return *act_node.m_value.p_map;
         }
         throw fkyaml::type_error("The node value is not a mapping.", get_type());
@@ -14326,7 +16393,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_bool/
     boolean_type& as_bool() {
         basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_boolean_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_boolean()) {
             return act_node.m_value.boolean;
         }
         throw fkyaml::type_error("The node value is not a boolean.", get_type());
@@ -14338,7 +16405,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_bool/
     const boolean_type& as_bool() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_boolean_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_boolean()) {
             return act_node.m_value.boolean;
         }
         throw fkyaml::type_error("The node value is not a boolean.", get_type());
@@ -14348,10 +16415,10 @@ public:
     /// @return true if the node holds an unsigned integer, false otherwise.
     bool is_uint() const noexcept {
         const auto& resolved = resolve_reference();
-        if (resolved.is_uint_impl()) {
+        if (resolved.m_attrs.is_uint()) {
             return true;
         }
-        if (resolved.is_integer_impl() && resolved.m_value.integer >= static_cast<integer_type>(0)) {
+        if (resolved.m_attrs.is_integer() && resolved.m_value.integer >= static_cast<integer_type>(0)) {
             // This is a signed integer node, but the value is non-negative,
             // so it can be treated as an unsigned integer.
             return true;
@@ -14366,13 +16433,13 @@ public:
     /// @return The node value as uint64_t.
     uint64_t as_uint() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_integer_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_integer()) {
             // When integer_type is unsigned the stored value IS the uint64_t directly.
             if (std::is_unsigned<integer_type>::value) {
                 return static_cast<uint64_t>(act_node.m_value.integer);
             }
             // When integer_type is signed, only uint_bit-marked nodes carry a uint64_t.
-            if (act_node.m_attrs & detail::node_attr_bits::uint_bit) {
+            if (act_node.m_attrs.is_uint()) {
                 return static_cast<uint64_t>(act_node.m_value.integer);
             }
             // Signed values in the non-negative range can be returned safely.
@@ -14389,8 +16456,8 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_int/
     integer_type& as_int() {
         basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_integer_impl()) {
-            if FK_YAML_UNLIKELY (act_node.is_uint_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_integer()) {
+            if FK_YAML_UNLIKELY (act_node.m_attrs.is_uint()) {
                 throw fkyaml::type_error(
                     "The integer value exceeds INT64_MAX and cannot be returned as a signed integer. "
                     "Use as_uint() instead.",
@@ -14407,8 +16474,8 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_int/
     const integer_type& as_int() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_integer_impl()) {
-            if FK_YAML_UNLIKELY (act_node.is_uint_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_integer()) {
+            if FK_YAML_UNLIKELY (act_node.m_attrs.is_uint()) {
                 throw fkyaml::type_error(
                     "The integer value exceeds INT64_MAX and cannot be returned as a signed integer. "
                     "Use as_uint() instead.",
@@ -14425,7 +16492,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_float/
     float_number_type& as_float() {
         basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_float_number_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_float_number()) {
             return act_node.m_value.float_val;
         }
         throw fkyaml::type_error("The node value is not a float.", get_type());
@@ -14437,7 +16504,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_float/
     const float_number_type& as_float() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_float_number_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_float_number()) {
             return act_node.m_value.float_val;
         }
         throw fkyaml::type_error("The node value is not a float.", get_type());
@@ -14449,7 +16516,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_str/
     string_type& as_str() {
         basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_string_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_string()) {
             return *act_node.m_value.p_str;
         }
         throw fkyaml::type_error("The node value is not a string.", get_type());
@@ -14461,7 +16528,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/as_str/
     const string_type& as_str() const {
         const basic_node& act_node = resolve_reference();
-        if FK_YAML_LIKELY (act_node.is_string_impl()) {
+        if FK_YAML_LIKELY (act_node.m_attrs.is_string()) {
             return *act_node.m_value.p_str;
         }
         throw fkyaml::type_error("The node value is not a string.", get_type());
@@ -14480,8 +16547,7 @@ public:
         std::memcpy(&m_value, &rhs.m_value, sizeof(node_value));
         std::memcpy(&rhs.m_value, &tmp, sizeof(node_value));
 
-        swap(m_prop.tag, rhs.m_prop.tag);
-        swap(m_prop.anchor, rhs.m_prop.anchor);
+        swap(mp_prop, rhs.mp_prop);
     }
 
     /// @brief Returns an iterator to the first element of a container node (sequence or mapping).
@@ -14490,7 +16556,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/begin/
     iterator begin() {
         basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit:
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return {act_node.m_value.p_seq->begin()};
@@ -14508,7 +16574,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/begin/
     const_iterator begin() const {
         const basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit:
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return {act_node.m_value.p_seq->begin()};
@@ -14534,7 +16600,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/end/
     iterator end() {
         basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit:
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return {act_node.m_value.p_seq->end()};
@@ -14552,7 +16618,7 @@ public:
     /// @sa https://fktn-k.github.io/fkYAML/api/basic_node/end/
     const_iterator end() const {
         const basic_node& act_node = resolve_reference();
-        switch (act_node.m_attrs & detail::node_attr_mask::value) {
+        switch (act_node.m_attrs.get_value_bits()) {
         case detail::node_attr_bits::seq_bit:
             FK_YAML_ASSERT(act_node.m_value.p_seq != nullptr);
             return {act_node.m_value.p_seq->end()};
@@ -14656,13 +16722,14 @@ public:
     size_type erase(KeyType&& key) {
         basic_node key_node = std::forward<KeyType>(key);
         basic_node& act_node = resolve_reference();
-        if FK_YAML_UNLIKELY (!act_node.is_mapping_impl()) {
+        if FK_YAML_UNLIKELY (!act_node.m_attrs.is_mapping()) {
             throw type_error("erase() cannot be called on a non-mapping node.", get_type());
         }
 
         auto& map = *act_node.m_value.p_map;
         for (auto itr = map.begin(); itr != map.end(); ++itr) {
-            if (itr->first == key_node) {
+            bool key_found = itr->first == key_node;
+            if (key_found) {
                 map.erase(itr);
                 return size_type {1};
             }
@@ -14675,9 +16742,19 @@ private:
     /// @return Reference to an actual value node.
     basic_node& resolve_reference() {
         if FK_YAML_UNLIKELY (has_anchor_name()) {
-            auto itr = mp_meta->anchor_table.equal_range(m_prop.anchor).first;
-            std::advance(itr, detail::node_attr_bits::get_anchor_offset(m_attrs));
-            return itr->second;
+            auto itr = mp_meta->anchor_table.equal_range(anchor_prop()).first;
+            auto offset = m_attrs.get_anchor_offset();
+            std::advance(itr, offset);
+            auto& anchor = itr->second;
+
+            // Checks for cyclic references in the child nodes of the anchor node.
+            // If it does, throws an exception to prevent infinite recursion and stack overflow.
+            const bool contains_self_ref = anchor.contains_self_referential_alias(anchor_prop(), offset);
+            if FK_YAML_UNLIKELY (contains_self_ref) {
+                throw fkyaml::exception("Cyclic reference detected during anchor/alias resolving.");
+            }
+
+            return anchor;
         }
         return *this;
     }
@@ -14686,49 +16763,131 @@ private:
     /// @return Const reference to an actual value node.
     const basic_node& resolve_reference() const {
         if FK_YAML_UNLIKELY (has_anchor_name()) {
-            auto itr = mp_meta->anchor_table.equal_range(m_prop.anchor).first;
-            std::advance(itr, detail::node_attr_bits::get_anchor_offset(m_attrs));
-            return itr->second;
+            auto itr = mp_meta->anchor_table.equal_range(anchor_prop()).first;
+            auto offset = m_attrs.get_anchor_offset();
+            std::advance(itr, offset);
+            const auto& anchor = itr->second;
+
+            // Checks for cyclic references in the child nodes of the anchor node.
+            // If it does, throws an exception to prevent infinite recursion and stack overflow.
+            const bool contains_self_ref = anchor.contains_self_referential_alias(anchor_prop(), offset);
+            if FK_YAML_UNLIKELY (contains_self_ref) {
+                throw fkyaml::exception("Cyclic reference detected during anchor/alias resolving.");
+            }
+
+            return anchor;
         }
         return *this;
     }
 
-    bool is_sequence_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::seq_bit;
+    /// @brief Checks if this node contains any alias node which references itself in its child nodes, which would cause
+    /// infinite recursion and then stack overflow.
+    ///
+    /// @param anchor_name The anchor name of the node to check.
+    /// @param anchor_offset The anchor offset of the node to check.
+    bool contains_self_referential_alias(const std::string& anchor_name, uint32_t anchor_offset) const {
+        std::vector<const basic_node*> stack {this};
+        while (!stack.empty()) {
+            const auto* node = stack.back();
+            stack.pop_back();
+            if (node->is_alias()) {
+                const auto& alias = *node;
+                const bool references_self =
+                    (alias.get_anchor_name() == anchor_name && alias.m_attrs.get_anchor_offset() == anchor_offset);
+                if (references_self) {
+                    return true;
+                }
+            }
+            else if (node->is_sequence()) {
+                for (const auto& child : node->as_seq()) {
+                    stack.push_back(&child);
+                }
+            }
+            else if (node->is_mapping()) {
+                for (const auto& entry : node->as_map()) {
+                    stack.push_back(&entry.first);
+                    stack.push_back(&entry.second);
+                }
+            }
+        }
+
+        return false;
     }
 
-    bool is_mapping_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::map_bit;
+    /// @brief Returns the metainfo of the document this node belongs to, creating it on first use.
+    /// @return The shared document metainfo.
+    const std::shared_ptr<detail::document_metainfo<basic_node>>& meta() const {
+        if (!mp_meta) {
+            mp_meta = std::make_shared<detail::document_metainfo<basic_node>>();
+        }
+        return mp_meta;
     }
 
-    bool is_null_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::null_bit;
+    /// @brief Moves the value of this basic_node object into the anchor table and turns it into an
+    /// anchor which refers to that value.
+    /// @param anchor_name An anchor name. This should not be empty.
+    void anchor_this_node(std::string anchor_name) {
+        // A tag which has already been set belongs to the node the caller holds. The value below moves
+        // into the anchor table, so the tag moves onto the anchor which replaces it, where it would have
+        // been stored anyway had it been set after the anchor name. An anchor which is given a new name
+        // carries its tag as well, so the tag is taken before the previous anchor is resolved below.
+        const auto take_tag_name = [this]() {
+            std::string taken;
+            if (mp_prop) {
+                taken = std::move(mp_prop->tag);
+                mp_prop->tag.clear();
+            }
+            return taken;
+        };
+
+        std::string tag_name = take_tag_name();
+
+        if (is_anchor()) {
+            m_attrs.unset(detail::node_attr_mask::anchoring);
+            auto itr = mp_meta->anchor_table.equal_range(anchor_prop()).first;
+            std::advance(itr, m_attrs.get_anchor_offset());
+            mp_meta.reset();
+            itr->second.swap(*this);
+            mp_meta->anchor_table.erase(itr);
+
+            if (tag_name.empty()) {
+                tag_name = take_tag_name();
+            }
+        }
+
+        auto p_meta = meta();
+
+        basic_node node;
+        node.swap(*this);
+        p_meta->anchor_table.emplace(anchor_name, std::move(node));
+
+        m_attrs.unset(detail::node_attr_mask::anchoring);
+        m_attrs.set(detail::node_attr_bits::anchor_bit);
+        mp_meta = p_meta;
+        const auto offset = static_cast<uint32_t>(mp_meta->anchor_table.count(anchor_name) - 1);
+        m_attrs.set_anchor_offset(offset);
+        prop().anchor = std::move(anchor_name);
+        if (!tag_name.empty()) {
+            prop().tag = std::move(tag_name);
+        }
     }
 
-    bool is_boolean_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::bool_bit;
+    /// @brief Returns the properties of this node, creating them on first use.
+    /// @return The node properties.
+    detail::node_property& prop() {
+        if (!mp_prop) {
+            // std::make_unique is C++14, while this library targets C++11.
+            // NOLINTNEXTLINE(modernize-make-unique)
+            mp_prop.reset(new detail::node_property());
+        }
+        return *mp_prop;
     }
 
-    bool is_integer_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::int_bit;
-    }
-
-    bool is_uint_impl() const noexcept {
-        // Both int_bit and uint_bit must be set: this node stores a uint64_t value
-        // whose bit pattern was placed into the signed integer_type field.
-        return (m_attrs & detail::node_attr_bits::int_bit) && (m_attrs & detail::node_attr_bits::uint_bit);
-    }
-
-    bool is_float_number_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::float_bit;
-    }
-
-    bool is_string_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::string_bit;
-    }
-
-    bool is_scalar_impl() const noexcept {
-        return m_attrs & detail::node_attr_bits::scalar_bits;
+    /// @brief Returns the anchor name of this node, which must have one.
+    /// @return The anchor name.
+    const std::string& anchor_prop() const noexcept {
+        FK_YAML_ASSERT(mp_prop != nullptr);
+        return mp_prop->anchor;
     }
 
     template <
@@ -14743,100 +16902,16 @@ private:
         v = *this;
     }
 
-    /// @brief Returns reference to the sequence node value.
-    /// @throw fkyaml::exception The node value is not a sequence.
-    /// @return Reference to the sequence node value.
-    sequence_type& get_value_ref_impl(sequence_type* /*unused*/) {
-        return as_seq();
-    }
-
-    /// @brief Returns constant reference to the sequence node value.
-    /// @throw fkyaml::exception The node value is not a sequence.
-    /// @return Constant reference to the sequence node value.
-    const sequence_type& get_value_ref_impl(const sequence_type* /*unused*/) const {
-        return as_seq();
-    }
-
-    /// @brief Returns reference to the mapping node value.
-    /// @throw fkyaml::exception The node value is not a mapping.
-    /// @return Reference to the mapping node value.
-    mapping_type& get_value_ref_impl(mapping_type* /*unused*/) {
-        return as_map();
-    }
-
-    /// @brief Returns constant reference to the mapping node value.
-    /// @throw fkyaml::exception The node value is not a mapping.
-    /// @return Constant reference to the mapping node value.
-    const mapping_type& get_value_ref_impl(const mapping_type* /*unused*/) const {
-        return as_map();
-    }
-
-    /// @brief Returns reference to the boolean node value.
-    /// @throw fkyaml::exception The node value is not a boolean.
-    /// @return Reference to the boolean node value.
-    boolean_type& get_value_ref_impl(boolean_type* /*unused*/) {
-        return as_bool();
-    }
-
-    /// @brief Returns reference to the boolean node value.
-    /// @throw fkyaml::exception The node value is not a boolean.
-    /// @return Constant reference to the boolean node value.
-    const boolean_type& get_value_ref_impl(const boolean_type* /*unused*/) const {
-        return as_bool();
-    }
-
-    /// @brief Returns reference to the integer node value.
-    /// @throw fkyaml::exception The node value is not an integer.
-    /// @return Reference to the integer node value.
-    integer_type& get_value_ref_impl(integer_type* /*unused*/) {
-        return as_int();
-    }
-
-    /// @brief Returns reference to the integer node value.
-    /// @throw fkyaml::exception The node value is not an integer.
-    /// @return Constant reference to the integer node value.
-    const integer_type& get_value_ref_impl(const integer_type* /*unused*/) const {
-        return as_int();
-    }
-
-    /// @brief Returns reference to the floating point number node value.
-    /// @throw fkyaml::exception The node value is not a floating point number.
-    /// @return Reference to the floating point number node value.
-    float_number_type& get_value_ref_impl(float_number_type* /*unused*/) {
-        return as_float();
-    }
-
-    /// @brief Returns reference to the floating point number node value.
-    /// @throw fkyaml::exception The node value is not a floating point number.
-    /// @return Constant reference to the floating point number node value.
-    const float_number_type& get_value_ref_impl(const float_number_type* /*unused*/) const {
-        return as_float();
-    }
-
-    /// @brief Returns reference to the string node value.
-    /// @throw fkyaml::exception The node value is not a string.
-    /// @return Reference to the string node value.
-    string_type& get_value_ref_impl(string_type* /*unused*/) {
-        return as_str();
-    }
-
-    /// @brief Returns reference to the string node value.
-    /// @throw fkyaml::exception The node value is not a string.
-    /// @return Constant reference to the string node value.
-    const string_type& get_value_ref_impl(const string_type* /*unused*/) const {
-        return as_str();
-    }
-
     /// The current node attributes.
-    detail::node_attr_t m_attrs {detail::node_attr_bits::default_bits};
+    detail::node_attrs m_attrs;
     /// The shared set of YAML directives applied to this node.
-    mutable std::shared_ptr<detail::document_metainfo<basic_node>> mp_meta {
-        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new)
-        std::shared_ptr<detail::document_metainfo<basic_node>>(new detail::document_metainfo<basic_node>())};
+    /// It is created on first use, since most nodes never need it, and then shared by the nodes of a document.
+    mutable std::shared_ptr<detail::document_metainfo<basic_node>> mp_meta {};
     /// The current node value.
     node_value m_value {};
-    /// The property set of this node.
-    detail::node_property m_prop {};
+    /// The property set of this node. It is created on first use since most nodes have neither an
+    /// anchor name nor a tag name.
+    std::unique_ptr<detail::node_property> mp_prop;
 };
 
 /// @brief Swap function for basic_node objects.
@@ -15001,7 +17076,13 @@ struct hash<fkyaml::basic_node<
             hash_combine(seed, std::hash<boolean_type>()(n.template get_value<boolean_type>()));
             return seed;
         case fkyaml::node_type::INTEGER:
-            hash_combine(seed, std::hash<integer_type>()(n.template get_value<integer_type>()));
+            if (n.is_uint()) {
+                // An unsigned integer may exceed the range of the signed integer type.
+                hash_combine(seed, std::hash<uint64_t>()(n.as_uint()));
+            }
+            else {
+                hash_combine(seed, std::hash<integer_type>()(n.template get_value<integer_type>()));
+            }
             return seed;
         case fkyaml::node_type::FLOAT:
             hash_combine(seed, std::hash<float_number_type>()(n.template get_value<float_number_type>()));
