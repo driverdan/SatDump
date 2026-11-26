@@ -295,19 +295,19 @@
         "src-core/libs/muparser"
       ],
       "upstream_url": "https://github.com/beltoforion/muparser",
-      "version": "2.3.3 (Development Build)",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "ParserVersion in muParserDef.h. Upstream v2.3.2 reports \"2.3.2\" and v2.3.3-1 reports \"2.3.3 (Release)\", so this is a master snapshot between them.",
+      "version": "2.3.5",
+      "commit": "fbafd7f8774af2b53f4d2de07c57353fcfc09216",
+      "commit_verified": true,
+      "version_source": "ParserVersion \"2.3.5 (Release)\" in muParserDef.h; the commit is the v2.3.5 tag. The directory holds upstream include/ and src/ flattened into one directory, plus LICENSE and README.md. Every file was compared with the tag: all are identical except for the local change below, apart from line endings (muParserDLL.cpp, muParserError.cpp and README.md use CRLF at the tag and are stored with LF here).",
       "license": "BSD-2-Clause",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against upstream."
+        "status": "yes",
+        "details": "muParserFixes.h defines MUPARSER_STATIC, so that API_EXPORT_CXX is empty and Windows builds do not mark the classes dllimport (from 2dc805326, \"Fix windows build\"). Upstream sets MUPARSER_STATIC from its own CMakeLists.txt for static builds, which SatDump does not use."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 284,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #284 from a master snapshot taken after v2.3.2 (upstream 11410c968cb5ecf20f9a898b83af91984e8307d4, 2021-06-07, which reports \"2.3.3 (Development Build)\"; matched by diffing upstream history, identical apart from the MUPARSER_STATIC change). v2.3.6-rc2 is a release candidate and was not used. Behaviour changes that SatDump can see: the maximum expression length grows from 5000 to 20000 characters, and rnd() is a new built-in function (uniform random number in [0, 1)); a token named rnd without parentheses is still treated as a variable. The bitwise & and | operators of mu::ParserInt now have separate precedences; SatDump only uses mu::Parser, which does not define them. README.rst became README.md upstream. muParserDLL.cpp (the C interface, compiled but not used by SatDump) changes the signature of mupDefineInfixOprt()."
     },
     {
       "id": "libaec",
