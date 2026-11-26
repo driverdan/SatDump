@@ -1,5 +1,6 @@
 #include "viterbi_punc.h"
 #include "utils.h"
+#include <algorithm>
 #include <cstring>
 
 #define ST_IDLE 0
@@ -23,8 +24,8 @@ namespace viterbi
         output_buffer = new uint8_t[d_buffer_size * 8];
 
         for (int s = 0; s < 2; s++)
-            for (int i = 0; i < 12; i++)
-                for (int y = 0; y < 2; y++)
+            for (int i = 0; i < MAX_PHASES; i++)
+                for (int y = 0; y < MAX_SHIFTS; y++)
                     d_bers[s][i][y] = 10;
     }
 
@@ -34,6 +35,8 @@ namespace viterbi
         delete[] depunc_buffer;
         delete[] output_buffer;
     }
+
+    int Viterbi_Depunc::get_num_shifts() const { return std::min(depunc->get_numstates() * 2, MAX_SHIFTS); }
 
     float Viterbi_Depunc::get_ber(uint8_t *raw, uint8_t *rencoded, int len, float ratio)
     {
@@ -65,7 +68,7 @@ namespace viterbi
                     signed_soft_to_unsigned(ber_test_buffer, ber_soft_buffer, TEST_BITS_LENGTH); // Convert to softs for the viterbi
 
                     // Puncturing stuff
-                    for (int shift = 0; shift < depunc->get_numstates() * 2; shift++) // Test puncturing shifts
+                    for (int shift = 0; shift < get_num_shifts(); shift++) // Test puncturing shifts
                     {
                         int lenp = depunc->depunc_static(ber_soft_buffer, ber_depunc_buffer, TEST_BITS_LENGTH, shift); // Depuncture
 
@@ -154,9 +157,9 @@ namespace viterbi
 
             for (int s = 0; s < (d_check_iq_swap ? 2 : 1); s++)
                 for (phase_t phase : d_phases_to_check)
-                    for (int o = 0; o < 12; o++)
-                        if (ber > d_bers[s][o][phase])
-                            ber = d_bers[s][o][phase];
+                    for (int shift = 0; shift < get_num_shifts(); shift++)
+                        if (ber > d_bers[s][phase][shift])
+                            ber = d_bers[s][phase][shift];
 
             return ber;
         }

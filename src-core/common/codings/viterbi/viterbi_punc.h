@@ -42,8 +42,16 @@ namespace viterbi
         phase_t d_phase;        // Phase the decoder locked onto
         int d_shift;            // Shift the decoder locked onto
         int d_invalid = 0;      // Number of invalid BER tests
-        float d_bers[2][12][2]; // BERs of all branches
         float d_ber;            // Main ber in LOCKED state
+
+        // BERs of all branches, as [iq_swap][phase][shift]
+        static constexpr int MAX_PHASES = 4;  // PHASE_0 to PHASE_270
+        static constexpr int MAX_SHIFTS = 16; // 2 * the most puncturing states (Depunc78)
+        float d_bers[2][MAX_PHASES][MAX_SHIFTS];
+
+        // Number of puncturing shifts the lock search tests. A depuncturer with more than
+        // MAX_SHIFTS / 2 states only has its first MAX_SHIFTS shifts tested
+        int get_num_shifts() const;
 
         // BER Testing
         CCDecoder cc_decoder_ber;
