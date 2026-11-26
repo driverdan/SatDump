@@ -187,19 +187,19 @@
         "src-core/libs/CLI11.hpp"
       ],
       "upstream_url": "https://github.com/CLIUtils/CLI11",
-      "version": "2.5.0",
-      "commit": "4160d259d961cd393fd8d67590a8c7d210207348",
-      "commit_verified": false,
-      "version_source": "CLI11_VERSION in CLI11.hpp; the commit is the v2.5.0 tag. The file is the single-header release asset, which is not in the repository, so it was not compared.",
+      "version": "2.7.2",
+      "commit": "cbd58a3696887b34c70949aef21a71735a0c2ad5",
+      "commit_verified": true,
+      "version_source": "CLI11_VERSION in CLI11.hpp; the commit is the v2.7.2 tag. CLI11.hpp is the unmodified single-header release asset generated from that tag (SHA-256 ffa9a30da295c5858fb5f91f9f45771bab09471d7010a34c7c68c857a330dd76, matching the digest listed for the asset on the v2.7.2 release).",
       "license": "BSD-3-Clause",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet compared with the v2.5.0 single-header asset."
+        "status": "no",
+        "details": "None. The previous copy was also byte-identical to its (v2.5.0) single-header asset."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 279,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated from 2.5.0 in #279. Since 2.6.2, prefix_command() (used by the legacy subcommand) stops at the first unrecognised option as well as at the first positional; PrefixCommandMode::PositionalOnly restores the old behaviour. Since 2.6, some validators are in ExtraValidators (behind CLI11_ENABLE_EXTRA_VALIDATORS for new ones); SatDump uses none."
     },
     {
       "id": "qoi",

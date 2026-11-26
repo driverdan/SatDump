@@ -81,6 +81,50 @@ TEST_CASE("LegacyCmdHandler passes everything after legacy through untouched", "
     }
 }
 
+TEST_CASE("LegacyCmdHandler forwards the arguments after legacy, without a leading --", "[cli][legacy]")
+{
+    LegacyApp l;
+    auto fwd = [&l]() { return satdump::LegacyCmdHandler::get_forwarded_args(l.sub()); };
+
+    SECTION("ordinary command lines are forwarded as they are")
+    {
+        l.parse({"legacy", "live", "goes_hrit", "out", "--source", "file", "--samplerate", "2.4e6", "--fill_missing", "--tracked_addresses", "AAAA0001,AAAA0002"});
+        CHECK(fwd() == std::vector<std::string>{"live", "goes_hrit", "out", "--source", "file", "--samplerate", "2.4e6", "--fill_missing", "--tracked_addresses", "AAAA0001,AAAA0002"});
+    }
+
+    SECTION("a leading -- is dropped, so legacy -- live is legacy live")
+    {
+        // CLI11 >= 2.6.2 keeps the -- in remaining(); the legacy dispatcher would take it for a pipeline id
+        l.parse({"legacy", "--", "live", "goes_hrit", "out", "--source", "file"});
+        CHECK(l.sub()->remaining() == std::vector<std::string>{"--", "live", "goes_hrit", "out", "--source", "file"});
+        CHECK(fwd() == std::vector<std::string>{"live", "goes_hrit", "out", "--source", "file"});
+    }
+
+    SECTION("only one leading -- is dropped")
+    {
+        l.parse({"legacy", "--", "--", "version"});
+        CHECK(fwd() == std::vector<std::string>{"--", "version"});
+    }
+
+    SECTION("a lone -- forwards nothing")
+    {
+        l.parse({"legacy", "--"});
+        CHECK(fwd().empty());
+    }
+
+    SECTION("a -- later in the line is passed through")
+    {
+        l.parse({"legacy", "live", "goes_hrit", "out", "--", "--x", "1"});
+        CHECK(fwd() == std::vector<std::string>{"live", "goes_hrit", "out", "--", "--x", "1"});
+    }
+
+    SECTION("no arguments forward nothing")
+    {
+        l.parse({"legacy"});
+        CHECK(fwd().empty());
+    }
+}
+
 TEST_CASE("LegacyCmdHandler plugs into the CommandHandler like the satdump executable does", "[cli][legacy]")
 {
     // Same registration as src-cli/main.cpp. reg() of the built-in commands reads (and with
