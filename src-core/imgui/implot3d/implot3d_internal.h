@@ -1,19 +1,18 @@
-//--------------------------------------------------
-// ImPlot3D v0.1
-// implot3d_internal.h
-// Date: 2024-11-17
-// Author: Breno Cunha Queiroz (brenocq.com)
-//
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2024-2026 Breno Cunha Queiroz
+
+// ImPlot3D v0.5
+
 // Acknowledgments:
 //  ImPlot3D is heavily inspired by ImPlot
 //  (https://github.com/epezent/implot) by Evan Pezent,
 //  and follows a similar code style and structure to
 //  maintain consistency with ImPlot's API.
-//--------------------------------------------------
 
 // Table of Contents:
 // [SECTION] Constants
 // [SECTION] Generic Helpers
+// [SECTION] Internal Enumerations
 // [SECTION] Forward Declarations
 // [SECTION] Callbacks
 // [SECTION] Structs
@@ -51,30 +50,49 @@
 namespace ImPlot3D {
 
 // Computes the common (base-10) logarithm
-static inline float ImLog10(float x) { return log10f(x); }
+static inline double ImLog10(double x) { return log10(x); }
+// Computes the hyperbolic sine
+static inline double ImSinh(double x) { return sinh(x); }
+// Computes the inverse hyperbolic sine
+static inline double ImAsinh(double x) { return asinh(x); }
+
 // Returns true if flag is set
-template <typename TSet, typename TFlag>
-static inline bool ImHasFlag(TSet set, TFlag flag) { return (set & flag) == flag; }
+template <typename TSet, typename TFlag> static inline bool ImHasFlag(TSet set, TFlag flag) { return (set & flag) == flag; }
 // Flips a flag in a flagset
-template <typename TSet, typename TFlag>
-static inline void ImFlipFlag(TSet& set, TFlag flag) { ImHasFlag(set, flag) ? set &= ~flag : set |= flag; }
-template <typename T>
-static inline T ImRemap01(T x, T x0, T x1) { return (x - x0) / (x1 - x0); }
-// Returns true if val is NAN
-static inline bool ImNan(float val) { return isnan(val); }
-// Returns true if val is NAN or INFINITY
-static inline bool ImNanOrInf(float val) { return !(val >= -FLT_MAX && val <= FLT_MAX) || ImNan(val); }
-// Turns NANs to 0s
-static inline double ImConstrainNan(float val) { return ImNan(val) ? 0 : val; }
-// Turns infinity to floating point maximums
-static inline double ImConstrainInf(double val) { return val >= FLT_MAX ? FLT_MAX : val <= -FLT_MAX ? -FLT_MAX
-                                                                                                    : val; }
-// True if two numbers are approximately equal using units in the last place.
-static inline bool ImAlmostEqual(double v1, double v2, int ulp = 2) { return ImAbs(v1 - v2) < FLT_EPSILON * ImAbs(v1 + v2) * ulp || ImAbs(v1 - v2) < FLT_MIN; }
-// Set alpha channel of 32-bit color from float in range [0.0 1.0]
-static inline ImU32 ImAlphaU32(ImU32 col, float alpha) {
-    return col & ~((ImU32)((1.0f - alpha) * 255) << IM_COL32_A_SHIFT);
+template <typename TSet, typename TFlag> static inline void ImFlipFlag(TSet& set, TFlag flag) { ImHasFlag(set, flag) ? set &= ~flag : set |= flag; }
+template <typename T> static inline T ImRemap01(T x, T x0, T x1) { return (x1 - x0) ? ((x - x0) / (x1 - x0)) : 0; }
+// Returns always positive modulo (assumes r != 0)
+static inline int ImPosMod(int l, int r) { return (l % r + r) % r; }
+// Returns the IEEE-754 bit pattern of val. NaN and infinity are tested on these bits rather than with isnan() or
+// comparisons, so the tests need no <cmath>, don't depend on whether isnan is a macro or a function, and keep
+// working when -ffast-math (-ffinite-math-only) or /fp:fast lets the compiler assume floats are never NaN or infinite.
+static inline ImU64 ImDoubleBits(double val) {
+    static_assert(sizeof(ImU64) == sizeof(double), "ImDoubleBits expects a 64-bit double");
+    ImU64 bits;
+    memcpy(&bits, &val, sizeof(bits));
+#if defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__ && (defined(__GNUC__) || defined(__clang__))
+    __asm__("" : "+r"(bits)); // hide the bits from the optimizer, which would otherwise fold these tests to false
+#endif
+    return bits;
 }
+// Returns true if val is NAN
+static inline bool ImNan(double val) { return (ImDoubleBits(val) & 0x7FFFFFFFFFFFFFFFull) > 0x7FF0000000000000ull; }
+// Returns true if val is NAN or INFINITY
+static inline bool ImNanOrInf(double val) { return (ImDoubleBits(val) & 0x7FF0000000000000ull) == 0x7FF0000000000000ull; }
+// Turns NANs to 0s
+static inline double ImConstrainNan(double val) { return ImNan(val) ? 0 : val; }
+// Turns infinity to floating point maximums
+// Clamped to half DBL_MAX to prevent overflow in size calculations (Max - Min)
+static inline double ImConstrainInf(double val) {
+    const double max_val = DBL_MAX * 0.5;
+    return val >= max_val ? max_val : val <= -max_val ? -max_val : val;
+}
+// True if two numbers are approximately equal using units in the last place.
+static inline bool ImAlmostEqual(double v1, double v2, int ulp = 2) {
+    return ImAbs(v1 - v2) < DBL_EPSILON * ImAbs(v1 + v2) * ulp || ImAbs(v1 - v2) < DBL_MIN;
+}
+// Set alpha channel of 32-bit color from float in range [0.0 1.0]
+static inline ImU32 ImAlphaU32(ImU32 col, float alpha) { return col & ~((ImU32)((1.0f - alpha) * 255) << IM_COL32_A_SHIFT); }
 // Mix color a and b by factor s in [0 256]
 static inline ImU32 ImMixU32(ImU32 a, ImU32 b, ImU32 s) {
 #ifdef IMPLOT3D_MIX64
@@ -97,7 +115,24 @@ static inline ImU32 ImMixU32(ImU32 a, ImU32 b, ImU32 s) {
 #endif
 }
 
+// Fills a buffer with n samples linear interpolated from vmin to vmax
+template <typename T> void FillRange(ImVector<T>& buffer, int n, T vmin, T vmax) {
+    buffer.resize(n);
+    T step = (vmax - vmin) / (n - 1);
+    for (int i = 0; i < n; ++i) {
+        buffer[i] = vmin + i * step;
+    }
+}
+
 } // namespace ImPlot3D
+
+//-----------------------------------------------------------------------------
+// [SECTION] Internal Enumerations
+//-----------------------------------------------------------------------------
+
+enum ImPlot3DMarkerInternal_ {
+    ImPlot3DMarker_Invalid = -3,
+};
 
 //-----------------------------------------------------------------------------
 // [SECTION] Forward Declarations
@@ -109,42 +144,61 @@ struct ImPlot3DTicker;
 // [SECTION] Callbacks
 //------------------------------------------------------------------------------
 
-typedef void (*ImPlot3DLocator)(ImPlot3DTicker& ticker, const ImPlot3DRange& range, ImPlot3DFormatter formatter, void* formatter_data);
+typedef void (*ImPlot3DLocator)(ImPlot3DTicker& ticker, const ImPlot3DRange& range, float pixels, ImPlot3DFormatter formatter, void* formatter_data);
 
 //-----------------------------------------------------------------------------
 // [SECTION] Structs
 //-----------------------------------------------------------------------------
 
 struct ImDrawList3D {
-    ImVector<ImDrawIdx> IdxBuffer;     // Index buffer
-    ImVector<ImDrawVert> VtxBuffer;    // Vertex buffer
-    ImVector<float> ZBuffer;           // Z buffer. Depth value for each triangle
-    unsigned int _VtxCurrentIdx;       // [Internal] current vertex index
-    ImDrawVert* _VtxWritePtr;          // [Internal] point within VtxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
-    ImDrawIdx* _IdxWritePtr;           // [Internal] point within IdxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
-    float* _ZWritePtr;                 // [Internal] point within ZBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
-    ImDrawListFlags _Flags;            // [Internal] draw list flags
-    ImDrawListSharedData* _SharedData; // [Internal] shared draw list data
+    // [Internal] Define which texture should be used when rendering triangles.
+    struct ImTextureBufferItem {
+        ImTextureRef TexRef;
+        unsigned int VtxIdx;
+    };
+
+    ImVector<ImDrawIdx> IdxBuffer;  // Index buffer
+    ImVector<ImDrawVert> VtxBuffer; // Vertex buffer
+    ImVector<double> ZBuffer;       // Z buffer. Depth value for each triangle
+    unsigned int _VtxCurrentIdx;    // [Internal] current vertex index
+    ImDrawVert* _VtxWritePtr; // [Internal] point within VtxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
+    ImDrawIdx* _IdxWritePtr;  // [Internal] point within IdxBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
+    double* _ZWritePtr;       // [Internal] point within ZBuffer.Data after each add command (to avoid using the ImVector<> operators too much)
+    ImVector<ImTextureBufferItem> _TextureBuffer; // [Internal] buffer for SetTexture/ResetTexture
+    ImDrawListSharedData* _SharedData;            // [Internal] shared draw list data
+    ImDrawList* _ParentDrawList; // [Internal] viewport's real ImDrawList, used to reach ImGui-internal helpers (e.g. _SelectLineTexture())
 
     ImDrawList3D() {
-        memset(this, 0, sizeof(*this));
+        _SharedData = nullptr;
+        _ParentDrawList = nullptr;
+        ResetBuffers();
     }
 
     void PrimReserve(int idx_count, int vtx_count);
     void PrimUnreserve(int idx_count, int vtx_count);
 
+    void SetTexture(ImTextureRef tex_ref);
+    void ResetTexture();
+
     void SortedMoveToImGuiDrawList();
+
+    void ResetBuffers() {
+        IdxBuffer.clear();
+        VtxBuffer.clear();
+        ZBuffer.clear();
+        _VtxCurrentIdx = 0;
+        _VtxWritePtr = VtxBuffer.Data;
+        _IdxWritePtr = IdxBuffer.Data;
+        _ZWritePtr = ZBuffer.Data;
+        _TextureBuffer.clear();
+        ResetTexture();
+    }
 
     constexpr static unsigned int MaxIdx() { return sizeof(ImDrawIdx) == 2 ? 65535 : 4294967295; }
 };
 
 struct ImPlot3DNextItemData {
-    ImVec4 Colors[4]; // ImPlot3DCol_Line, ImPlot3DCol_Fill, ImPlot3DCol_MarkerOutline, ImPlot3DCol_MarkerFill,
-    float LineWeight;
-    ImPlot3DMarker Marker;
-    float MarkerSize;
-    float MarkerWeight;
-    float FillAlpha;
+    ImPlot3DSpec Spec;
     bool RenderLine;
     bool RenderFill;
     bool RenderMarkerLine;
@@ -156,13 +210,7 @@ struct ImPlot3DNextItemData {
     ImPlot3DNextItemData() { Reset(); }
 
     void Reset() {
-        for (int i = 0; i < 4; i++)
-            Colors[i] = IMPLOT3D_AUTO_COL;
-        LineWeight = IMPLOT3D_AUTO;
-        Marker = IMPLOT3D_AUTO;
-        MarkerSize = IMPLOT3D_AUTO;
-        MarkerWeight = IMPLOT3D_AUTO;
-        FillAlpha = IMPLOT3D_AUTO;
+        Spec = ImPlot3DSpec();
         RenderLine = false;
         RenderFill = false;
         RenderMarkerLine = true;
@@ -227,7 +275,7 @@ struct ImPlot3DColormapData {
                 for (int s = 0; s < 255; ++s) {
                     ImU32 a = keys[i];
                     ImU32 b = keys[i + 1];
-                    ImU32 c = ImPlot3D::ImMixU32(a, b, s);
+                    ImU32 c = ImPlot3D::ImMixU32(a, b, (ImU32)s);
                     // if (c != last) {
                     Tables.push_back(c);
                     // last = c;
@@ -284,6 +332,7 @@ struct ImPlot3DColormapData {
 struct ImPlot3DItem {
     ImGuiID ID;
     ImU32 Color;
+    ImPlot3DMarker Marker;
     int NameOffset;
     bool Show;
     bool LegendHovered;
@@ -292,6 +341,7 @@ struct ImPlot3DItem {
     ImPlot3DItem() {
         ID = 0;
         Color = IM_COL32_WHITE;
+        Marker = ImPlot3DMarker_None;
         NameOffset = -1;
         Show = true;
         LegendHovered = false;
@@ -306,9 +356,11 @@ struct ImPlot3DLegend {
     ImPlot3DLegendFlags PreviousFlags;
     ImPlot3DLocation Location;
     ImPlot3DLocation PreviousLocation;
+    ImVec2 Scroll;
     ImVector<int> Indices;
     ImGuiTextBuffer Labels;
     ImRect Rect;
+    ImRect RectClamped;
     bool Hovered;
     bool Held;
 
@@ -316,6 +368,7 @@ struct ImPlot3DLegend {
         PreviousFlags = Flags = ImPlot3DLegendFlags_None;
         Hovered = Held = false;
         PreviousLocation = Location = ImPlot3DLocation_NorthWest;
+        Scroll = ImVec2(0, 0);
     }
 
     void Reset() {
@@ -326,12 +379,16 @@ struct ImPlot3DLegend {
 
 // Holds items
 struct ImPlot3DItemGroup {
+    ImGuiID ID;
     ImPool<ImPlot3DItem> ItemPool;
     ImPlot3DLegend Legend;
     int ColormapIdx;
+    ImPlot3DMarker MarkerIdx;
 
     ImPlot3DItemGroup() {
+        ID = 0;
         ColormapIdx = 0;
+        MarkerIdx = 0;
     }
 
     int GetItemCount() const { return ItemPool.GetBufSize(); }
@@ -348,12 +405,13 @@ struct ImPlot3DItemGroup {
         ItemPool.Clear();
         Legend.Reset();
         ColormapIdx = 0;
+        MarkerIdx = 0;
     }
 };
 
 // Tick mark info
 struct ImPlot3DTick {
-    float PlotPos;
+    double PlotPos;
     bool Major;
     bool ShowLabel;
     ImVec2 LabelSize;
@@ -373,9 +431,7 @@ struct ImPlot3DTicker {
     ImVector<ImPlot3DTick> Ticks;
     ImGuiTextBuffer TextBuffer;
 
-    ImPlot3DTicker() {
-        Reset();
-    }
+    ImPlot3DTicker() { Reset(); }
 
     ImPlot3DTick& AddTick(double value, bool major, bool show_label, const char* label) {
         ImPlot3DTick tick(value, major, show_label);
@@ -405,73 +461,133 @@ struct ImPlot3DTicker {
         return Ticks.back();
     }
 
-    const char* GetText(int idx) const {
-        return TextBuffer.Buf.Data + Ticks[idx].TextOffset;
-    }
+    const char* GetText(int idx) const { return TextBuffer.Buf.Data + Ticks[idx].TextOffset; }
 
-    const char* GetText(const ImPlot3DTick& tick) const {
-        return GetText(tick.Idx);
-    }
+    const char* GetText(const ImPlot3DTick& tick) const { return GetText(tick.Idx); }
 
     void Reset() {
         Ticks.shrink(0);
         TextBuffer.Buf.shrink(0);
     }
 
-    int TickCount() const {
-        return Ticks.Size;
-    }
+    int TickCount() const { return Ticks.Size; }
 };
 
 // Holds axis information
 struct ImPlot3DAxis {
+    // Flags
     ImPlot3DAxisFlags Flags;
     ImPlot3DAxisFlags PreviousFlags;
+    // Range
     ImPlot3DRange Range;
     ImPlot3DCond RangeCond;
+    double NDCScale;
+    ImPlot3DScale Scale;
+    // Label
     ImGuiTextBuffer Label;
     // Ticks
     ImPlot3DTicker Ticker;
     ImPlot3DFormatter Formatter;
     void* FormatterData;
     ImPlot3DLocator Locator;
+    bool ShowDefaultTicks;
+    // Scale
+    ImPlot3DTransform TransformForward; // Custom axis forward transform
+    ImPlot3DTransform TransformInverse; // Custom axis inverse transform
+    void* TransformData;                // Custom transform data set by the user
+    ImPlot3DRange ScaledRange;          // Cached scaled range values
     // Fit data
     bool FitThisFrame;
     ImPlot3DRange FitExtents;
+    // Constraints
+    ImPlot3DRange ConstraintRange;
+    ImPlot3DRange ConstraintZoom;
     // User input
+    bool Hovered;
     bool Held;
+    // Cached colors
+    ImU32 ColorBg;
+    ImU32 ColorHov;
+    ImU32 ColorAct;
 
     // Constructor
     ImPlot3DAxis() {
         PreviousFlags = Flags = ImPlot3DAxisFlags_None;
         // Range
-        Range.Min = 0.0f;
-        Range.Max = 1.0f;
+        Range.Min = 0.0;
+        Range.Max = 1.0;
         RangeCond = ImPlot3DCond_None;
+        // Scale
+        NDCScale = 1.0;
+        Scale = ImPlot3DScale_Linear;
+        TransformForward = TransformInverse = nullptr;
+        TransformData = nullptr;
         // Ticks
         Formatter = nullptr;
         FormatterData = nullptr;
         Locator = nullptr;
+        ShowDefaultTicks = true;
         // Fit data
         FitThisFrame = true;
-        FitExtents.Min = HUGE_VAL;
-        FitExtents.Max = -HUGE_VAL;
+        FitExtents = ImPlot3DRange(HUGE_VAL, -HUGE_VAL);
+        // Constraints
+        ConstraintRange = ImPlot3DRange(-INFINITY, INFINITY);
+        ConstraintZoom = ImPlot3DRange(DBL_MIN, INFINITY);
         // User input
+        Hovered = false;
         Held = false;
+        // Cached colors
+        ColorBg = ColorHov = ColorAct = IM_COL32_BLACK_TRANS;
+    }
+
+    inline void Reset() {
+        RangeCond = ImPlot3DCond_None;
+        // Scale
+        Scale = ImPlot3DScale_Linear;
+        TransformForward = TransformInverse = nullptr;
+        TransformData = nullptr;
+        // Ticks
+        Ticker.Reset();
+        Formatter = nullptr;
+        FormatterData = nullptr;
+        Locator = nullptr;
+        ShowDefaultTicks = true;
+        // Fit data
+        FitExtents = ImPlot3DRange(HUGE_VAL, -HUGE_VAL);
+        // Constraints
+        ConstraintRange = ImPlot3DRange(-INFINITY, INFINITY);
+        ConstraintZoom = ImPlot3DRange(DBL_MIN, INFINITY);
     }
 
     inline void SetRange(double v1, double v2) {
+        v1 = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(v1));
+        v2 = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(v2));
         Range.Min = ImMin(v1, v2);
         Range.Max = ImMax(v1, v2);
+        Constrain();
+        UpdateTransformCache();
     }
 
     inline bool SetMin(double _min, bool force = false) {
         if (!force && IsLockedMin())
             return false;
         _min = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(_min));
+
+        // Constraints
+        if (_min < ConstraintRange.Min)
+            _min = ConstraintRange.Min;
+        double zoom = Range.Max - _min;
+        if (zoom < ConstraintZoom.Min)
+            _min = Range.Max - ConstraintZoom.Min;
+        if (zoom > ConstraintZoom.Max)
+            _min = Range.Max - ConstraintZoom.Max;
+
+        // Ensure min is less than max
         if (_min >= Range.Max)
             return false;
+
         Range.Min = _min;
+        UpdateTransformCache();
         return true;
     }
 
@@ -479,16 +595,93 @@ struct ImPlot3DAxis {
         if (!force && IsLockedMax())
             return false;
         _max = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(_max));
+
+        // Constraints
+        if (_max > ConstraintRange.Max)
+            _max = ConstraintRange.Max;
+        double zoom = _max - Range.Min;
+        if (zoom < ConstraintZoom.Min)
+            _max = Range.Min + ConstraintZoom.Min;
+        if (zoom > ConstraintZoom.Max)
+            _max = Range.Min + ConstraintZoom.Max;
+
+        // Ensure max is greater than min
         if (_max <= Range.Min)
             return false;
+
         Range.Max = _max;
+        UpdateTransformCache();
         return true;
+    }
+
+    inline void Constrain() {
+        Range.Min = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(Range.Min));
+        Range.Max = ImPlot3D::ImConstrainNan(ImPlot3D::ImConstrainInf(Range.Max));
+        if (Range.Min < ConstraintRange.Min)
+            Range.Min = ConstraintRange.Min;
+        if (Range.Max > ConstraintRange.Max)
+            Range.Max = ConstraintRange.Max;
+        double zoom = Range.Size();
+        if (zoom < ConstraintZoom.Min) {
+            double delta = (ConstraintZoom.Min - zoom) * 0.5;
+            Range.Min -= delta;
+            Range.Max += delta;
+        }
+        if (zoom > ConstraintZoom.Max) {
+            double delta = (zoom - ConstraintZoom.Max) * 0.5;
+            Range.Min += delta;
+            Range.Max -= delta;
+        }
+        if (Range.Max <= Range.Min)
+            Range.Max = Range.Min + DBL_EPSILON;
+    }
+
+    inline void UpdateTransformCache() {
+        if (TransformForward != nullptr) {
+            ScaledRange.Min = TransformForward(Range.Min, TransformData);
+            ScaledRange.Max = TransformForward(Range.Max, TransformData);
+        } else {
+            ScaledRange.Min = Range.Min;
+            ScaledRange.Max = Range.Max;
+        }
+    }
+
+    inline double PlotToNDC(double plt) const {
+        if (TransformForward != nullptr) {
+            double s = TransformForward(plt, TransformData);
+            return (s - ScaledRange.Min) / (ScaledRange.Max - ScaledRange.Min);
+        }
+        return (plt - Range.Min) / (Range.Max - Range.Min);
+    }
+
+    inline double NDCToPlot(double t) const {
+        if (TransformInverse != nullptr) {
+            double s = t * (ScaledRange.Max - ScaledRange.Min) + ScaledRange.Min;
+            return TransformInverse(s, TransformData);
+        }
+        return Range.Min + t * (Range.Max - Range.Min);
     }
 
     inline bool IsRangeLocked() const { return RangeCond == ImPlot3DCond_Always; }
     inline bool IsLockedMin() const { return IsRangeLocked() || ImPlot3D::ImHasFlag(Flags, ImPlot3DAxisFlags_LockMin); }
     inline bool IsLockedMax() const { return IsRangeLocked() || ImPlot3D::ImHasFlag(Flags, ImPlot3DAxisFlags_LockMax); }
     inline bool IsLocked() const { return IsLockedMin() && IsLockedMax(); }
+    inline bool IsInputLockedMin() const { return IsLockedMin() || IsAutoFitting(); }
+    inline bool IsInputLockedMax() const { return IsLockedMax() || IsAutoFitting(); }
+    inline bool IsInputLocked() const { return IsLocked() || IsAutoFitting(); }
+
+    inline bool IsPanLocked(bool increasing) {
+        if (ImPlot3D::ImHasFlag(Flags, ImPlot3DAxisFlags_PanStretch)) {
+            return IsInputLocked();
+        } else {
+            if (IsLockedMin() || IsLockedMax() || IsAutoFitting())
+                return false;
+            if (increasing)
+                return Range.Max == ConstraintRange.Max;
+            else
+                return Range.Min == ConstraintRange.Min;
+        }
+    }
 
     inline void SetLabel(const char* label) {
         Label.Buf.shrink(0);
@@ -498,15 +691,34 @@ struct ImPlot3DAxis {
 
     inline const char* GetLabel() const { return Label.Buf.Data; }
 
+    inline double NDCSize() const {
+        // By default, the axis span from NDC -0.5 to 0.5, so size is 1.0
+        // If NDCScale is applied, the size is scaled accordingly
+        return NDCScale;
+    }
+
+    inline void SetAspect(double units_per_ndc_unit) {
+        double new_size = units_per_ndc_unit * NDCSize();
+        double delta = (new_size - Range.Size()) * 0.5;
+        if (IsLocked())
+            return;
+        else if (IsLockedMin() && !IsLockedMax())
+            SetRange(Range.Min, Range.Max + 2 * delta);
+        else if (!IsLockedMin() && IsLockedMax())
+            SetRange(Range.Min - 2 * delta, Range.Max);
+        else
+            SetRange(Range.Min - delta, Range.Max + delta);
+    }
+
+    double GetAspect() const { return Range.Size() / NDCSize(); }
+
     bool HasLabel() const;
     bool HasGridLines() const;
     bool HasTickLabels() const;
     bool HasTickMarks() const;
     bool IsAutoFitting() const;
-    void ExtendFit(float value);
+    void ExtendFit(double value);
     void ApplyFit();
-    float PlotToNDC(float value) const;
-    float NDCToPlot(float value) const;
 };
 
 // Holds plot state information that must persist after EndPlot
@@ -521,9 +733,11 @@ struct ImPlot3DPlot {
     ImRect FrameRect;  // Outermost bounding rectangle that encapsulates whole the plot/title/padding/etc
     ImRect CanvasRect; // Frame rectangle reduced by padding
     ImRect PlotRect;   // Bounding rectangle for the actual plot area
-    // Rotation & Axes
-    ImPlot3DQuat Rotation;
-    ImPlot3DAxis Axes[3];
+    // Rotation & axes & box
+    ImPlot3DQuat InitialRotation; // Initial rotation quaternion
+    ImPlot3DQuat Rotation;        // Current rotation quaternion
+    ImPlot3DCond RotationCond;
+    ImPlot3DAxis Axes[3]; // X, Y, Z axes
     // Animation
     float AnimationTime;               // Remaining animation time
     ImPlot3DQuat RotationAnimationEnd; // End rotation for animation
@@ -531,13 +745,13 @@ struct ImPlot3DPlot {
     bool SetupLocked;
     bool Hovered;
     bool Held;
-    int HeldEdgeIdx;  // Index of the edge being held
-    int HeldPlaneIdx; // Index of the plane being held
+    int HeldEdgeIdx;                // Index of the edge being held
+    int HeldPlaneIdx;               // Index of the plane being held
+    ImPlot3DPoint DragRotationAxis; // Axis of rotation for the duration of a drag
     // Fit data
     bool FitThisFrame;
     // Items
     ImPlot3DItemGroup Items;
-    ImPlot3DItem* CurrentItem;
     // 3D draw list
     ImDrawList3D DrawList;
     // Misc
@@ -548,7 +762,9 @@ struct ImPlot3DPlot {
         PreviousFlags = Flags = ImPlot3DFlags_None;
         JustCreated = true;
         Initialized = false;
-        Rotation = ImPlot3DQuat(0.0f, 0.0f, 0.0f, 1.0f);
+        InitialRotation = ImPlot3DQuat(-0.513269, -0.212596, -0.318184, 0.76819);
+        Rotation = ImPlot3DQuat(0.0, 0.0, 0.0, 1.0);
+        RotationCond = ImPlot3DCond_None;
         for (int i = 0; i < 3; i++)
             Axes[i] = ImPlot3DAxis();
         AnimationTime = 0.0f;
@@ -557,8 +773,8 @@ struct ImPlot3DPlot {
         Hovered = Held = false;
         HeldEdgeIdx = -1;
         HeldPlaneIdx = -1;
+        DragRotationAxis = ImPlot3DPoint(0.0, 0.0, 0.0);
         FitThisFrame = true;
-        CurrentItem = nullptr;
         ContextClick = false;
         OpenContextThisFrame = false;
     }
@@ -570,18 +786,39 @@ struct ImPlot3DPlot {
     }
     inline bool HasTitle() const { return !Title.empty() && !ImPlot3D::ImHasFlag(Flags, ImPlot3DFlags_NoTitle); }
     inline const char* GetTitle() const { return Title.Buf.Data; }
+    inline bool IsRotationLocked() const { return RotationCond == ImPlot3DCond_Always; }
 
+    // Extends the fit range of all three axes to include the provided point
     void ExtendFit(const ImPlot3DPoint& point);
+
+    // Returns the minimum of the range in all three dimensions
     ImPlot3DPoint RangeMin() const;
+
+    // Returns the maximum of the range in all three dimensions
     ImPlot3DPoint RangeMax() const;
+
+    // Returns the point at the center of the range in all three dimensions
     ImPlot3DPoint RangeCenter() const;
+
+    // Sets the range of all three axes
     void SetRange(const ImPlot3DPoint& min, const ImPlot3DPoint& max);
+
+    // Returns the scale of the plot view (constant to convert from NDC coordinates to pixels coordinates)
+    float GetViewScale() const;
+
+    // Returns the scale of the plot box in each dimension
+    ImPlot3DPoint GetBoxScale() const;
+
+    // Applies equal aspect ratio constraint using the specified axis as reference.
+    // Other axes are adjusted to match the reference axis's aspect ratio (units per NDC unit).
+    void ApplyEqualAspect(ImAxis3D ref_axis);
 };
 
 struct ImPlot3DContext {
     ImPool<ImPlot3DPlot> Plots;
     ImPlot3DPlot* CurrentPlot;
     ImPlot3DItemGroup* CurrentItems;
+    ImPlot3DItem* CurrentItem;
     ImPlot3DNextItemData NextItemData;
     ImPlot3DStyle Style;
     ImVector<ImGuiColorMod> ColorModifiers;
@@ -616,6 +853,12 @@ IMPLOT3D_API bool IsColorAuto(ImPlot3DCol idx);
 IMPLOT3D_API ImVec4 GetAutoColor(ImPlot3DCol idx);
 IMPLOT3D_API const char* GetStyleColorName(ImPlot3DCol idx);
 
+// Returns white or black text given background color
+static inline ImU32 CalcTextColor(const ImVec4& bg) {
+    return (bg.x * 0.299f + bg.y * 0.587f + bg.z * 0.114f) > 0.5f ? IM_COL32_BLACK : IM_COL32_WHITE;
+}
+static inline ImU32 CalcTextColor(ImU32 bg) { return CalcTextColor(ImGui::ColorConvertU32ToFloat4(bg)); }
+
 // Get styling data for next item (call between BeginItem/EndItem)
 IMPLOT3D_API const ImPlot3DNextItemData& GetItemData();
 
@@ -625,15 +868,24 @@ IMPLOT3D_API ImU32 GetColormapColorU32(int idx, ImPlot3DColormap cmap);
 // Returns the next unused colormap color and advances the colormap. Can be used to skip colors if desired
 IMPLOT3D_API ImU32 NextColormapColorU32();
 
+// Render a colormap bar
+IMPLOT3D_API void RenderColorBar(const ImU32* colors, int size, ImDrawList& DrawList, const ImRect& bounds, bool vert, bool reversed,
+                                 bool continuous);
+
 //-----------------------------------------------------------------------------
 // [SECTION] Item Utils
 //-----------------------------------------------------------------------------
 
-IMPLOT3D_API bool BeginItem(const char* label_id, ImPlot3DItemFlags flags = 0, ImPlot3DCol recolor_from = IMPLOT3D_AUTO);
+// Begins a new item. Returns false if the item should not be plotted
+IMPLOT3D_API bool BeginItem(const char* label_id, const ImPlot3DSpec& spec = ImPlot3DSpec(), const ImVec4& item_col = IMPLOT3D_AUTO_COL,
+                            ImPlot3DMarker item_mkr = ImPlot3DMarker_Invalid);
 IMPLOT3D_API void EndItem();
 
 // Register or get an existing item from the current plot
 IMPLOT3D_API ImPlot3DItem* RegisterOrGetItem(const char* label_id, ImPlot3DItemFlags flags, bool* just_created = nullptr);
+
+// Gets the current item from ImPlot3DContext
+IMPLOT3D_API ImPlot3DItem* GetCurrentItem();
 
 // Busts the cache for every item for every plot in the current context
 IMPLOT3D_API void BustItemCache();
@@ -645,7 +897,7 @@ IMPLOT3D_API void AddTextRotated(ImDrawList* draw_list, ImVec2 pos, float angle,
 // [SECTION] Plot Utils
 //-----------------------------------------------------------------------------
 
-// Gets the current plot from the current ImPlot3DContext
+// Gets the current plot from ImPlot3DContext
 IMPLOT3D_API ImPlot3DPlot* GetCurrentPlot();
 
 // Busts the cache for every plot in the current context
@@ -655,7 +907,7 @@ IMPLOT3D_API ImVec2 GetFramePos();  // Get the current frame position (top-left)
 IMPLOT3D_API ImVec2 GetFrameSize(); // Get the current frame size in pixels
 
 // Convert a position in the current plot's coordinate system to the current plot's normalized device coordinate system (NDC)
-// When the cube aspect ratio is [1,1,1], the NDC varies from [-0.5, 0.5] in each axis
+// When the cube's aspect ratio is [1,1,1], the NDC ranges from [-0.5, 0.5] along each axis
 IMPLOT3D_API ImPlot3DPoint PlotToNDC(const ImPlot3DPoint& point);
 IMPLOT3D_API ImPlot3DPoint NDCToPlot(const ImPlot3DPoint& point);
 // Convert a position in the current plot's NDC to pixels
@@ -672,16 +924,30 @@ IMPLOT3D_API ImPlot3DRay NDCRayToPlotRay(const ImPlot3DRay& ray);
 IMPLOT3D_API void SetupLock();
 
 //-----------------------------------------------------------------------------
+// [SECTION] Transforms
+//-----------------------------------------------------------------------------
+
+static inline double TransformForward_Log10(double v, void*) { return ImLog10(v <= 0.0 ? DBL_MIN : v); }
+
+static inline double TransformInverse_Log10(double v, void*) { return ImPow(10, v); }
+
+static inline double TransformForward_SymLog(double v, void*) { return 2.0 * ImAsinh(v / 2.0); }
+
+static inline double TransformInverse_SymLog(double v, void*) { return 2.0 * ImSinh(v / 2.0); }
+
+//-----------------------------------------------------------------------------
 // [SECTION] Formatter
 //-----------------------------------------------------------------------------
 
-int Formatter_Default(float value, char* buff, int size, void* data);
+int Formatter_Default(double value, char* buff, int size, void* data);
 
 //------------------------------------------------------------------------------
 // [SECTION] Locator
 //------------------------------------------------------------------------------
 
-void Locator_Default(ImPlot3DTicker& ticker, const ImPlot3DRange& range, ImPlot3DFormatter formatter, void* formatter_data);
+void Locator_Default(ImPlot3DTicker& ticker, const ImPlot3DRange& range, float pixels, ImPlot3DFormatter formatter, void* formatter_data);
+void Locator_Log10(ImPlot3DTicker& ticker, const ImPlot3DRange& range, float pixels, ImPlot3DFormatter formatter, void* formatter_data);
+void Locator_SymLog(ImPlot3DTicker& ticker, const ImPlot3DRange& range, float pixels, ImPlot3DFormatter formatter, void* formatter_data);
 
 } // namespace ImPlot3D
 
