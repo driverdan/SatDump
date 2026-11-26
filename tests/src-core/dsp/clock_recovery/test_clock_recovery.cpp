@@ -250,7 +250,7 @@ namespace
         auto large = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(sps), in, opt);
         REQUIRE(large.completed);
         REQUIRE(large.outputs[0].max_sizes.size() >= 2);
-        CHECK(large.outputs[0].max_sizes[1] == 1100000);
+        CHECK(large.outputs[0].max_sizes[1] == 2 * 1100000);
 
         REQUIRE(large.output().size() == small.output().size());
         size_t diffs = 0;
@@ -260,16 +260,21 @@ namespace
         CHECK(diffs == 0);
     }
 
-    // Omega below 1 gives more than one output per input sample. Each output buffer
-    // is only as large as the input one, so the output must stop there
+    // Omega below 1 gives more than one output per input sample (up to 2). Every output must fit in
+    // its buffer, and no input may be dropped : about one output per omega input samples
     template <typename B, typename T>
     void checkOutputBound(const std::vector<T> &in)
     {
-        auto r = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(0.5), in, ndsp_sig_test::chunked(4096));
-        REQUIRE(r.completed);
-        REQUIRE(r.outputs[0].sizes.size() == r.outputs[0].max_sizes.size());
-        for (size_t i = 0; i < r.outputs[0].sizes.size(); i++)
-            CHECK(r.outputs[0].sizes[i] <= r.outputs[0].max_sizes[i]);
+        for (double omega : {0.5, 0.8})
+        {
+            INFO("omega " << omega);
+            auto r = ndsp_sig_test::runBlock<T, T>(makeRecovery<B>(omega), in, ndsp_sig_test::chunked(4096));
+            REQUIRE(r.completed);
+            REQUIRE(r.outputs[0].sizes.size() == r.outputs[0].max_sizes.size());
+            for (size_t i = 0; i < r.outputs[0].sizes.size(); i++)
+                CHECK(r.outputs[0].sizes[i] <= r.outputs[0].max_sizes[i]);
+            CHECK((double)r.output().size() == Approx(in.size() / omega).epsilon(0.01));
+        }
     }
 } // namespace
 
@@ -294,10 +299,10 @@ TEST_CASE("ndsp MM, MM fast and Gardner clock recovery take input buffers larger
     SECTION("Gardner complex") { checkLargeBuffer<GardnerClockRecoveryBlock<complex_t>>(cin, sps); }
 }
 
-TEST_CASE("ndsp MM, MM fast and Gardner clock recovery do not overflow the output buffer with omega below 1", "[dsp][clock_recovery]")
+TEST_CASE("ndsp MM, MM fast and Gardner clock recovery do not overflow the output buffer or drop input with omega below 1", "[dsp][clock_recovery]")
 {
-    // The loop stopped at 2 outputs per input sample, but each output buffer only holds as many samples
-    // as the input buffer (caught by AddressSanitizer)
+    // The loop stops at 2 outputs per input sample, but each output buffer only held as many samples
+    // as the input buffer (caught by AddressSanitizer). The output buffer is now twice the input one
     auto cin = ndsp_test::randomComplex(5 * 4096, 11);
     auto fin = ndsp_test::randomFloats(5 * 4096, 12);
 

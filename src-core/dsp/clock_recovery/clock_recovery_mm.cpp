@@ -84,7 +84,10 @@ namespace satdump
 
             reinit_if_needed();
 
-            DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size, sizeof(T));
+            // The loop below writes up to 2 outputs per input sample (omega below 1), so the output buffer is twice
+            // the input one and no input is dropped down to omega 0.5. The ouc < oblk.max_size bound in the loop
+            // is only a safety net
+            DSPBuffer oblk = outputs[0].fifo->newBufferSamples(iblk.max_size * 2, sizeof(T));
             T *ibuf = iblk.getSamples<T>();
             T *obuf = oblk.getSamples<T>();
 
@@ -111,7 +114,6 @@ namespace satdump
 #endif
             ouc = 0;
 
-            // The output buffer holds iblk.max_size samples, more than one output per input sample (omega < 1) must not overflow it
             for (; inc < nsamples && ouc < nsamples * 2 /* TODO THIS PROBABLY SUCKS!!!!*/ && ouc < (int)oblk.max_size;)
             {
                 //  if constexpr (std::is_same_v<T, complex_t>)
