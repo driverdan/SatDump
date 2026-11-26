@@ -240,7 +240,7 @@
       },
       "consumption": "vendored",
       "upstream_state": "current",
-      "update_issue": 281,
+      "update_issue": null,
       "notes": "Updated in #281 from a develop snapshot taken after v0.4.3. No SatDump code includes these headers at present. v0.5.0 breaks API and ABI: unquoted empty mapping keys become null keys, deserialize_docs() skips comment-only sections, ordered_map::value_type loses its const key, and the deprecated node_t, yaml_version_t, type() and get_value_ref<T>() APIs are removed."
     },
     {
