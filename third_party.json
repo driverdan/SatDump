@@ -209,18 +209,18 @@
       ],
       "upstream_url": "https://github.com/phoboslab/qoi",
       "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded (no upstream releases). Differs from current master in two lines (QOI_COLOR_HASH(px) % 64 where master has & (64 - 1)), so it predates that master change.",
+      "commit": "ffb2d2cb74a1de60819b21b939f7209aa53e91c1",
+      "commit_verified": true,
+      "version_source": "No releases. qoi.h is identical to master at this commit (2026-09-27; the file last changed in 4ab68bb, 2025-04-28).",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "The two-line difference is probably an older upstream state, not a local change."
+        "status": "no",
+        "details": "None."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 280,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #280 from upstream 36190eb07dc5d85f408d998d1884eb69573adf68 (2023-06-15, byte-identical). The only upstream change since replaces % 64 with & (64 - 1) for the colour index in both the encoder and the decoder, with the same result; there are no decoder fixes to pick up."
     },
     {
       "id": "fkyaml",
