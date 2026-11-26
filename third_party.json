@@ -99,19 +99,19 @@
         "src-core/imgui/implot3d"
       ],
       "upstream_url": "https://github.com/brenocq/implot3d",
-      "version": "0.1",
-      "commit": "8e77ea20905408da9b9862cfe842961c4ef8da30",
+      "version": "0.5",
+      "commit": "dc53089543240d167bee1740604e32ed7061e8c6",
       "commit_verified": true,
-      "version_source": "IMPLOT3D_VERSION in implot3d.h; implot3d.cpp and implot3d.h differ from the v0.1 tag only by the local changes below.",
+      "version_source": "IMPLOT3D_VERSION in implot3d.h. implot3d.cpp, implot3d.h, implot3d_demo.cpp, implot3d_internal.h, implot3d_items.cpp and implot3d_meshes.cpp are the v0.5 tag, apart from the local changes below.",
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "implot3d.h includes \"imgui/imgui.h\" and <cmath>; implot3d.cpp adds <cmath> for Windows and uses ImFont::LegacySize for Dear ImGui 1.92."
+        "details": "implot3d.h includes \"imgui/imgui.h\" instead of \"imgui.h\" and adds <cmath>; implot3d_internal.h includes \"imgui/imgui_internal.h\" instead of \"imgui_internal.h\"; implot3d.cpp and implot3d_demo.cpp add <cmath> for Windows."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 275,
-      "notes": "The other implot3d files were not compared."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated from upstream 0fd065199cd31e286422e4cff6b632485d73ed04 (just after v0.1, identical apart from the local changes) in #275. The Dear ImGui 1.92 font fixes (ImFont::LegacySize, GetFontBaked) are upstream since v0.3, and the code that needs Dear ImGui newer than 1.92.5 is behind IMGUI_VERSION_NUM checks."
     },
     {
       "id": "imnodes",
