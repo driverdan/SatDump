@@ -274,19 +274,19 @@
         "src-core/libs/miniz"
       ],
       "upstream_url": "https://github.com/richgel999/miniz",
-      "version": "2.2.0",
-      "commit": "cb97387d20909c0a4728972fd0f19bfacd083c42",
+      "version": "3.1.2",
+      "commit": "77d0dce8627735138c51770d1799a1ef48f2117d",
       "commit_verified": true,
-      "version_source": "MZ_VERSION \"10.2.0\" in miniz.h is the internal version of the 2.2.0 release; miniz.h is identical to the 2.2.0 tag and miniz_zip.c differs only by the local change below.",
+      "version_source": "The commit is the 3.1.2 tag; MZ_VERSION \"11.3.2\" in miniz.h is the internal version of that release. The split source files (miniz.c, miniz.h, miniz_common.h, miniz_tdef.*, miniz_tinfl.*, miniz_zip.*) and LICENSE are identical to the tag apart from the local change below. The release asset is the amalgamated miniz.c/miniz.h, which SatDump does not use.",
       "license": "MIT",
       "local_changes": {
         "status": "yes",
-        "details": "miniz_zip.c: the \"Using fopen, ftello, fseeko, stat() ...\" #pragma message is commented out."
+        "details": "miniz_zip.c: the \"Using fopen, ftello, fseeko, stat() ...\" #pragma message is commented out (3.1.2 no longer reaches it on x86-64 Linux, but still does on other targets such as aarch64 Linux). miniz_export.h is not an upstream source file: upstream's CMake generates it, and this copy is that generated header with #define MINIZ_STATIC_DEFINE added. It was kept as is."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 283,
-      "notes": "#283 calls the vendored version 10.2.0; that is MZ_VERSION, the release is 2.2.0."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #283 from 2.2.0 (MZ_VERSION \"10.2.0\"). 3.1.2 fixes an infinite loop in tinfl_decompress on crafted input (a regression of CVE-2018-12913) and a central directory offset overflow; 3.0.0 changed struct layouts (an ABI break, no source changes needed in SatDump). Upstream master has reader fixes not yet released after 3.1.2 (EOCD scan signed underflow 8a4d024, zip64 local header out-of-bounds pointer a61de56): pick them up with the next release."
     },
     {
       "id": "muparser",
