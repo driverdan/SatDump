@@ -42,9 +42,9 @@ namespace viterbi
         depunc_buffer = new uint8_t[d_buffer_size * 4];
         output_buffer = new uint8_t[d_buffer_size * 4];
 
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < MAX_SHIFTS; i++)
         {
-            for (int y = 0; y < 2; y++)
+            for (int y = 0; y < MAX_PHASES; y++)
             {
                 d_bers_12[y][i] = 10;
                 d_bers_23[y][i] = 10;

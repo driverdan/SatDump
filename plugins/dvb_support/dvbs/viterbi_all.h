@@ -46,12 +46,16 @@ namespace viterbi
         phase_t d_phase;              // Phase the decoder locked onto
         int d_shift;                  // Shift the decoder locked onto
         int d_invalid = 0;            // Number of invalid BER tests
-        float d_bers_12[2][12];       // BERs of all branches, rate 1/2
-        float d_bers_23[2][12];       // BERs of all branches, rate 2/3
-        float d_bers_34[2][12];       // BERs of all branches, rate 3/4
-        float d_bers_56[2][12];       // BERs of all branches, rate 5/6
-        float d_bers_78[2][12];       // BERs of all branches, rate 7/8
         float d_ber;                  // Main ber in LOCKED state
+
+        // BERs of all branches, as [phase][shift]
+        static constexpr int MAX_PHASES = 4;  // PHASE_0 to PHASE_270
+        static constexpr int MAX_SHIFTS = 12; // The most puncturing shifts tested (rate 5/6)
+        float d_bers_12[MAX_PHASES][MAX_SHIFTS]; // Rate 1/2
+        float d_bers_23[MAX_PHASES][MAX_SHIFTS]; // Rate 2/3
+        float d_bers_34[MAX_PHASES][MAX_SHIFTS]; // Rate 3/4
+        float d_bers_56[MAX_PHASES][MAX_SHIFTS]; // Rate 5/6
+        float d_bers_78[MAX_PHASES][MAX_SHIFTS]; // Rate 7/8
 
         // BER Testing
         CCDecoder cc_decoder_ber_12;
