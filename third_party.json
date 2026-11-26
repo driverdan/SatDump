@@ -265,7 +265,7 @@
       "consumption": "vendored",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "Add-ons scriptarray, scriptbuilder, scriptdictionary and scriptstdstring are from the AngelScript SDK; scriptsatdump is SatDump's own. lib/as_callfunc_x64_msvc_clang.S (new in 2.39.0, for Clang on Windows without MSVC) is vendored but not built: src-core/CMakeLists.txt only adds the assembly files it lists. Since 2.39.0 asITypeInfo::GetTypedefTypeId() is only available with AS_DEPRECATED; use GetUnderlyingTypeId() (scriptsatdump/dump_predef.cpp does). Before 2.39.0 the copy was a mix: lib/ was SVN r3022 (git e3569f97c8dc9e8bc09043141618bef3ffa90fd3, 2.38.0 WIP) and the add-ons were from the 2.38.0 release."
+      "notes": "Add-ons scriptarray, scriptbuilder, scriptdictionary and scriptstdstring are from the AngelScript SDK; scriptsatdump is SatDump's own. lib/as_callfunc_x64_msvc_clang.S (new in 2.39.0, for Clang on Windows without MSVC) is vendored but not built: src-core/CMakeLists.txt only adds the assembly files it lists. Since 2.39.0 asITypeInfo::GetTypedefTypeId() is only available with AS_DEPRECATED; use GetUnderlyingTypeId() (scriptsatdump/dump_predef.cpp does). Updated in #282 from a mixed copy: lib/ was SVN r3022 (upstream e3569f97c8dc9e8bc09043141618bef3ffa90fd3, 2025-04-07, 2.38.0 WIP; matched by diffing upstream history), and the add-ons were from the 2.38.0 release (535fa4e13037c659e726dcfac8791b19da463360, \"Releasing 2.38.0\"; the v2.38.0 tag, 0601da029d846a658bf23f2888e953a45a94450a, only adds README.md). Behaviour change from an upstream fix (365b8fb5): converting a runtime double above 2^31 to uint now gives the right value, e.g. 3000000000 where the old copy gave 2147483648."
     },
     {
       "id": "miniz",
