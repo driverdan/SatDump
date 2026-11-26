@@ -2,6 +2,7 @@
 
 #include "dsp_buffer.h"
 #include "readerwritercircularbuffer.h"
+#include <mutex>
 
 namespace satdump
 {
@@ -12,6 +13,11 @@ namespace satdump
         private:
             moodycamel::BlockingReaderWriterCircularBuffer<DSPBuffer> fifo;
             moodycamel::BlockingReaderWriterCircularBuffer<DSPBuffer> ufifo;
+
+            // ufifo is single-producer, but free() is called both by the consumer
+            // (returning a used buffer) and by the producer (dropping a buffer it
+            // allocated but never sent). This serializes those enqueues.
+            std::mutex ufifo_free_mtx;
 
         public:
             DSPStream(int size) : fifo(size), ufifo(size)
@@ -65,7 +71,13 @@ namespace satdump
                 return b;
             }
 
-            inline void free(DSPBuffer &b) { ufifo.wait_enqueue(b); }
+            inline void free(DSPBuffer &b)
+            {
+                // Never blocks while holding the lock: there are only ever as many
+                // buffers as ufifo has slots, so it has room for any buffer out of it
+                std::lock_guard<std::mutex> lock(ufifo_free_mtx);
+                ufifo.wait_enqueue(b);
+            }
 
             size_t size_approx() { return fifo.size_approx(); }
             size_t max_capacity() { return fifo.max_capacity(); }
