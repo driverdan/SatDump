@@ -252,20 +252,20 @@
       "satdump_files": [
         "src-core/angelscript/scriptsatdump"
       ],
-      "upstream_url": "https://www.angelcode.com/angelscript/",
-      "version": "2.38.0 WIP",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "ANGELSCRIPT_VERSION_STRING in angelscript.h. Upstream is Subversion (GitHub mirror: https://github.com/anjo76/angelscript); a WIP version is a snapshot between releases.",
+      "upstream_url": "https://github.com/anjo76/angelscript",
+      "version": "2.39.0",
+      "commit": "4857f0b48a3122967478417c1270ecef1f4fe590",
+      "commit_verified": true,
+      "version_source": "ANGELSCRIPT_VERSION_STRING in angelscript.h and the v2.39.0 tag of the official repository (https://github.com/anjo76/angelscript; home page https://www.angelcode.com/angelscript/). lib/ holds sdk/angelscript/source plus sdk/angelscript/include/angelscript.h, which is also copied to src-core/angelscript/angelscript.h; the four add-on directories are from sdk/add_on. Every file was compared with the tag: all are identical except for the local changes below. The tag's contents also match angelscript_2.39.0.zip from angelcode.com, apart from line endings (most files in the zip use CRLF, the tag uses LF).",
       "license": "Zlib",
       "local_changes": {
         "status": "yes",
-        "details": "25 local commits (see #282). Not yet split out from the upstream code."
+        "details": "as_config.h includes \"../angelscript.h\" instead of \"../include/angelscript.h\", and defines AS_MAX_PORTABILITY on __APPLE__ (macOS fix from f3a337bff). The add-on headers scriptarray.h, scriptbuilder.h, scriptdictionary.h and scriptstdstring.h include \"angelscript/angelscript.h\" instead of <angelscript.h>. parseFloat() in scriptstdstring.cpp tests __ANDROID__ instead of ANDROID before using newlocale()/uselocale() (from 1d24985aa). Upstream 2.39.0 already has the fix for the misplaced #endif in parseFloat() (bfa326caf) and supersedes the as_callfunc_arm_gcc.S part of 1d24985aa."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 282,
-      "notes": "Add-ons scriptarray, scriptbuilder, scriptdictionary and scriptstdstring are from the AngelScript SDK; scriptsatdump is SatDump's own."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Add-ons scriptarray, scriptbuilder, scriptdictionary and scriptstdstring are from the AngelScript SDK; scriptsatdump is SatDump's own. lib/as_callfunc_x64_msvc_clang.S (new in 2.39.0, for Clang on Windows without MSVC) is vendored but not built: src-core/CMakeLists.txt only adds the assembly files it lists. Since 2.39.0 asITypeInfo::GetTypedefTypeId() is only available with AS_DEPRECATED; use GetUnderlyingTypeId() (scriptsatdump/dump_predef.cpp does). Before 2.39.0 the copy was a mix: lib/ was SVN r3022 (git e3569f97c8dc9e8bc09043141618bef3ffa90fd3, 2.38.0 WIP) and the add-ons were from the 2.38.0 release."
     },
     {
       "id": "miniz",

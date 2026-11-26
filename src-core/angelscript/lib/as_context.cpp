@@ -1,6 +1,6 @@
 /*
    AngelCode Scripting Library
-   Copyright (c) 2003-2025 Andreas Jonsson
+   Copyright (c) 2003-2026 Andreas Jonsson
 
    This software is provided 'as-is', without any express or implied
    warranty. In no event will the authors be held liable for any
@@ -50,13 +50,17 @@
 
 #ifdef _MSC_VER
 #pragma warning(disable:4702) // unreachable code
+
+// Apparently a bug in MSVC (or perhaps Windows SDK) caused use HUGE_VALF to issue a warning
+// ref: https://developercommunity.visualstudio.com/t/C4756-related-issues-in-VS-2022/10697767
+#pragma warning(disable:4756)
 #endif
 
 //make compiler shut up
 #if __cplusplus >= 201703L
 #define FALLTHROUGH [[fallthrough]];
 #else
-#define FALLTHROUGH
+#define FALLTHROUGH // fall through
 #endif
 
 BEGIN_AS_NAMESPACE
@@ -71,6 +75,7 @@ public:
 		memset(instrCount, 0, sizeof(instrCount));
 		memset(instrCount2, 0, sizeof(instrCount2));
 		lastBC = 255;
+		outputDebug = false;
 	}
 
 	~asCDebugStats()
@@ -205,6 +210,19 @@ asCContext::asCContext(asCScriptEngine *engine, bool holdRef)
 	m_regs.ctx                  = this;
 	m_regs.objectRegister       = 0;
 	m_regs.objectType           = 0;
+	m_argsOnStackCacheFunc      = 0;
+	m_argsOnStackCacheProgPos   = 0;
+	m_argumentsSize             = 0;
+	m_doAbort                   = false;
+	m_exceptionCallbackObj      = 0;
+	m_exceptionLine             = 0;
+	m_exceptionColumn           = 0;
+	m_exceptionFunction         = 0;
+	m_exceptionSectionIdx       = 0;
+	m_externalSuspendRequest    = false;
+	m_lineCallbackObj           = 0;
+	m_returnValueSize           = 0;
+	m_stackIndex                = 0;
 }
 
 asCContext::~asCContext()
@@ -269,15 +287,14 @@ void asCContext::DetachEngine()
 	if( m_engine == 0 ) return;
 
 	// Clean up all calls, included nested ones
-	do
+	while (IsNested())
 	{
 		// Abort any execution
 		Abort();
-
-		// Free all resources
-		Unprepare();
+		PopState();
 	}
-	while( IsNested() );
+	Abort();
+	Unprepare();
 
 	// Free the stack blocks
 	for( asUINT n = 0; n < m_stackBlocks.GetLength(); n++ )
@@ -463,7 +480,7 @@ int asCContext::GetStateRegisters(asUINT stackLevel, asIScriptFunction **_callin
 
 		// Only return state registers for a nested call, see PushState()
 		if( tmp[0] != 0 )
-			return asERROR;
+			return asNO_FUNCTION;
 
 		// Restore the previous initial function and the associated values
 		callingSystemFunction = reinterpret_cast<asCScriptFunction*>(tmp[1]);
@@ -479,11 +496,15 @@ int asCContext::GetStateRegisters(asUINT stackLevel, asIScriptFunction **_callin
 
 	if(_callingSystemFunction) *_callingSystemFunction = callingSystemFunction;
 	if(_initialFunction)       *_initialFunction       = initialFunction;
-	if(_originalStackPointer)  *_originalStackPointer  = SerializeStackPointer(originalStackPointer);
+	asDWORD sp = SerializeStackPointer(originalStackPointer);
+	if (_originalStackPointer)  *_originalStackPointer = sp;
 	if(_argumentSize)          *_argumentSize          = argumentsSize;
 	if(_valueRegister)         *_valueRegister         = valueRegister;
 	if(_objectRegister)        *_objectRegister        = objectRegister;
 	if(_objectRegisterType)    *_objectRegisterType    = objectType;
+
+	if (int(sp) < 0)
+		return asERROR;
 
 	return asSUCCESS;
 }
@@ -520,13 +541,18 @@ int asCContext::GetCallStateRegisters(asUINT stackLevel, asDWORD *_stackFramePoi
 	}
 
 	if( stackFramePointer == 0 )
-		return asERROR; // TODO: This is not really an error. It just means that the stackLevel represent a pushed state
+		return asNO_FUNCTION; // It just means that the stackLevel represent a pushed state
 
-	if(_stackFramePointer) *_stackFramePointer = SerializeStackPointer(stackFramePointer); // TODO: Calculate stack frame pointer as delta from previous stack frame pointer (Or perhaps it will always be the same as the stack pointer in previous function?)
+	asDWORD sfp = SerializeStackPointer(stackFramePointer);
+	if(_stackFramePointer) *_stackFramePointer = sfp; // TODO: Calculate stack frame pointer as delta from previous stack frame pointer (Or perhaps it will always be the same as the stack pointer in previous function?)
 	if(_currentFunction)   *_currentFunction   = currentFunction;
 	if(_programPointer)    *_programPointer    = programPointer != 0? asUINT(programPointer - currentFunction->scriptData->byteCode.AddressOf()) : -1;
-	if(_stackPointer)      *_stackPointer      = SerializeStackPointer(stackPointer); // TODO: Calculate the stack pointer as offset from the stack frame pointer
+	asDWORD sp = SerializeStackPointer(stackPointer);
+	if(_stackPointer)      *_stackPointer      = sp; // TODO: Calculate the stack pointer as offset from the stack frame pointer
 	if(_stackIndex)        *_stackIndex        = stackIndex; // TODO: This shouldn't be returned, as it should be calculated during deserialization
+
+	if (int(sfp) < 0 || int(sp) < 0)
+		return asERROR;
 
 	return asSUCCESS;
 }
@@ -689,6 +715,9 @@ int asCContext::Prepare(asIScriptFunction *func)
 	// Release the returned object (if any)
 	CleanReturnObject();
 
+	// Make sure the engine is prepared. It may be that additional interface has been registered after the context was created
+	m_engine->PrepareEngine();
+
 	// Check if there has been a previous function prepared
 	if (m_initialFunction)
 	{
@@ -761,10 +790,9 @@ int asCContext::Prepare(asIScriptFunction *func)
 
 	// Reset state
 	// Most of the time the previous state will be asEXECUTION_FINISHED, in which case the values are already initialized
+	ClearException();
 	if( m_status != asEXECUTION_FINISHED )
 	{
-		m_exceptionLine           = -1;
-		m_exceptionFunction       = 0;
 		m_doAbort                 = false;
 		m_doSuspend               = false;
 		m_regs.doProcessSuspend   = m_lineCallback;
@@ -795,7 +823,17 @@ int asCContext::Prepare(asIScriptFunction *func)
 	return asSUCCESS;
 }
 
-// Free all resources
+// internal
+void asCContext::ClearException()
+{
+	m_exceptionString = "";
+	m_exceptionFunction = 0;
+	m_exceptionLine = -1;
+	m_exceptionColumn = -1;
+	m_exceptionSectionIdx = 0;
+}
+
+// interface
 int asCContext::Unprepare()
 {
 	if( m_status == asEXECUTION_ACTIVE || m_status == asEXECUTION_SUSPENDED )
@@ -840,9 +878,9 @@ int asCContext::Unprepare()
 	}
 
 	// Clear function pointers
+	ClearException();
 	m_initialFunction = 0;
 	m_currentFunction = 0;
-	m_exceptionFunction = 0;
 	m_regs.programPointer = 0;
 
 	// Reset status
@@ -1785,7 +1823,7 @@ int asCContext::PopState()
 	m_regs.objectType      = (asITypeInfo*)tmp[8];
 
 	// Calculate the returnValueSize
-	if( m_initialFunction->DoesReturnOnStack() )
+	if(m_initialFunction && m_initialFunction->DoesReturnOnStack() )
 		m_returnValueSize = m_initialFunction->returnType.GetSizeInMemoryDWords();
 	else
 		m_returnValueSize = 0;
@@ -1871,7 +1909,7 @@ void asCContext::PopCallState()
 // interface
 asUINT asCContext::GetCallstackSize() const
 {
-	if( m_currentFunction == 0 ) return 0;
+	if (m_currentFunction == 0 && m_callStack.GetLength() <= CALLSTACK_FRAME_SIZE) return 0;
 
 	// The current function is accessed at stackLevel 0
 	return asUINT(1 + m_callStack.GetLength() / CALLSTACK_FRAME_SIZE);
@@ -2194,16 +2232,21 @@ void asCContext::CallInterfaceMethod(asCScriptFunction *func)
 
 #if AS_USE_COMPUTED_GOTOS
 #define INSTRUCTION(x) case_##x
-#define NEXT_INSTRUCTION() goto *(void*) dispatch_table[*(asBYTE*)l_bc]
+#define NEXT_INSTRUCTION() goto *(const void*) dispatch_table[*(asBYTE*)l_bc]
 #define BEGIN() NEXT_INSTRUCTION();
 #else
 #define INSTRUCTION(x) case x
 #define NEXT_INSTRUCTION() break
-#define BEGIN() switch( *(asBYTE*)l_bc )
+#define BEGIN() switch( *(const asBYTE*)l_bc )
 #endif
 
 void asCContext::ExecuteNext()
 {
+#if defined(_MSC_VER) && defined(__clang__)
+// Disable the warning about use of HUGE_VAL
+#pragma GCC diagnostic ignored "-Wnan-infinity-disabled"
+#endif
+
 #if AS_USE_COMPUTED_GOTOS
 static const void *const dispatch_table[256] = {
 &&INSTRUCTION(asBC_PopPtr),		&&INSTRUCTION(asBC_PshGPtr),	&&INSTRUCTION(asBC_PshC4),		&&INSTRUCTION(asBC_PshV4),
@@ -3181,7 +3224,7 @@ static const void *const dispatch_table[256] = {
 						m_regs.stackFramePointer = l_fp;
 
 						m_engine->CallFree(mem);
-						*a = 0;
+						if( a ) *a = 0;
 
 						return;
 					}
@@ -3541,8 +3584,17 @@ static const void *const dispatch_table[256] = {
 		NEXT_INSTRUCTION();
 
 	INSTRUCTION(asBC_fTOu):
-		// We must cast to int first, because on some compilers the cast of a negative float value to uint result in 0
-		*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(int(*(float*)(l_fp - asBC_SWORDARG0(l_bc))));
+		{
+			float f = *(float*)(l_fp - asBC_SWORDARG0(l_bc));
+			if (f < 0)
+			{
+				// For consistency across compilers and target systems we must cast to int first, 
+				// because on some compilers the cast of a negative float value to uint result in 0
+				*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(int(f));
+			}
+			else
+				*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(f);
+		}
 		l_bc++;
 		NEXT_INSTRUCTION();
 
@@ -3576,8 +3628,17 @@ static const void *const dispatch_table[256] = {
 		NEXT_INSTRUCTION();
 
 	INSTRUCTION(asBC_dTOu):
-		// We must cast to int first, because on some compilers the cast of a negative float value to uint result in 0
-		*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(int(*(double*)(l_fp - asBC_SWORDARG1(l_bc))));
+		{
+			double d = *(double*)(l_fp - asBC_SWORDARG1(l_bc));
+			if (d < 0)
+			{
+				// For consistency across compilers and target systems we must cast to int first, 
+				// because on some compilers the cast of a negative float value to uint result in 0
+				*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(int(d));
+			}
+			else
+				*(l_fp - asBC_SWORDARG0(l_bc)) = asUINT(d);
+		}
 		l_bc += 2;
 		NEXT_INSTRUCTION();
 
@@ -4007,12 +4068,32 @@ static const void *const dispatch_table[256] = {
 		NEXT_INSTRUCTION();
 
 	INSTRUCTION(asBC_fTOu64):
-		*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(asINT64(*(float*)(l_fp - asBC_SWORDARG1(l_bc))));
+		{
+			float f = *(float*)(l_fp - asBC_SWORDARG1(l_bc));
+			if (f < 0)
+			{
+				// For consistency across compilers and target systems we must cast to int first, 
+				// because on some compilers the cast of a negative float value to uint result in 0
+				*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(asINT64(f));
+			}
+			else
+				*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(f);
+		}
 		l_bc += 2;
 		NEXT_INSTRUCTION();
 
 	INSTRUCTION(asBC_dTOu64):
-		*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(asINT64(*(double*)(l_fp - asBC_SWORDARG0(l_bc))));
+		{
+			double d = *(double*)(l_fp - asBC_SWORDARG0(l_bc));
+			if (d < 0)
+			{
+				// For consistency across compilers and target systems we must cast to int first, 
+				// because on some compilers the cast of a negative float value to uint result in 0
+				*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(asINT64(d));
+			}
+			else
+				*(asQWORD*)(l_fp - asBC_SWORDARG0(l_bc)) = asQWORD(d);
+		}
 		l_bc++;
 		NEXT_INSTRUCTION();
 
@@ -4288,7 +4369,7 @@ static const void *const dispatch_table[256] = {
 	INSTRUCTION(asBC_CallPtr):
 		{
 			// Get the function pointer from the local variable
-			asCScriptFunction *func = *(asCScriptFunction**)(l_fp - asBC_SWORDARG0(l_bc));
+			asCScriptFunction *func = *(asCScriptFunction**)(l_fp - asBC_SWORDARG1(l_bc));
 
 			// Need to move the values back to the context
 			m_regs.programPointer    = l_bc;
@@ -4298,7 +4379,7 @@ static const void *const dispatch_table[256] = {
 			if( func == 0 )
 			{
 				// Need to update the program pointer anyway for the exception handler
-				m_regs.programPointer++;
+				m_regs.programPointer += 2;
 
 				// Tell the exception handler to clean up the arguments to this method
 				m_needToCleanupArgs = true;
@@ -4311,7 +4392,7 @@ static const void *const dispatch_table[256] = {
 			{
 				if (func->funcType == asFUNC_SCRIPT)
 				{
-					m_regs.programPointer++;
+					m_regs.programPointer += 2;
 					CallScriptFunction(func);
 				}
 				else if (func->funcType == asFUNC_DELEGATE)
@@ -4329,11 +4410,11 @@ static const void *const dispatch_table[256] = {
 
 						// Update program position after the call so the line number
 						// is correct in case the system function queries it
-						m_regs.programPointer++;
+						m_regs.programPointer += 2;
 					}
 					else
 					{
-						m_regs.programPointer++;
+						m_regs.programPointer += 2;
 
 						// TODO: run-time optimize: The true method could be figured out when creating the delegate
 						CallInterfaceMethod(func->funcForDelegate);
@@ -4345,11 +4426,11 @@ static const void *const dispatch_table[256] = {
 
 					// Update program position after the call so the line number
 					// is correct in case the system function queries it
-					m_regs.programPointer++;
+					m_regs.programPointer += 2;
 				}
 				else if (func->funcType == asFUNC_IMPORTED)
 				{
-					m_regs.programPointer++;
+					m_regs.programPointer += 2;
 					int funcId = m_engine->importedFunctions[func->id & ~FUNC_IMPORTED]->boundFunctionId;
 					if (funcId > 0)
 						CallScriptFunction(m_engine->scriptFunctions[funcId]);
@@ -4693,7 +4774,7 @@ static const void *const dispatch_table[256] = {
 		{
 			float r = powf(*(float*)(l_fp - asBC_SWORDARG1(l_bc)), *(float*)(l_fp - asBC_SWORDARG2(l_bc)));
 			*(float*)(l_fp - asBC_SWORDARG0(l_bc)) = r;
-			if( r == float(HUGE_VAL) )
+			if( r == HUGE_VALF || isinf(r) )
 			{
 				// Need to move the values back to the context
 				m_regs.programPointer    = l_bc;
@@ -4712,7 +4793,7 @@ static const void *const dispatch_table[256] = {
 		{
 			double r = pow(*(double*)(l_fp - asBC_SWORDARG1(l_bc)), *(double*)(l_fp - asBC_SWORDARG2(l_bc)));
 			*(double*)(l_fp - asBC_SWORDARG0(l_bc)) = r;
-			if( r == HUGE_VAL )
+			if( r == HUGE_VAL || isinf(r) )
 			{
 				// Need to move the values back to the context
 				m_regs.programPointer    = l_bc;
@@ -4731,7 +4812,7 @@ static const void *const dispatch_table[256] = {
 		{
 			double r = pow(*(double*)(l_fp - asBC_SWORDARG1(l_bc)), *(int*)(l_fp - asBC_SWORDARG2(l_bc)));
 			*(double*)(l_fp - asBC_SWORDARG0(l_bc)) = r;
-			if( r == HUGE_VAL )
+			if( r == HUGE_VAL || isinf(r) )
 			{
 				// Need to move the values back to the context
 				m_regs.programPointer    = l_bc;
@@ -4929,12 +5010,12 @@ static const void *const dispatch_table[256] = {
 	INSTRUCTION(255): l_bc = (asDWORD*)255; goto case_FAULT;
 #endif
 
-#ifdef AS_DEBUG
+#if defined(AS_DEBUG) && !defined(AS_USE_COMPUTED_GOTOS)
 	default:
 		asASSERT(false);
 		SetInternalException(TXT_UNRECOGNIZED_BYTE_CODE);
 #endif
-#if defined(_MSC_VER) && !defined(AS_DEBUG)
+#if defined(_MSC_VER) && !defined(AS_DEBUG) && !defined(AS_USE_COMPUTED_GOTOS)
 	default:
 		// This Microsoft specific code allows the
 		// compiler to optimize the switch case as
@@ -5310,7 +5391,7 @@ void asCContext::CleanArgsOnStack()
 
 	// Determine what function was being called
 	asCScriptFunction *func = 0;
-	asBYTE bc = *(asBYTE*)prevInstr;
+	asBYTE bc = prevInstr ? *(asBYTE*)prevInstr : 0;
 	if( bc == asBC_CALL || bc == asBC_CALLSYS || bc == asBC_CALLINTF )
 	{
 		int funcId = asBC_INTARG(prevInstr);
@@ -5324,7 +5405,7 @@ void asCContext::CleanArgsOnStack()
 	else if( bc == asBC_CallPtr )
 	{
 		asUINT v;
-		int var = asBC_SWORDARG0(prevInstr);
+		int var = asBC_SWORDARG1(prevInstr);
 
 		// Find the funcdef from the local variable
 		for( v = 0; v < m_currentFunction->scriptData->variables.GetLength(); v++ )
@@ -5586,9 +5667,10 @@ bool asCContext::CleanStackFrame(bool catchException)
 	else
 		m_isStackMemoryNotAllocated = false;
 
-	// If the exception was caught then move the program position to the catch block then stop the unwinding
+	// If the exception was caught then move the program position and stack pointer to the catch block then stop the unwinding
 	if (exceptionCaught)
 	{
+		m_regs.stackPointer = m_regs.stackFramePointer - tryCatchInfo->stackSize - m_currentFunction->scriptData->variableSpace;
 		m_regs.programPointer = m_currentFunction->scriptData->byteCode.AddressOf() + tryCatchInfo->catchPos;
 		return exceptionCaught;
 	}
@@ -6256,6 +6338,9 @@ asDWORD asCContext::SerializeStackPointer(asDWORD *v) const
 
 	// Find the stack block that is used, and the offset into that block
 	asUINT stackIndex = DetermineStackIndex(v);
+	asASSERT(int(stackIndex) >= 0);
+	if (stackIndex >= m_stackBlocks.GetLength()) 
+		return asUINT(asERROR);
 	asQWORD offset    = asQWORD(v - m_stackBlocks[stackIndex]);
 
 	asASSERT(offset < 0x03FFFFFF && (asUINT)stackIndex < 0x3F);
@@ -6575,6 +6660,10 @@ int as_powi(int base, int exponent, bool& isOverflow)
 			return 0;  // overflow
 		}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 		int result = 1;
 		switch( high_bit )
 		{
@@ -6605,6 +6694,9 @@ int as_powi(int base, int exponent, bool& isOverflow)
 			isOverflow = false;
 			return result;
 		}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 	}
 }
 
@@ -6642,6 +6734,10 @@ asDWORD as_powu(asDWORD base, asDWORD exponent, bool& isOverflow)
 			return 0;  // overflow
 		}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 		asDWORD result = 1;
 		switch( high_bit )
 		{
@@ -6672,6 +6768,9 @@ asDWORD as_powu(asDWORD base, asDWORD exponent, bool& isOverflow)
 			isOverflow = false;
 			return result;
 		}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 	}
 }
 
@@ -6723,6 +6822,10 @@ asINT64 as_powi64(asINT64 base, asINT64 exponent, bool& isOverflow)
 			return 0;  // overflow
 		}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 		asINT64 result = 1;
 		switch( high_bit )
 		{
@@ -6758,6 +6861,9 @@ asINT64 as_powi64(asINT64 base, asINT64 exponent, bool& isOverflow)
 			isOverflow = false;
 			return result;
 		}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 	}
 }
 
@@ -6795,6 +6901,10 @@ asQWORD as_powu64(asQWORD base, asQWORD exponent, bool& isOverflow)
 			return 0;  // overflow
 		}
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#endif
 		asQWORD result = 1;
 		switch( high_bit )
 		{
@@ -6830,6 +6940,9 @@ asQWORD as_powu64(asQWORD base, asQWORD exponent, bool& isOverflow)
 			isOverflow = false;
 			return result;
 		}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 	}
 }
 

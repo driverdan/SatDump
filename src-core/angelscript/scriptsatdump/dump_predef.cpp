@@ -151,8 +151,8 @@ namespace satdump
                     const std::string_view ns = type->GetNamespace();
                     if (!ns.empty())
                         stream << "namespace " << ns << " {\n"; // std::format("namespace {} {{\n", ns);
-                    stream << "typedef " << engine->GetTypeDeclaration(type->GetTypedefTypeId()) << " " << type->GetName()
-                           << ";\n"; // std::format("typedef {} {};\n", engine->GetTypeDeclaration(type->GetTypedefTypeId()), type->GetName());
+                    stream << "typedef " << engine->GetTypeDeclaration(type->GetUnderlyingTypeId()) << " " << type->GetName()
+                           << ";\n"; // std::format("typedef {} {};\n", engine->GetTypeDeclaration(type->GetUnderlyingTypeId()), type->GetName());
                     if (!ns.empty())
                         stream << "}\n";
                 }

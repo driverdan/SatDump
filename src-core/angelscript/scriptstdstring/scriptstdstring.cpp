@@ -7,7 +7,9 @@
 #ifndef __psp2__
 	#include <locale.h> // setlocale()
 #endif
+#ifdef AS_CAN_USE_CPP11
 #include <regex>
+#endif
 
 
 using namespace std;
@@ -394,7 +396,7 @@ static int StringRegexFind(const string& rex, asUINT start, asUINT& outLengthOfM
 	// https://www.regular-expressions.info/stdregex.html
 	// 
 	//  std::wregex pattern(L"[[:alpha:]]+");
-	//  bool result = std::regex_match(std::wstring(L"abcdï¿½fg"), pattern);
+	//  bool result = std::regex_match(std::wstring(L"abcdéfg"), pattern);
 	//
 	// The solution from stack overflow doesn't work with MSVC
 	// https://stackoverflow.com/questions/11254232/do-c11-regular-expressions-work-with-utf-8-strings
@@ -402,11 +404,11 @@ static int StringRegexFind(const string& rex, asUINT start, asUINT& outLengthOfM
 	//  std::locale old;
 	//  std::locale::global(std::locale("en_US.UTF-8"));
 	//  std::regex pattern("[[:alpha:]]+", std::regex_constants::extended);
-	//  bool result = std::regex_match(std::string(u8"abcdï¿½fg"), pattern);
+	//  bool result = std::regex_match(std::string(u8"abcdéfg"), pattern);
 	//
 	// I've tried setting the manifest to use utf8 code page but it also doesn't work with MSVC
 	// https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page
-
+#ifdef AS_CAN_USE_CPP11
 	std::regex pattern(rex, std::regex_constants::ECMAScript | std::regex_constants::collate);
 	std::cmatch match;
 	bool result = std::regex_search(str.c_str() + start, str.c_str()+str.length(), match, pattern);
@@ -419,6 +421,9 @@ static int StringRegexFind(const string& rex, asUINT start, asUINT& outLengthOfM
 
 	outLengthOfMatch = (asUINT)match[0].length();
 	return (int)match.prefix().length();
+#else 
+	return -1;
+#endif
 }
 
 // This function returns the index of the first position where the one of the bytes in substring
@@ -637,7 +642,26 @@ static string formatFloat(double value, const string &options, asUINT width, asU
 	return buf;
 }
 
-// TODO: variadic: review
+#if defined(AS_CAN_USE_CPP11)
+using std::to_string;
+#else
+// C++98 doesn't have std::to_string, so let's define our own
+template<class T>
+static std::string to_string(T value)
+{
+	std::stringstream _ss;
+	_ss << value;
+	return _ss.str();
+}
+// stringstream with uint8 treats it a single character rather than a number, so a template specialization is needed
+static std::string to_string(asBYTE value)
+{
+	std::stringstream _ss;
+	_ss << (unsigned int)value;
+	return _ss.str();
+}
+#endif
+
 static void StringFormat(asIScriptGeneric* gen)
 {
 	const string& fmt = *(string*)gen->GetArgAddress(0);
@@ -734,7 +758,7 @@ static void StringFormat(asIScriptGeneric* gen)
 		}
 	}
 
-	new(gen->GetAddressOfReturnLocation()) string(std::move(result));
+	new(gen->GetAddressOfReturnLocation()) string(result);
 }
 
 // TODO: variadic: review
@@ -786,7 +810,7 @@ static void StringScan(asIScriptGeneric* gen)
 			if (!ss) goto end_scan;
 
 			void* ref = gen->GetArgAddress(i);
-			*(string*)ref = std::move(val);
+			val.swap(*(string*)ref);
 		}
 		else // Invalid type
 		{
@@ -908,7 +932,7 @@ double parseFloat(const string &val, asUINT *byteCount)
 	char *end;
 
 	// Set the locale to C so that we are guaranteed to parse the float value correctly
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(_MSC_VER)
 	// WinCE doesn't have setlocale. Some quick testing on my current platform
 	// still manages to parse the numbers such as "3.14" even if the decimal for the
 	// locale is ",".
@@ -921,7 +945,7 @@ double parseFloat(const string &val, asUINT *byteCount)
 	setlocale(LC_NUMERIC, "C");
 #endif
 #else
-#if !defined(__ANDROID__) && !defined(__psp2__)
+#if !defined(__ANDROID__) && !defined(__psp2__) && defined(LC_NUMERIC_MASK)
 	// On Linux and other similar systems the threadsafe option is uselocale
 	// ref: https://stackoverflow.com/questions/4057319/is-setlocale-thread-safe-function
 	locale_t locale = newlocale(LC_NUMERIC_MASK, "C", NULL);
@@ -932,13 +956,13 @@ double parseFloat(const string &val, asUINT *byteCount)
 	double res = strtod(val.c_str(), &end);
 
 	// Restore the original locale
-#if defined(_WIN32)
+#if defined(_WIN32) && defined(_MSC_VER)
 #if !defined(_WIN32_WCE)
 	setlocale(LC_NUMERIC, orig.c_str());
 	_configthreadlocale(oldConfig);
 #endif
 #else
-#if !defined(__ANDROID__) && !defined(__psp2__)
+#if !defined(__ANDROID__) && !defined(__psp2__) && defined(LC_NUMERIC_MASK)
 	uselocale(orig_locale);
 	freelocale(locale);
 #endif
