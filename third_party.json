@@ -120,19 +120,19 @@
         "src-core/imgui/imnodes"
       ],
       "upstream_url": "https://github.com/Nelarius/imnodes",
-      "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded in the files.",
+      "version": "v0.5-41-g2d0c280",
+      "commit": "2d0c280b07b2f62b120034811cc6e41251673961",
+      "commit_verified": true,
+      "version_source": "Upstream master (git describe v0.5-41-g2d0c280). imnodes.cpp, imnodes.h and imnodes_internal.h are that commit, apart from the local changes below.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against upstream."
+        "status": "yes",
+        "details": "imnodes.h includes \"imgui/imgui.h\" instead of <imgui.h>, and imnodes_internal.h includes \"imgui/imgui.h\" and \"imgui/imgui_internal.h\" instead of <imgui.h> and <imgui_internal.h>."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 276,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #276 from upstream e9bb6cadc0382e8288be70a524ccb557f9e8c422 (2024-02-23, matched by diffing upstream history; identical apart from the include paths and a local Dear ImGui 1.92 ImDrawCmd::TexRef fix, which upstream now has). Upstream also stops box selection and panning from starting when the editor window is not hovered, and adds ImNodes::GetStyleColorName."
     },
     {
       "id": "imgui_markdown",
