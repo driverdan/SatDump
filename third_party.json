@@ -166,19 +166,19 @@
         "src-core/nlohmann/json_utils.h"
       ],
       "upstream_url": "https://github.com/nlohmann/json",
-      "version": "3.11.3",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "NLOHMANN_JSON_VERSION_* in json.hpp. The file is not the v3.11.3 release: its SPDX copyright reads 2013 - 2024 (the release has 2013-2023) and about 1500 lines differ, so it is a develop-branch snapshot taken after v3.11.3.",
+      "version": "3.12.0",
+      "commit": "55f93686c01528224f448c19128836e7df245f72",
+      "commit_verified": true,
+      "version_source": "NLOHMANN_JSON_VERSION_* in json.hpp; the commit is the v3.12.0 tag. json.hpp is the v3.12.0 single-include release asset (SHA-256 aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63, identical to single_include/nlohmann/json.hpp at the tag), apart from the local changes below.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against the develop snapshot it came from."
+        "status": "yes",
+        "details": "The ignore_comments default is true instead of false in the lexer, the lexer's ignore_comments member, sax_parse, parse and accept (12 places), so SatDump's JSON files may contain // and /* */ comments."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 278,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #278 from a develop snapshot taken after v3.11.3 (upstream 4f64d8d0b4f3783256c1d8597682d75c3ea587b9, identical apart from the ignore_comments defaults). v3.12.0 converts std::filesystem::path to and from UTF-8 on all platforms (previously the native narrow encoding on Windows) and adds std::optional conversions under C++17."
     },
     {
       "id": "cli11",
