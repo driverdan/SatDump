@@ -4,6 +4,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <future>
+#include <thread>
+#include <vector>
 
 using namespace satdump::ndsp;
 
@@ -198,4 +200,110 @@ TEST_CASE("ndsp DSPStream destructor frees queued buffers", "[dsp][base][dsp_str
     CHECK(s->size_approx() == 3);
     s.reset();
     SUCCEED();
+}
+
+namespace
+{
+    // Runs fn on a detached thread, so that a thread stuck on a lost buffer
+    // makes the test fail on a timeout instead of hanging in a future's destructor
+    template <typename F>
+    auto runDetached(F fn) -> std::future<decltype(fn())>
+    {
+        auto pr = std::make_shared<std::promise<decltype(fn())>>();
+        auto fut = pr->get_future();
+        std::thread([pr, fn]() { pr->set_value(fn()); }).detach();
+        return fut;
+    }
+} // namespace
+
+TEST_CASE("ndsp DSPStream free from producer and consumer at once loses no buffer", "[dsp][base][dsp_stream]")
+{
+    // Blocks drop buffers they allocated but never sent with free() on their
+    // output stream, while the downstream block frees the buffers it used: two
+    // threads enqueue into the free pool at once (#439)
+    constexpr int nbuf = 2;
+    constexpr int nloops = 20000;
+    constexpr int nsamples = 16;
+    auto s = std::make_shared<DSPStream>(nbuf);
+
+    auto consumer = runDetached(
+        [s]()
+        {
+            int bad = 0;
+            int received = 0;
+            uint32_t last = 0;
+            while (true)
+            {
+                DSPBuffer b = s->wait_dequeue();
+                if (b.isTerminator())
+                {
+                    s->free(b);
+                    break;
+                }
+                uint32_t *p = b.getSamples<uint32_t>();
+                // Each buffer holds its own sequence number, in increasing order
+                if (b.size != nsamples || p[0] <= last)
+                    bad++;
+                for (int i = 1; i < nsamples; i++)
+                    if (p[i] != p[0])
+                        bad++;
+                last = p[0];
+                received++;
+                s->free(b);
+            }
+            return std::make_pair(received, bad);
+        });
+
+    auto producer = runDetached(
+        [s]()
+        {
+            int sent = 0;
+            for (int i = 1; i <= nloops; i++)
+            {
+                DSPBuffer b = s->newBufferSamples(nsamples, sizeof(uint32_t));
+                if (i % 2 == 0)
+                {
+                    // Dropped on the producer side, like ReshapeBufferBlock or BlockSimple do
+                    s->free(b);
+                    continue;
+                }
+                uint32_t *p = b.getSamples<uint32_t>();
+                for (int j = 0; j < nsamples; j++)
+                    p[j] = i;
+                b.size = nsamples;
+                s->wait_enqueue(b);
+                sent++;
+            }
+            s->wait_enqueue(s->newBufferTerminator());
+            return sent;
+        });
+
+    REQUIRE(producer.wait_for(std::chrono::seconds(60)) == std::future_status::ready);
+    REQUIRE(consumer.wait_for(std::chrono::seconds(60)) == std::future_status::ready);
+    int sent = producer.get();
+    auto [received, bad] = consumer.get();
+    CHECK(sent == nloops / 2);
+    CHECK(received == sent);
+    CHECK(bad == 0);
+
+    // Every buffer is back in the pool exactly once: all nbuf of them can be
+    // allocated again, and they are all distinct
+    auto drain = runDetached(
+        [s]()
+        {
+            std::vector<DSPBuffer> bufs;
+            for (int i = 0; i < nbuf; i++)
+                bufs.push_back(s->newBufferSamples(nsamples, sizeof(uint32_t)));
+            return bufs;
+        });
+    REQUIRE(drain.wait_for(ndsp_test::kTimeout) == std::future_status::ready);
+    std::vector<DSPBuffer> bufs = drain.get();
+    for (int i = 0; i < nbuf; i++)
+    {
+        REQUIRE(bufs[i].getSamples<void>() != nullptr);
+        for (int j = 0; j < i; j++)
+            CHECK(bufs[i].getSamples<void>() != bufs[j].getSamples<void>());
+    }
+    for (auto &b : bufs)
+        s->free(b);
 }
