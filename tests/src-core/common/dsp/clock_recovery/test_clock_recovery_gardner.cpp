@@ -1,5 +1,6 @@
 #include "common/dsp/clock_recovery/clock_recovery_gardner.h"
 #include "common/dsp/clock_recovery/clock_test_signal.h"
+#include "helpers/guards.h"
 #include "helpers/prefilled.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -70,4 +71,42 @@ TEST_CASE("GardnerClockRecoveryBlock<complex_t> recovers QPSK symbols", "[common
 
     CHECK(dsp_test_clock::bestMatch(r.output.size(), start, isym, [&](size_t k) { return r.output[k].real > 0; }) > 0.999);
     CHECK(dsp_test_clock::bestMatch(r.output.size(), start, qsym, [&](size_t k) { return r.output[k].imag > 0; }) > 0.999);
+}
+
+TEST_CASE("GardnerClockRecoveryBlock takes input chunks of a full STREAM_BUFFER_SIZE", "[common][dsp][clock_recovery][gardner]")
+{
+    // #138: the history buffer held STREAM_BUFFER_SIZE samples, but each chunk is copied after
+    // ntaps - 1 + 20 history samples, so a chunk close to that size wrote past its end (caught by
+    // AddressSanitizer). A small buffer size keeps the test short, the streams below are built with it.
+    test_helpers::ValueGuard size_guard(dsp::STREAM_BUFFER_SIZE, 4096);
+    auto sym = dsp_test_clock::randomSymbols(8 * 4096 / 2, 53);
+    auto sig = dsp_test_clock::shapeSymbols(sym, 2.0, 0.6);
+
+    SECTION("float")
+    {
+        auto input = std::make_shared<dsp::stream<float>>();
+        auto gd = test_helpers::makePrefilled<dsp::GardnerClockRecoveryBlock<float>>(0, input, 2.0f, kGardnerOmegaGain, 0.5f, kGardnerMuGain, kGardnerOmegaLimit);
+        auto r = dsp_test::runBlock(*gd, input, sig, dsp::STREAM_BUFFER_SIZE);
+        REQUIRE(r.completed);
+        CHECK_THAT((double)r.output.size(), WithinAbs(sym.size(), 0.01 * sym.size()));
+
+        size_t start = r.output.size() / 4;
+        CHECK(dsp_test_clock::bestMatch(r.output.size(), start, sym, [&](size_t k) { return r.output[k] > 0; }) > 0.999);
+    }
+
+    SECTION("complex")
+    {
+        std::vector<complex_t> csig(sig.size());
+        for (size_t n = 0; n < sig.size(); n++)
+            csig[n] = complex_t(sig[n], -sig[n]);
+
+        auto input = std::make_shared<dsp::stream<complex_t>>();
+        dsp::GardnerClockRecoveryBlock<complex_t> gd(input, 2.0f, kGardnerOmegaGain, 0.5f, kGardnerMuGain, kGardnerOmegaLimit);
+        auto r = dsp_test::runBlock(gd, input, csig, dsp::STREAM_BUFFER_SIZE);
+        REQUIRE(r.completed);
+        CHECK_THAT((double)r.output.size(), WithinAbs(sym.size(), 0.01 * sym.size()));
+
+        size_t start = r.output.size() / 4;
+        CHECK(dsp_test_clock::bestMatch(r.output.size(), start, sym, [&](size_t k) { return r.output[k].real > 0; }) > 0.999);
+    }
 }

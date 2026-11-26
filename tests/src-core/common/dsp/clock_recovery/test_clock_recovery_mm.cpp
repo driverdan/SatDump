@@ -1,5 +1,6 @@
 #include "common/dsp/clock_recovery/clock_recovery_mm.h"
 #include "common/dsp/clock_recovery/clock_test_signal.h"
+#include "helpers/guards.h"
 #include "helpers/prefilled.h"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -97,4 +98,42 @@ TEST_CASE("MMClockRecoveryBlock<complex_t> recovers QPSK symbols", "[common][dsp
 
     CHECK(dsp_test_clock::bestMatch(r.output.size(), start, isym, [&](size_t k) { return r.output[k].real > 0; }) > 0.999);
     CHECK(dsp_test_clock::bestMatch(r.output.size(), start, qsym, [&](size_t k) { return r.output[k].imag > 0; }) > 0.999);
+}
+
+TEST_CASE("MMClockRecoveryBlock takes input chunks of a full STREAM_BUFFER_SIZE", "[common][dsp][clock_recovery][mm]")
+{
+    // #138: the history buffer held STREAM_BUFFER_SIZE samples, but each chunk is copied after
+    // ntaps - 1 history samples, so a full chunk wrote past its end (caught by AddressSanitizer).
+    // A small buffer size keeps the test short, the streams below are built with it.
+    test_helpers::ValueGuard size_guard(dsp::STREAM_BUFFER_SIZE, 4096);
+    auto sym = dsp_test_clock::randomSymbols(8 * 4096 / 4, 44);
+    auto sig = dsp_test_clock::shapeSymbols(sym, 4.0, 1.2);
+
+    SECTION("float")
+    {
+        auto input = std::make_shared<dsp::stream<float>>();
+        auto mm = makeMM(input, 4.0f);
+        auto r = dsp_test::runBlock(*mm, input, sig, dsp::STREAM_BUFFER_SIZE);
+        REQUIRE(r.completed);
+        CHECK_THAT((double)r.output.size(), WithinAbs(sym.size(), 0.01 * sym.size()));
+
+        size_t start = r.output.size() / 4;
+        CHECK(dsp_test_clock::bestMatch(r.output.size(), start, sym, [&](size_t k) { return r.output[k] > 0; }) > 0.999);
+    }
+
+    SECTION("complex")
+    {
+        std::vector<complex_t> csig(sig.size());
+        for (size_t n = 0; n < sig.size(); n++)
+            csig[n] = complex_t(sig[n], -sig[n]);
+
+        auto input = std::make_shared<dsp::stream<complex_t>>();
+        dsp::MMClockRecoveryBlock<complex_t> mm(input, 4.0f, kOmegaGain, 0.5f, kMuGain, kOmegaLimit);
+        auto r = dsp_test::runBlock(mm, input, csig, dsp::STREAM_BUFFER_SIZE);
+        REQUIRE(r.completed);
+        CHECK_THAT((double)r.output.size(), WithinAbs(sym.size(), 0.01 * sym.size()));
+
+        size_t start = r.output.size() / 4;
+        CHECK(dsp_test_clock::bestMatch(r.output.size(), start, sym, [&](size_t k) { return r.output[k].real > 0; }) > 0.999);
+    }
 }
