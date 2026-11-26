@@ -229,19 +229,19 @@
         "src-core/libs/fkyaml"
       ],
       "upstream_url": "https://github.com/fktn-k/fkYAML",
-      "version": "0.4.3",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "FK_YAML_*_VERSION in node.hpp. The files are not the v0.4.3 tag: their SPDX copyright reads 2023-2026 (the tag has 2023-2025) and node.hpp differs by about 160 lines, so this is probably a develop snapshot after v0.4.3.",
+      "version": "0.5.0",
+      "commit": "5cc0747068b94708aa0986cacd200aa74be4f9e8",
+      "commit_verified": true,
+      "version_source": "FK_YAML_*_VERSION in node.hpp; the commit is the v0.5.0 tag. node.hpp and fkyaml_fwd.hpp are the unmodified release assets (SHA-256 928a022e2f40b72f79d41011bebb20c0362d0ebdfadff5136ac67a44d495a690 and 9b4ccfa59ac546b4903748f779312aedcf8bb7b96e93f1c40c388ee3c7a5c1bb, matching the digests listed on the v0.5.0 release), identical to single_include/fkYAML at that tag.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "Not yet diffed against the snapshot it came from."
+        "status": "no",
+        "details": "None. The previous copy was also byte-identical to its upstream snapshot (develop f44392f5b7090b9236e684325557b25593b0316c)."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
+      "upstream_state": "current",
       "update_issue": 281,
-      "notes": ""
+      "notes": "Updated in #281 from a develop snapshot taken after v0.4.3. No SatDump code includes these headers at present. v0.5.0 breaks API and ABI: unquoted empty mapping keys become null keys, deserialize_docs() skips comment-only sections, ordered_map::value_type loses its const key, and the deprecated node_t, yaml_version_t, type() and get_value_ref<T>() APIs are removed."
     },
     {
       "id": "angelscript",
