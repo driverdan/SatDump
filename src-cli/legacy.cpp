@@ -12,9 +12,21 @@ namespace satdump
         sub->set_help_flag();
     }
 
-    void LegacyCmdHandler::run(CLI::App *app, CLI::App *subcom, bool is_gui)
+    std::vector<std::string> LegacyCmdHandler::get_forwarded_args(CLI::App *subcom)
     {
         auto args = subcom->remaining();
+
+        // Since CLI11 2.6.2, a prefix command keeps a leading "--" in remaining(). The legacy
+        // dispatcher would take it for a pipeline id, so drop it (#279)
+        if (!args.empty() && args.front() == "--")
+            args.erase(args.begin());
+
+        return args;
+    }
+
+    void LegacyCmdHandler::run(CLI::App *app, CLI::App *subcom, bool is_gui)
+    {
+        auto args = get_forwarded_args(subcom);
 
         std::vector<char *> vec;
         args.insert(args.begin(), "satdump legacy");
