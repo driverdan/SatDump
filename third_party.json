@@ -220,7 +220,7 @@
       "consumption": "vendored",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "Updated in #280 from upstream 36190eb07dc5d85f408d998d1884eb69573adf68 (2023-06-15, byte-identical). The only upstream change since is in the encoder (QOI_COLOR_HASH(px) & (64 - 1) instead of % 64, same result); the decoder is unchanged."
+      "notes": "Updated in #280 from upstream 36190eb07dc5d85f408d998d1884eb69573adf68 (2023-06-15, byte-identical). The only upstream change since replaces % 64 with & (64 - 1) for the colour index in both the encoder and the decoder, with the same result; there are no decoder fixes to pick up."
     },
     {
       "id": "fkyaml",
