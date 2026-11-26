@@ -183,3 +183,129 @@ TEST_CASE("ZipFilesIterator rejects invalid archives", "[utils][file_iterators]"
     writeBytes(dir.path / "fake.zip", bytes("this is definitely not a zip archive"));
     CHECK_THROWS_AS(ZipFilesIterator((dir.path / "fake.zip").string()), satdump::satdump_exception_t);
 }
+
+namespace
+{
+    using test_helpers::readBytes;
+
+    void putLE32(std::vector<uint8_t> &v, size_t off, uint32_t val)
+    {
+        for (int i = 0; i < 4; i++)
+            v[off + i] = (val >> (8 * i)) & 0xFF;
+    }
+
+    // Overwrites the uncompressed size of the only entry, in both its local and central directory headers
+    void patchUncompressedSize(std::vector<uint8_t> &zip, uint32_t size)
+    {
+        int patched = 0;
+        for (size_t i = 0; i + 30 <= zip.size(); i++)
+        {
+            if (zip[i] == 'P' && zip[i + 1] == 'K' && zip[i + 2] == 3 && zip[i + 3] == 4)
+                putLE32(zip, i + 22, size), patched++;
+            else if (zip[i] == 'P' && zip[i + 1] == 'K' && zip[i + 2] == 1 && zip[i + 3] == 2)
+                putLE32(zip, i + 24, size), patched++;
+        }
+        if (patched != 2)
+            throw std::runtime_error("Unexpected test zip layout");
+    }
+
+    std::vector<uint8_t> zipBytes(const std::map<std::string, std::vector<uint8_t>> &entries)
+    {
+        TempZip zip(entries);
+        return readBytes(zip.path);
+    }
+
+    struct ZipReader
+    {
+        mz_zip_archive zip{};
+        ZipReader(const std::filesystem::path &p)
+        {
+            if (!mz_zip_reader_init_file(&zip, p.string().c_str(), 0))
+                throw std::runtime_error("Could not open test zip");
+        }
+        ~ZipReader() { mz_zip_reader_end(&zip); }
+    };
+} // namespace
+
+TEST_CASE("extractZipEntry extracts valid entries", "[utils][file_iterators]")
+{
+    std::vector<uint8_t> data = patterned(50000);
+    std::vector<uint8_t> zeros(1 << 20, 0);
+    TempZip zip({{"data.bin", data}, {"empty.bin", {}}, {"zeros.bin", zeros}});
+    ZipReader r(zip.path);
+
+    std::map<std::string, std::vector<uint8_t>> got;
+    for (int i = 0; i < (int)mz_zip_reader_get_num_files(&r.zip); i++)
+    {
+        char name[256];
+        REQUIRE(mz_zip_reader_get_filename(&r.zip, i, name, sizeof(name)));
+        std::vector<uint8_t> out = {1, 2, 3};
+        CHECK(satdump::utils::extractZipEntry(&r.zip, i, out));
+        got[name] = out;
+    }
+
+    REQUIRE(got.size() == 3);
+    CHECK(got["data.bin"] == data);
+    CHECK(got["empty.bin"].empty());
+    // A highly compressible entry is still within the plausible expansion ratio
+    CHECK(got["zeros.bin"] == zeros);
+}
+
+TEST_CASE("extractZipEntry rejects invalid indices", "[utils][file_iterators]")
+{
+    TempZip zip({{"a.txt", bytes("a")}});
+    ZipReader r(zip.path);
+    std::vector<uint8_t> out = {1};
+    CHECK_FALSE(satdump::utils::extractZipEntry(&r.zip, -1, out));
+    CHECK(out.empty());
+    out = {1};
+    CHECK_FALSE(satdump::utils::extractZipEntry(&r.zip, 1, out));
+    CHECK(out.empty());
+}
+
+TEST_CASE("extractZipEntry rejects an implausibly large claimed size", "[utils][file_iterators]")
+{
+    TempDir dir("zip_oversize");
+    std::vector<uint8_t> raw = zipBytes({{"small.txt", bytes("tiny payload")}});
+    // ~2 GB claimed for a few bytes of compressed data
+    patchUncompressedSize(raw, 0x7FFFFFF0);
+    writeBytes(dir.path / "oversize.zip", raw);
+
+    ZipReader r(dir.path / "oversize.zip");
+    REQUIRE(mz_zip_reader_get_num_files(&r.zip) == 1);
+    std::vector<uint8_t> out;
+    CHECK_FALSE(satdump::utils::extractZipEntry(&r.zip, 0, out));
+    CHECK(out.empty());
+    // Rejected up front: miniz was never asked to allocate or extract
+    CHECK(mz_zip_peek_last_error(&r.zip) == MZ_ZIP_NO_ERROR);
+
+    // The iterator returns an empty payload instead of allocating
+    ZipFilesIterator it((dir.path / "oversize.zip").string());
+    int entries = 0;
+    auto files = drain(it, entries);
+    CHECK(entries == 1);
+    REQUIRE(files.count("small.txt") == 1);
+    CHECK(files["small.txt"].empty());
+}
+
+TEST_CASE("extractZipEntry fails on a size mismatch or corrupt data", "[utils][file_iterators]")
+{
+    std::vector<uint8_t> data = patterned(4000);
+    std::vector<uint8_t> raw = zipBytes({{"data.bin", data}});
+
+    SECTION("claimed size larger than the real data") { patchUncompressedSize(raw, data.size() + 100); }
+
+    SECTION("corrupted compressed data")
+    {
+        // Past the local header (30 bytes) and the name, inside the deflate stream
+        for (size_t i = 30 + 8 + 10; i < 30 + 8 + 40; i++)
+            raw[i] ^= 0x5A;
+    }
+
+    TempDir dir("zip_corrupt");
+    writeBytes(dir.path / "bad.zip", raw);
+    ZipReader r(dir.path / "bad.zip");
+    std::vector<uint8_t> out;
+    CHECK_FALSE(satdump::utils::extractZipEntry(&r.zip, 0, out));
+    CHECK(out.empty());
+}
