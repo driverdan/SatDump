@@ -327,8 +327,9 @@ TEST_CASE("aec_decode decodes what aec_encode makes of signed samples, for every
 
 TEST_CASE("SZ_BufftoBuffDecompress decodes scanlines longer than 4096 pixels", "[libs][aec]")
 {
-    // Upstream libaec limits SZ scanlines to 4096 pixels. SatDump does not: GOES HRIT full disk
-    // lines have 5424 pixels (8 bit) and Landsat TIRS lines 6000 (16 bit, 16 pixels per block).
+    // Upstream libaec limits SZ scanlines to 4096 pixels. SatDump allows 4096 * 64: GOES HRIT full
+    // disk lines have 5424 pixels (8 bit). 6000 is the Landsat TIRS setting (16 bit, 16 pixels per
+    // block), whose decoder is disabled.
     auto settings = GENERATE(std::make_tuple(8, 32, 5424), std::make_tuple(8, 16, 5424), std::make_tuple(16, 16, 6000));
     SZ_com_t p = lineSettings(std::get<1>(settings), std::get<2>(settings));
     p.bits_per_pixel = std::get<0>(settings);
@@ -347,6 +348,36 @@ TEST_CASE("SZ_BufftoBuffDecompress decodes scanlines longer than 4096 pixels", "
     REQUIRE(SZ_BufftoBuffDecompress(out.data(), &out_size, compressed.data(), compressed_size, &p) == SZ_OK);
     CHECK(out_size == lines.size());
     CHECK(test_helpers::bytesDiff(out, lines) == "");
+}
+
+TEST_CASE("SZ_BufftoBuffCompress and SZ_BufftoBuffDecompress reject scanlines over 4096 * 64 pixels and blocks over 256 pixels", "[libs][aec]")
+{
+    // Sizes computed from them overflowed an int: 600000000 pixels at 24 bits wrote past the
+    // padding buffer of SZ_BufftoBuffCompress. The input is never read.
+    auto settings = GENERATE(std::make_tuple(24, 16, 4096 * 64 + 1), std::make_tuple(24, 16, 600000000), std::make_tuple(8, 16, INT32_MAX),
+                             std::make_tuple(8, 258, 5424), std::make_tuple(8, INT32_MAX - 1, 5424));
+    SZ_com_t p = lineSettings(std::get<1>(settings), std::get<2>(settings));
+    p.bits_per_pixel = std::get<0>(settings);
+
+    std::vector<uint8_t> in(64), out(64);
+    size_t out_size = out.size();
+    CHECK(SZ_BufftoBuffCompress(out.data(), &out_size, in.data(), in.size(), &p) == SZ_PARAM_ERROR);
+    out_size = out.size();
+    CHECK(SZ_BufftoBuffDecompress(out.data(), &out_size, in.data(), in.size(), &p) == SZ_PARAM_ERROR);
+}
+
+TEST_CASE("SZ_BufftoBuffDecompress accepts scanlines of 4096 * 64 pixels", "[libs][aec]")
+{
+    SZ_com_t p = lineSettings(64, 4096 * 64);
+    std::vector<uint8_t> line(4096 * 64, 7);
+    std::vector<uint8_t> compressed(line.size() + 1024);
+    size_t compressed_size = compressed.size();
+    REQUIRE(SZ_BufftoBuffCompress(compressed.data(), &compressed_size, line.data(), line.size(), &p) == SZ_OK);
+    std::vector<uint8_t> out(line.size());
+    size_t out_size = out.size();
+    REQUIRE(SZ_BufftoBuffDecompress(out.data(), &out_size, compressed.data(), compressed_size, &p) == SZ_OK);
+    CHECK(out_size == line.size());
+    CHECK(out == line);
 }
 
 TEST_CASE("SZ_BufftoBuffDecompress only reports the decoded part of a line cut short", "[libs][aec]")

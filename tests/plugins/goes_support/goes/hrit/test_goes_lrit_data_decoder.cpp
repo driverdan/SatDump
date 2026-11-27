@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <catch2/generators/catch_generators.hpp>
 #include <thread>
+#include <utility>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -938,15 +939,49 @@ TEST_CASE("GOESLRITDataDecoderModule decompresses Rice compressed images", "[plu
 
 TEST_CASE("GOESLRITDataDecoderModule keeps the lines after a Rice compressed line cut short in place", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
-    // The Rice decoder decodes such a line as far as its input goes, and only reports that part
+    // The Rice decoder decodes such a line as far as its input goes, and only reports that part.
+    // With 32 pixels per block, 100 columns are not a whole number of blocks (as 5424 are not)
+    auto settings = GENERATE(std::make_pair(16, COLUMNS), std::make_pair(32, 100));
+    int pixels_per_block = settings.first, columns = settings.second;
     DecoderEnv env;
     Mux mux;
-    auto lines = imageLines();
-    lines[9].cut = riceLine(lines[9].pixels).size() / 2;
-    mux.add(VCID, riceImagePackets(riceImageHeaders("IMAGE.lrit"), lines, APID));
+    std::vector<RiceLine> lines;
+    for (int y = 0; y < LINES; y++)
+        lines.push_back({linePixels(y, columns)});
+    for (RiceLine &l : lines)
+        l.pixels_per_block = pixels_per_block;
+    lines[9].cut = riceLine(lines[9].pixels, pixels_per_block).size() / 2;
+    Bytes headers = lritHeaders(0,
+                                {imageStructureRecord(8, columns, LINES, 1), annotationRecord("IMAGE.lrit"), noaaRecord(1, 0, 0, 1),
+                                 riceCompressionRecord(riceSettings(columns).options_mask, pixels_per_block, 1)},
+                                0);
+    mux.add(VCID, riceImagePackets(headers, lines, APID));
     decode(env, mux);
 
-    CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({{9, -2}}));
+    image::Image img;
+    image::load_img(img, env.path("IMAGES/IMAGE.lrit.png"));
+    REQUIRE((int)img.width() == columns);
+    REQUIRE((int)img.height() == LINES);
+    int wrong_lines = 0;
+    for (int y = 0; y < LINES; y++)
+    {
+        Bytes row(columns);
+        for (int x = 0; x < columns; x++)
+            row[x] = img.get(0, x, y);
+        if (y != 9 && row != linePixels(y, columns))
+            wrong_lines++;
+        if (y == 9)
+        {
+            // What was decoded, then black
+            int decoded = 0;
+            while (decoded < columns && row[decoded] == linePixels(9, columns)[decoded])
+                decoded++;
+            CHECK(decoded > 0);
+            CHECK(decoded < columns);
+            CHECK(Bytes(row.begin() + decoded, row.end()) == Bytes(columns - decoded, 0));
+        }
+    }
+    CHECK(wrong_lines == 0);
     CHECK_FALSE(env.log.contains("Rice decompression failed"));
 }
 

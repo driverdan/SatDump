@@ -74,12 +74,16 @@ static int check_params(const SZ_com_t *param)
 {
     /* SZ_com_t fields are signed, so reject negative values here
      * before they are converted to unsigned sizes. */
-    /* SatDump: no limit of 4096 pixels per scanline (that of szip).
-     * GOES HRIT lines have up to 5424 pixels and Landsat TIRS lines
-     * 6000. aec_decode_init() and aec_encode_init() still limit the
-     * RSI to 4096 blocks. */
+    /* SatDump: up to 4096 * 64 pixels per scanline instead of 4096
+     * (that of szip), as GOES HRIT full disk lines have 5424 pixels.
+     * It is the longest scanline that fits in a RSI of 4096 blocks
+     * of 64 pixels, and keeps the sizes computed from it (and from
+     * pixels_per_block, limited to 256 as in aec_decode_init()) from
+     * overflowing an int. */
     if (param->pixels_per_scanline <= 0
+        || param->pixels_per_scanline > 4096 * 64
         || param->pixels_per_block <= 0
+        || param->pixels_per_block > 256
         || param->pixels_per_block & 1
         || param->bits_per_pixel <= 0
         || (param->bits_per_pixel > 32 && param->bits_per_pixel != 64))
