@@ -12,18 +12,7 @@ namespace satdump
     { // TODOREWORK?
         void process_product_with_handler(std::shared_ptr<Product> p, std::string directory)
         {
-            // Setting up the handler can fail on a product with invalid info (eg, projection).
-            // Skip this product rather than aborting everything else.
-            std::shared_ptr<handlers::ProductHandler> handler;
-            try
-            {
-                handler = handlers::getProductHandlerForProduct(p);
-            }
-            catch (std::exception &e)
-            {
-                logger->warn("Could not setup product handler, skipping product! %s", e.what());
-                return;
-            }
+            std::shared_ptr<handlers::ProductHandler> handler = handlers::getProductHandlerForProduct(p);
 
             bool use_preset_cache = p->d_use_preset_cache;
 

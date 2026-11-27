@@ -1,3 +1,4 @@
+#include "core/exception.h"
 #include "handlers/product/image_product_handler.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include "products/image_product.h"
@@ -89,7 +90,7 @@ TEST_CASE("process_product_with_handler generates the presets of a product witho
     CHECK_FALSE(prod->has_proj_cfg());
 }
 
-TEST_CASE("process_product_with_handler skips a product without a handler", "[products][product_process]")
+TEST_CASE("process_product_with_handler fails on a product without a handler", "[products][product_process]")
 {
     ResourcesEnv env;
     EventBusGuard bus;
@@ -98,5 +99,6 @@ TEST_CASE("process_product_with_handler skips a product without a handler", "[pr
     auto prod = std::make_shared<satdump::products::Product>();
     prod->instrument_name = "unit_instr";
     prod->type = "unit_no_handler_type";
-    CHECK_NOTHROW(satdump::products::process_product_with_handler(prod, out.str()));
+    // A real setup failure must stay visible to the caller
+    CHECK_THROWS_AS(satdump::products::process_product_with_handler(prod, out.str()), satdump::satdump_exception_t);
 }

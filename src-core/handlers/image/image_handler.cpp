@@ -552,6 +552,7 @@ namespace satdump
         {
             image::set_metadata(image, {});
             image = img;
+            image_proj_warned = false;
             process();
         }
 
@@ -715,7 +716,9 @@ namespace satdump
                 }
                 catch (std::exception &e)
                 {
-                    logger->warn("Image has invalid projection info, ignoring it : %s", e.what());
+                    if (!image_proj_warned)
+                        logger->warn("Image has invalid projection info, ignoring it : %s", e.what());
+                    image_proj_warned = true;
                 }
             }
 
