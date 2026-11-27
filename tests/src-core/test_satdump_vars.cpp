@@ -21,14 +21,11 @@ TEST_CASE("satdump_vars getSatDumpVersionName includes version and optional tag"
 }
 
 #if !defined(__APPLE__) && !defined(_WIN32) && !defined(__ANDROID__)
-// Bug: satdump_vars.cpp:77-78 initialise the globals RESPATH/LIBPATH from RESOURCES_PATH and
-// LIBRARIES_PATH, which are defined in another translation unit (the generated satdump_varst.cpp).
-// C++ does not order dynamic initialisation across translation units, and in this build they are
-// read before being constructed, so RESPATH and LIBPATH end up empty (static initialisation order
-// fiasco). Resources and system plugins are then only found relative to the working directory.
-// The initialisation order is up to the compiler and linker (it follows link order with GCC and
-// ld here), so another toolchain or link order may happen to initialise them correctly.
-TEST_CASE("satdump_vars RESPATH and LIBPATH default to the configured install paths", "[satdump_vars][!mayfail]")
+// RESPATH and LIBPATH are initialised from RESOURCES_PATH and LIBRARIES_PATH. They used to be
+// defined in a different translation unit from those constants, so with some link orders they
+// were initialised from not-yet-constructed strings and ended up empty (#469). They are now
+// defined in the same translation unit (the generated satdump_varst.cpp), after the constants.
+TEST_CASE("satdump_vars RESPATH and LIBPATH default to the configured install paths", "[satdump_vars]")
 {
     // On Linux, nothing is searched relative to the executable
     CHECK(satdump::RESPATH == satdump::RESOURCES_PATH);
