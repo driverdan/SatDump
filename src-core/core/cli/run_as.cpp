@@ -120,7 +120,11 @@ namespace satdump
         // string type for C++ applications. Every developer is free to register its own string type.
         // The SDK do however provide a standard add-on for registering a string type, so it's not
         // necessary to implement the registration yourself if you don't want to.
-        satdump::script::registerAll(engine);
+        if (!satdump::script::registerAll(engine))
+        {
+            engine->ShutDownAndRelease();
+            return 1;
+        }
 
         if (predef)
             script::GenerateScriptPredefined(engine, "../as.predefined");
