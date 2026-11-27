@@ -215,6 +215,63 @@ namespace
         return readBytes(zip.path);
     }
 
+    void putLE(std::vector<uint8_t> &v, uint64_t val, int n)
+    {
+        for (int i = 0; i < n; i++)
+            v.push_back((val >> (8 * i)) & 0xFF);
+    }
+
+    /*
+     * Builds a one-entry archive by hand, so that the central directory can
+     * claim any sizes. The local header holds the real ones. If z64 is not
+     * empty, it is written as a ZIP64 extra field (the uncompressed then the
+     * compressed size, as for central directory fields set to 0xFFFFFFFF).
+     */
+    std::vector<uint8_t> rawZip(const std::vector<uint8_t> &data, bool deflate, uint32_t cd_comp, uint32_t cd_uncomp, std::vector<uint64_t> z64 = {})
+    {
+        std::vector<uint8_t> comp = data;
+        if (deflate)
+        {
+            size_t len = 0;
+            void *p = tdefl_compress_mem_to_heap(data.data(), data.size(), &len, TDEFL_DEFAULT_MAX_PROBES);
+            if (!p)
+                throw std::runtime_error("Could not compress test data");
+            comp.assign((uint8_t *)p, (uint8_t *)p + len);
+            mz_free(p);
+        }
+        const uint32_t crc = mz_crc32(MZ_CRC32_INIT, data.data(), data.size());
+        const std::string name = "x.bin";
+        const uint16_t method = deflate ? 8 : 0;
+
+        std::vector<uint8_t> z;
+        putLE(z, 0x04034B50, 4); // Local header
+        putLE(z, 20, 2), putLE(z, 0, 2), putLE(z, method, 2), putLE(z, 0, 2), putLE(z, 0, 2);
+        putLE(z, crc, 4), putLE(z, comp.size(), 4), putLE(z, data.size(), 4);
+        putLE(z, name.size(), 2), putLE(z, 0, 2);
+        z.insert(z.end(), name.begin(), name.end());
+        z.insert(z.end(), comp.begin(), comp.end());
+
+        const size_t cd_ofs = z.size();
+        putLE(z, 0x02014B50, 4); // Central directory header
+        putLE(z, 45, 2), putLE(z, 45, 2), putLE(z, 0, 2), putLE(z, method, 2), putLE(z, 0, 2), putLE(z, 0, 2);
+        putLE(z, crc, 4), putLE(z, cd_comp, 4), putLE(z, cd_uncomp, 4);
+        putLE(z, name.size(), 2), putLE(z, z64.empty() ? 0 : 4 + 8 * z64.size(), 2);
+        putLE(z, 0, 2), putLE(z, 0, 2), putLE(z, 0, 2), putLE(z, 0, 4), putLE(z, 0, 4);
+        z.insert(z.end(), name.begin(), name.end());
+        if (!z64.empty())
+        {
+            putLE(z, 1, 2), putLE(z, 8 * z64.size(), 2);
+            for (uint64_t v : z64)
+                putLE(z, v, 8);
+        }
+        const size_t cd_size = z.size() - cd_ofs;
+
+        putLE(z, 0x06054B50, 4); // End of central directory
+        putLE(z, 0, 2), putLE(z, 0, 2), putLE(z, 1, 2), putLE(z, 1, 2);
+        putLE(z, cd_size, 4), putLE(z, cd_ofs, 4), putLE(z, 0, 2);
+        return z;
+    }
+
     struct ZipReader
     {
         mz_zip_archive zip{};
@@ -286,6 +343,62 @@ TEST_CASE("extractZipEntry rejects an implausibly large claimed size", "[utils][
     CHECK(entries == 1);
     REQUIRE(files.count("small.txt") == 1);
     CHECK(files["small.txt"].empty());
+}
+
+TEST_CASE("extractZipEntry checks the compressed size the archive claims", "[utils][file_iterators]")
+{
+    // Sizes miniz does not check against the archive at init. Each must be
+    // rejected before the claimed size is allocated (several GiB here)
+    const uint64_t G = 1ULL << 30;
+    const std::vector<uint8_t> data = bytes("hello world");
+    std::vector<uint8_t> raw;
+
+    SECTION("both central directory sizes 0xFFFFFFFF, without a ZIP64 extra") { raw = rawZip(data, true, 0xFFFFFFFF, 0xFFFFFFFF); }
+    SECTION("equal ZIP64 sizes past the archive, stored") { raw = rawZip(data, false, 0xFFFFFFFF, 0xFFFFFFFF, {3 * G, 3 * G}); }
+    SECTION("equal ZIP64 sizes past the archive, deflated") { raw = rawZip(data, true, 0xFFFFFFFF, 0xFFFFFFFF, {3 * G, 3 * G}); }
+    SECTION("ZIP64 compressed size 0 with data claimed") { raw = rawZip(data, true, 0xFFFFFFFF, 0xFFFFFFFF, {1000, 0}); }
+
+    TempDir dir("zip_compsize");
+    writeBytes(dir.path / "bad.zip", raw);
+    ZipReader r(dir.path / "bad.zip");
+    REQUIRE(mz_zip_reader_get_num_files(&r.zip) == 1);
+    std::vector<uint8_t> out = {1};
+    CHECK_FALSE(satdump::utils::extractZipEntry(&r.zip, 0, out));
+    CHECK(out.empty());
+    CHECK(mz_zip_peek_last_error(&r.zip) == MZ_ZIP_NO_ERROR);
+}
+
+TEST_CASE("extractZipEntry extracts stored and ZIP64 entries", "[utils][file_iterators]")
+{
+    std::vector<uint8_t> data = patterned(10240);
+    std::vector<uint8_t> expected = data;
+    std::vector<uint8_t> raw;
+
+    SECTION("stored") { raw = rawZip(data, false, data.size(), data.size()); }
+    SECTION("stored, empty")
+    {
+        expected.clear();
+        raw = rawZip({}, false, 0, 0);
+    }
+    SECTION("deflated, empty")
+    {
+        expected.clear();
+        raw = rawZip({}, true, 2, 0);
+    }
+    SECTION("ZIP64 sizes")
+    {
+        std::vector<uint8_t> deflated = rawZip(data, true, 0, 0);
+        // The compressed size, as written in the local header
+        uint64_t comp = deflated[18] | deflated[19] << 8 | deflated[20] << 16 | (uint64_t)deflated[21] << 24;
+        raw = rawZip(data, true, 0xFFFFFFFF, 0xFFFFFFFF, {data.size(), comp});
+    }
+
+    TempDir dir("zip_valid_raw");
+    writeBytes(dir.path / "ok.zip", raw);
+    ZipReader r(dir.path / "ok.zip");
+    std::vector<uint8_t> out = {1};
+    CHECK(satdump::utils::extractZipEntry(&r.zip, 0, out));
+    CHECK(out == expected);
 }
 
 TEST_CASE("extractZipEntry fails on a size mismatch or corrupt data", "[utils][file_iterators]")

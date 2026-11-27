@@ -15,10 +15,11 @@ namespace satdump
         /**
          * @brief Extract a zip entry into a vector.
          *
-         * The uncompressed size the archive claims is checked against what
-         * its compressed size can plausibly expand to before anything is
-         * allocated, so that a corrupt or malicious archive cannot request a
-         * huge allocation.
+         * Both sizes the archive claims for the entry are checked before
+         * anything is allocated: the compressed data must fit in the archive,
+         * and the uncompressed size must be one deflate can produce from it.
+         * The allocation is then bounded by about 1032 times the size of the
+         * archive, rather than by whatever the archive claims.
          *
          * @param zip an initialized miniz reader
          * @param index index of the entry in the archive
@@ -28,10 +29,25 @@ namespace satdump
          */
         inline bool extractZipEntry(mz_zip_archive *zip, int index, std::vector<uint8_t> &out)
         {
-            out.clear();
+            std::vector<uint8_t>().swap(out);
 
             mz_zip_archive_file_stat stat;
             if (index < 0 || !mz_zip_reader_file_stat(zip, index, &stat))
+                return false;
+
+            // The compressed size is claimed by the archive too, and miniz only
+            // checks it at init for entries without ZIP64 sizes: it must fit
+            // in the archive, after the entry's local header
+            const uint64_t archive_size = mz_zip_get_archive_size(zip);
+            if (stat.m_local_header_ofs > archive_size || stat.m_comp_size > archive_size - stat.m_local_header_ofs)
+                return false;
+
+            if (stat.m_uncomp_size == 0)
+                return true;
+
+            // Data cannot come out of nothing, and miniz reports success
+            // without writing anything for such an entry
+            if (stat.m_comp_size == 0)
                 return false;
 
             // Deflate cannot expand data more than 1032 times, so a larger claim
@@ -41,23 +57,19 @@ namespace satdump
             if (stat.m_uncomp_size > SIZE_MAX)
                 return false;
 
-            if (stat.m_uncomp_size == 0)
-                return true;
-
             try
             {
                 out.resize((size_t)stat.m_uncomp_size);
             }
             catch (std::exception &)
             {
-                out.clear();
+                std::vector<uint8_t>().swap(out);
                 return false;
             }
 
             if (!mz_zip_reader_extract_to_mem(zip, index, out.data(), out.size(), 0))
             {
-                out.clear();
-                out.shrink_to_fit();
+                std::vector<uint8_t>().swap(out);
                 return false;
             }
 
