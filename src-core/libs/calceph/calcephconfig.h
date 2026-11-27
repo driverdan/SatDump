@@ -1,11 +1,3 @@
-
-/* Define to a macro mangling the given C identifier (in lower and upper
-   case), which must not contain underscores, for linking with Fortran. */
-#define FC_FUNC(name,NAME) name ## _
-
-/* As FC_FUNC, but for C identifiers containing underscores. */
-#define FC_FUNC_(name,NAME) name ## _
-
 /* Define to 1 if you have the <errno.h> header file. */
 #define HAVE_ERRNO_H 1 
 
@@ -17,6 +9,9 @@
 
 /* Define to 1 if _fseeki64 (and presumably ftello) exists and is declared. */
 /* #undef HAVE__FSEEKI64 */
+
+/* Define 1 if iso c11 is supported */
+/* #undef HAVE_ISO_C11_THREAD */
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1 
@@ -118,6 +113,12 @@
 
 /* Define to 1 if you have the `strerror_s' function. */
 /* #undef HAVE_STRERROR_S */
+
+/* Define to 1 if you have the `pread' function. */
+/* #undef HAVE_PREAD */
+
+/* Define to 1 if you have the `pwrite' function. */
+/* #undef HAVE_PWRITE */
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */

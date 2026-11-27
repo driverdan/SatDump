@@ -120,6 +120,9 @@ int calceph_spice_getpositionrecordcount(const struct calcephbin_spice *eph)
 
             case DAF_PCK:
             case TXT_PCK:
+            case TXT_IK:
+            case TXT_LSK:
+            case TXT_SCLK:
             case TXT_FK:
                 break;
 
@@ -194,6 +197,9 @@ int calceph_spice_getpositionrecordindex(const struct calcephbin_spice *eph, int
 
             case DAF_PCK:
             case TXT_PCK:
+            case TXT_IK:
+            case TXT_LSK:
+            case TXT_SCLK:
             case TXT_FK:
                 break;
 

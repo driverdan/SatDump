@@ -5,9 +5,9 @@
          load all files from a text Meta KERNEL (MK)  Ephemeris data.
          
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2011-2024, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:                                                                
@@ -112,16 +112,17 @@ static void calceph_txtmk_symbols_copy(char *dst, const char *buffer, const stru
  
    @param file (inout) file descriptor.   
    @param filename (in) A character string giving the name of an ephemeris data file.   
+   @param locale (in) C locale to handle the decimal point inside the conversion string to double
    @param res (out) descriptor of the ephemeris.
 */
 /*--------------------------------------------------------------------------*/
-int calceph_txtmk_open(FILE * file, const char *filename, struct calcephbin_spice *res)
+int calceph_txtmk_open(FILE * file, const char *filename, struct calceph_locale clocale, struct calcephbin_spice *res)
 {
     int ret;
     struct TXTPCKfile txtfile;
     buffer_error_t buffer_error;
 
-    ret = calceph_txtpck_load(file, filename, "KPL/MK", res->clocale, &txtfile);
+    ret = calceph_txtpck_load(file, filename, "KPL/MK", clocale, &txtfile);
 
     if (ret)
     {

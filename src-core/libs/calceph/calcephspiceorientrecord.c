@@ -120,6 +120,9 @@ int calceph_spice_getorientrecordcount(const struct calcephbin_spice *eph)
 
             case DAF_SPK:
             case TXT_PCK:
+            case TXT_IK:
+            case TXT_LSK:
+            case TXT_SCLK:
             case TXT_FK:
                 break;
 
@@ -192,6 +195,9 @@ int calceph_spice_getorientrecordindex(const struct calcephbin_spice *eph, int i
 
             case DAF_SPK:
             case TXT_PCK:
+            case TXT_IK:
+            case TXT_LSK:
+            case TXT_SCLK:
             case TXT_FK:
                 break;
 

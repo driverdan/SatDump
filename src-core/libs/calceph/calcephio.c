@@ -8,7 +8,7 @@
   \author  M. Gastineau
            Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2008-2025, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -172,6 +172,11 @@ t_calcephbin *calceph_open_array2(int n, char **fileName_array)
     }
     res->etype = CALCEPH_unknown;
     res->data.spkernel.list = NULL;
+    if (calceph_locale_init(&res->clocale)==1)
+    {
+        free(res);
+        return NULL;
+    }
 
     for (k = 0; k < n; k++)
     {
@@ -308,7 +313,103 @@ t_calcephbin *calceph_open_array2(int n, char **fileName_array)
                 calceph_close(res);
                 return NULL;
             }
-            if (calceph_txtpck_open(file, fileName, res->data.spkernel.clocale, spicekernel) == 0)
+            if (calceph_txtpck_open(file, fileName, res->clocale, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtpck_merge_incrementalassignment(res->data.spkernel.list, spicekernel) == 0
+                || calceph_spice_tablelinkbody_addfile(&res->data.spkernel, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+        }
+        else if (strncmp(H1.label[0], "KPL/IK", 6) == 0)
+        {                       /* text IK files */
+            if (res->etype == CALCEPH_ebinary)
+            {
+                /* GCOVR_EXCL_START */
+                fatalerror("Can't open SPICE kernel and INPOP/original DE files at the same time.\n");
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+                /* GCOVR_EXCL_STOP */
+            }
+            res->etype = CALCEPH_espice;
+            if ((spicekernel = calceph_spice_addfile(&res->data.spkernel)) == NULL)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtik_open(file, fileName, res->clocale, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtpck_merge_incrementalassignment(res->data.spkernel.list, spicekernel) == 0
+                || calceph_spice_tablelinkbody_addfile(&res->data.spkernel, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+        }
+        else if (strncmp(H1.label[0], "KPL/LSK", 7) == 0)
+        {                       /* text LSK files */
+            if (res->etype == CALCEPH_ebinary)
+            {
+                /* GCOVR_EXCL_START */
+                fatalerror("Can't open SPICE kernel and INPOP/original DE files at the same time.\n");
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+                /* GCOVR_EXCL_STOP */
+            }
+            res->etype = CALCEPH_espice;
+            if ((spicekernel = calceph_spice_addfile(&res->data.spkernel)) == NULL)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtlsk_open(file, fileName, res->clocale, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtpck_merge_incrementalassignment(res->data.spkernel.list, spicekernel) == 0
+                || calceph_spice_tablelinkbody_addfile(&res->data.spkernel, spicekernel) == 0)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+        }
+        else if (strncmp(H1.label[0], "KPL/SCLK", 8) == 0)
+        {                       /* text SCLK files */
+            if (res->etype == CALCEPH_ebinary)
+            {
+                /* GCOVR_EXCL_START */
+                fatalerror("Can't open SPICE kernel and INPOP/original DE files at the same time.\n");
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+                /* GCOVR_EXCL_STOP */
+            }
+            res->etype = CALCEPH_espice;
+            if ((spicekernel = calceph_spice_addfile(&res->data.spkernel)) == NULL)
+            {
+                fclose(file);
+                calceph_close(res);
+                return NULL;
+            }
+            if (calceph_txtsclk_open(file, fileName, res->clocale, spicekernel) == 0)
             {
                 fclose(file);
                 calceph_close(res);
@@ -340,7 +441,7 @@ t_calcephbin *calceph_open_array2(int n, char **fileName_array)
                 calceph_close(res);
                 return NULL;
             }
-            if (calceph_txtfk_open(file, fileName, res->data.spkernel.clocale, spicekernel) == 0)
+            if (calceph_txtfk_open(file, fileName, res->clocale, spicekernel) == 0)
             {
                 fclose(file);
                 calceph_close(res);
@@ -359,7 +460,7 @@ t_calcephbin *calceph_open_array2(int n, char **fileName_array)
                 /* GCOVR_EXCL_STOP */
             }
             res->etype = CALCEPH_espice;
-            if (calceph_txtmk_open(file, fileName, &res->data.spkernel) == 0)
+            if (calceph_txtmk_open(file, fileName, res->clocale, &res->data.spkernel) == 0)
             {
                 fclose(file);
                 calceph_close(res);
@@ -403,6 +504,8 @@ t_calcephbin *calceph_open_array2(int n, char **fileName_array)
             return NULL;
         }
     }
+
+    res->relationship_tdb_tt = 0;
 
     return res;
 }
@@ -460,6 +563,7 @@ t_calcephbin *calceph_fdopen(t_calcephbin * eph)
 /*--------------------------------------------------------------------------*/
 void calceph_close(t_calcephbin * eph)
 {
+    calceph_locale_clear(&eph->clocale);
     switch (eph->etype)
     {
         case CALCEPH_espice:
@@ -556,7 +660,7 @@ int calceph_isthreadsafe(t_calcephbin * eph)
     switch (eph->etype)
     {
         case CALCEPH_espice:
-#if HAVE_PTHREAD  || HAVE_WIN32API
+#if CALCEPH_HAVE_MUTEX
             res = calceph_spice_isthreadsafe(&eph->data.spkernel);
 #endif
             break;
@@ -1149,6 +1253,7 @@ int calceph_getmaxsupportedorder(int idseg)
     switch (idseg)
     {
         case CALCEPH_SEGTYPE_ORIG_0:
+        case CALCEPH_SEGTYPE_SPK_1:
         case CALCEPH_SEGTYPE_SPK_2:
         case CALCEPH_SEGTYPE_SPK_3:
         case CALCEPH_SEGTYPE_SPK_8:
@@ -1159,16 +1264,15 @@ int calceph_getmaxsupportedorder(int idseg)
         case CALCEPH_SEGTYPE_SPK_18:
         case CALCEPH_SEGTYPE_SPK_19:
         case CALCEPH_SEGTYPE_SPK_20:
+        case CALCEPH_SEGTYPE_SPK_21:
         case CALCEPH_SEGTYPE_SPK_102:
         case CALCEPH_SEGTYPE_SPK_103:
         case CALCEPH_SEGTYPE_SPK_120:
             res = 3;
             break;
 
-        case CALCEPH_SEGTYPE_SPK_1:
         case CALCEPH_SEGTYPE_SPK_5:
         case CALCEPH_SEGTYPE_SPK_17:
-        case CALCEPH_SEGTYPE_SPK_21:
             res = 1;
             break;
 

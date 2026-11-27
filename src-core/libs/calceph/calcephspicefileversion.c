@@ -4,10 +4,10 @@
   \brief get file version of the SPICE KERNEL ephemeris data file
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de
   Paris.
 
-   Copyright, 2018-2024, CNRS
+   Copyright, 2018-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -79,6 +79,7 @@ terms.
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
+#include <ctype.h>
 
 #include "calcephdebug.h"
 #include "real.h"
@@ -106,7 +107,10 @@ int calceph_spice_getfileversion(struct calcephbin_spice *eph, char szversion[CA
     int iversio;
     char subrelease;
 
-    if (calceph_spice_getconstant_vs(eph, "INPOP_PCK_VERSION", &szversio, 1) == 1)
+    szversio[0] = '\0';
+
+    if (calceph_spice_getconstant_vs(eph, "INPOP_PCK_VERSION", &szversio, 1) == 1 && !isdigit_char(szversio[0]) &&
+        szversio[0] != '+' && szversio[0] != '-')
     {
         strcpy(szversion, szversio);
     }

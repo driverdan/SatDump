@@ -96,7 +96,7 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
   @param eph (inout) ephemeris descriptor
 */
 /*--------------------------------------------------------------------------*/
-int calceph_gettimescale(t_calcephbin * eph)
+int calceph_gettimescale(t_calcephbin *eph)
 {
     int res = 0;
 
@@ -137,7 +137,7 @@ returned by calceph_gettimescale().
      3 if the quantities of each body are available on a continuous time interval between the first and last time, but not available for any time between the first and last time.
 */
 /*--------------------------------------------------------------------------*/
-int calceph_gettimespan(t_calcephbin * eph, double *firsttime, double *lasttime, int *continuous)
+int calceph_gettimespan(t_calcephbin *eph, double *firsttime, double *lasttime, int *continuous)
 {
     int res = 0;
 

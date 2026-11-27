@@ -6,9 +6,9 @@
          compute position and velocity from binary ephemeris file.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris.
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2008-2024, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
 */
@@ -69,9 +69,6 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
 #if HAVE_STRING_H
 #include <string.h>
 #endif
-#ifdef HAVE_PTHREAD
-#include <pthread.h>
-#endif                          /*HAVE_PTHREAD */
 #include <stdlib.h>
 #ifdef STDC_HEADERS
 #include <stdarg.h>
@@ -80,6 +77,7 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
 #include "calceph.h"
 #include "real.h"
 #include "calcephinternal.h"
+#include "calcephthread.h"
 #include "util.h"
 
 /********************************************************/
@@ -96,12 +94,17 @@ static pthread_once_t calceph_key_once = PTHREAD_ONCE_INIT;
 
 static void calceph_key_init(void);
 
-#else                           /*HAVE_PTHREAD */
+#elif HAVE_ISO_C11_THREAD
+
+/* version thread-safe using thread local storage */
+/*! description of the ephemeris file  */
+static thread_local t_calcephbin *pephbin = NULL;
+#else
 
 /* version not thread-safe */
 /*! description of the ephemeris file  */
 static t_calcephbin *pephbin = NULL;
-#endif                          /*HAVE_PTHREAD */
+#endif
 
 /*! error variable */
 struct st_calceph_sglobal
@@ -410,7 +413,7 @@ int calceph_sgetfileversion(char szversion[CALCEPH_MAX_CONSTANTVALUE])
    @param PV (out) position and the velocity of the "target" object
 */
 /********************************************************/
-int calceph_compute(t_calcephbin * pephbin, treal JD0, treal time, int target, int center, treal PV[6])
+int calceph_compute(t_calcephbin *pephbin, treal JD0, treal time, int target, int center, treal PV[6])
 {
     int unit = CALCEPH_UNIT_AU + CALCEPH_UNIT_DAY + CALCEPH_UNIT_RAD;
 
@@ -433,7 +436,7 @@ int calceph_compute(t_calcephbin * pephbin, treal JD0, treal time, int target, i
 /********************************************************/
 void calceph_seterrorhandler(int type, void (*userfunc)(const char *))
 {
-    if (type >= 1 && type <= 3)
+    if(type >= 1 && type <= 3)
     {
         calceph_sglobal.func.cusererror = userfunc;
         calceph_sglobal.usertypeerror = type;

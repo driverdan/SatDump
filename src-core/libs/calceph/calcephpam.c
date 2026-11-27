@@ -5,9 +5,9 @@
          for inpop ephemeris only.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris.
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2017-2024, CNRS
+   Copyright, 2017-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -195,16 +195,16 @@ int calceph_init_pam(t_pam_calcephbin * p_ppameph, FILE * file, int swapbyte, do
     /*swap */
     if (swapbyte)
     {
-        p_ppameph->inforec.locNextRecord = swapint(p_ppameph->inforec.locNextRecord);
-        p_ppameph->inforec.numAngMomPlaRecord = swapint(p_ppameph->inforec.numAngMomPlaRecord);
-        p_ppameph->inforec.nCompAngMomPla = swapint(p_ppameph->inforec.nCompAngMomPla);
-        p_ppameph->inforec.locCoeffAngMomPlaRecord = swapint(p_ppameph->inforec.locCoeffAngMomPlaRecord);
-        p_ppameph->inforec.sizeAngMomPlaRecord = swapint(p_ppameph->inforec.sizeAngMomPlaRecord);
+        p_ppameph->inforec.locNextRecord = calceph_swapint(p_ppameph->inforec.locNextRecord);
+        p_ppameph->inforec.numAngMomPlaRecord = calceph_swapint(p_ppameph->inforec.numAngMomPlaRecord);
+        p_ppameph->inforec.nCompAngMomPla = calceph_swapint(p_ppameph->inforec.nCompAngMomPla);
+        p_ppameph->inforec.locCoeffAngMomPlaRecord = calceph_swapint(p_ppameph->inforec.locCoeffAngMomPlaRecord);
+        p_ppameph->inforec.sizeAngMomPlaRecord = calceph_swapint(p_ppameph->inforec.sizeAngMomPlaRecord);
         for (j = 0; j < 12; j++)
         {
             for (k = 0; k <= 2; k++)
             {
-                p_ppameph->inforec.coeffPtr[j][k] = swapint(p_ppameph->inforec.coeffPtr[j][k]);
+                p_ppameph->inforec.coeffPtr[j][k] = calceph_swapint(p_ppameph->inforec.coeffPtr[j][k]);
             }
         }
     }

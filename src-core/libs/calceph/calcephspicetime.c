@@ -4,10 +4,10 @@
   \brief get time information on SPICE KERNEL ephemeris data file
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de
   Paris.
 
-   Copyright, 2017-2024, CNRS
+   Copyright, 2017-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -147,6 +147,7 @@ int calceph_spice_gettimescale(const struct calcephbin_spice *eph)
                                 }
                                 break;
 
+                            case SPK_SEGTYPE102:
                             case SPK_SEGTYPE103:
                             case SPK_SEGTYPE120:
                                 if (res == 0 || res == 2)

@@ -7,10 +7,10 @@
          for the segments of type 21.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de
   Paris.
 
-   Copyright, 2018-2021, CNRS
+   Copyright, 2018-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -129,7 +129,7 @@ static void calceph_spk_interpol_MDA_21(const struct SegType21_Record
 */
 /*--------------------------------------------------------------------------*/
 static void calceph_spk_interpol_MDA_21(const struct SegType21_Record
-                                        *Precord, double TimeJD0, double Timediff, stateType * Planet)
+                                        *Precord, double TimeJD0, double Timediff, stateType *Planet)
 {
     double delta = (TimeJD0 - Precord->tl) + Timediff;
 
@@ -145,7 +145,7 @@ static void calceph_spk_interpol_MDA_21(const struct SegType21_Record
 
     double w[MAXTRM + 3];
 
-    int i, j, jx;
+    int i, j, jx, p;
 
     fc[0] = 1.E0;
     for (j = 0; j < mpq2; j++)
@@ -208,6 +208,57 @@ static void calceph_spk_interpol_MDA_21(const struct SegType21_Record
             Planet->Velocity[i] = Precord->refvel[i] + delta * V_Sum;
         }
     }
+
+    /* evaluate the second derivative of the polynomial : acceleration */
+    if (Planet->order >= 2)
+    {
+        ks++;
+        for (i = 0; i < 3; i++)
+        {
+            double A_Sum = 0.E0;
+
+            for (j = 0; j <= Precord->kq[i] - 1; j++)
+            {
+                double proddt = 1.E0;
+
+                for (p = 1; p <= j; p++)
+                {
+                    proddt *= fc[p];
+                }
+                A_Sum += Precord->dt[j][i] * proddt;
+            }
+            Planet->Acceleration[i] = A_Sum;
+        }
+    }
+
+    /* evaluate the third derivative of the polynomial   : jerks */
+    if (Planet->order >= 3)
+    {
+        for (i = 0; i < 3; i++)
+        {
+            double J_Sum = 0.E0;
+
+            for (j = 0; j <= Precord->kq[i] - 1; j++)
+            {
+                int d;
+                double diffA = 0.E0;
+
+                for (d = 1; d <= j; d++)
+                {
+                    double proddt = 1.E0 / Precord->g[d - 1];
+
+                    for (p = 1; p <= j; p++)
+                    {
+                        if (p != d)
+                            proddt *= fc[p];
+                    }
+                    diffA += proddt;
+                }
+                J_Sum += Precord->dt[j][i] * diffA;
+            }
+            Planet->Jerk[i] = J_Sum;
+        }
+    }
 }
 
 /*--------------------------------------------------------------------------*/
@@ -234,7 +285,7 @@ static void calceph_spk_interpol_MDA_21(const struct SegType21_Record
 /*--------------------------------------------------------------------------*/
 int calceph_spk_interpol_PV_segment_21(struct SPKfile *pspk,
                                        struct SPKSegmentHeader *seg,
-                                       struct SPICEcache *cache, treal TimeJD0, treal Timediff, stateType * Planet)
+                                       struct SPICEcache *cache, treal TimeJD0, treal Timediff, stateType *Planet)
 {
     int p, k;
 
@@ -314,13 +365,6 @@ int calceph_spk_interpol_PV_segment_21(struct SPKfile *pspk,
     arecord.kqmax1 = (int) drecord[4 * nvalid + 7];
     for (k = 0; k < 3; k++)
         arecord.kq[k] = (int) drecord[4 * nvalid + 8 + k];
-
-    /* check the order */
-    if (Planet->order >= 2)
-    {
-        fatalerror("order>=2 is not supported on segment of type 21");
-        return 0;
-    }
 
     calceph_spk_interpol_MDA_21(&arecord, (TimeJD0 - 2.451545E+06) * 86400E0, Timediff * 86400E0, Planet);
 

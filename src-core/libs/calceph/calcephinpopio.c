@@ -6,9 +6,9 @@
          compute position and velocity from binary ephemeris file.
 
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2008-2024, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -130,7 +130,7 @@ int calceph_inpop_readcoeff(t_memarcoeff * pcoeftime_array, double Time)
         }
         /* swap the data if necessary */
         if (pcoeftime_array->swapbyteorder)
-            swapdblarray(pcoeftime_array->Coeff_Array, pcoeftime_array->ARRAY_SIZE);
+            calceph_swapdblarray(pcoeftime_array->Coeff_Array, pcoeftime_array->ARRAY_SIZE);
     }
 
     pcoeftime_array->T_beg = pcoeftime_array->Coeff_Array[0];
@@ -270,7 +270,7 @@ int calceph_inpop_open_extension_jpl(FILE * file, const char *fileName, struct c
 
     /* read the additional constant */
     if (res->coefftime_array.swapbyteorder)
-        nConst = swapint(nConst);
+        nConst = calceph_swapint(nConst);
 
     /* additional check the validity of nConst */
     if ((nConst < 0) || (nConst > 3000))
@@ -426,7 +426,7 @@ int calceph_inpop_open(FILE * file, const char *fileName, struct calcephbin_inpo
             res->coefftime_array.ncompTTmTDB = 6;
             break;
         default:
-            switch (swapint(res->H1.DENUM))
+            switch (calceph_swapint(res->H1.DENUM))
             {
                 case EPHEMERIS_INPOP:
                     if (calceph_inpop_open_extension_inpop(file, fileName, res) == 0)
@@ -434,7 +434,7 @@ int calceph_inpop_open(FILE * file, const char *fileName, struct calcephbin_inpo
                     res->coefftime_array.swapbyteorder = true;
                     res->coefftime_array.ARRAY_SIZE = res->H1.recordsize;
                     if (res->coefftime_array.swapbyteorder)
-                        res->coefftime_array.ARRAY_SIZE = swapint(res->coefftime_array.ARRAY_SIZE);
+                        res->coefftime_array.ARRAY_SIZE = calceph_swapint(res->coefftime_array.ARRAY_SIZE);
                     res->coefftime_array.ncomp = 6;
                     res->coefftime_array.ncompTTmTDB = 6;
                     break;
@@ -445,7 +445,7 @@ int calceph_inpop_open(FILE * file, const char *fileName, struct calcephbin_inpo
                     newdenum = res->H1.DENUM;
                     if (((unsigned int) res->H1.DENUM) > (1U << 15))
                     {
-                        newdenum = swapint(res->H1.DENUM);
+                        newdenum = calceph_swapint(res->H1.DENUM);
                         res->coefftime_array.swapbyteorder = true;
                         computerecordsize = 1;
                     }
@@ -471,16 +471,16 @@ int calceph_inpop_open(FILE * file, const char *fileName, struct calcephbin_inpo
     /*--------------------------------------------------------------------------*/
     if (res->coefftime_array.swapbyteorder)
     {
-        swapdblarray(res->H1.timeData, 3);
-        res->H1.numConst = swapint(res->H1.numConst);
-        res->H1.AU = swapdbl(res->H1.AU);
-        res->H1.EMRAT = swapdbl(res->H1.EMRAT);
-        swapintarray((int *) res->H1.coeffPtr, 36);
-        res->H1.DENUM = swapint(res->H1.DENUM);
-        swapintarray(res->H1.libratPtr, 3);
-        swapintarray(res->H1.lunarAngularvelocityPtr, 3);
-        swapintarray(res->H1.TTmTDBPtr, 3);
-        res->H1.recordsize = swapint(res->H1.recordsize);
+        calceph_swapdblarray(res->H1.timeData, 3);
+        res->H1.numConst = calceph_swapint(res->H1.numConst);
+        res->H1.AU = calceph_swapdbl(res->H1.AU);
+        res->H1.EMRAT = calceph_swapdbl(res->H1.EMRAT);
+        calceph_swapintarray((int *) res->H1.coeffPtr, 36);
+        res->H1.DENUM = calceph_swapint(res->H1.DENUM);
+        calceph_swapintarray(res->H1.libratPtr, 3);
+        calceph_swapintarray(res->H1.lunarAngularvelocityPtr, 3);
+        calceph_swapintarray(res->H1.TTmTDBPtr, 3);
+        res->H1.recordsize = calceph_swapint(res->H1.recordsize);
     }
 
     /*--------------------------------------------------------------------------*/
@@ -571,7 +571,7 @@ int calceph_inpop_open(FILE * file, const char *fileName, struct calcephbin_inpo
     }
     /* swap the data if necessary */
     if (res->coefftime_array.swapbyteorder)
-        swapdblarray(res->constVal, res->H1.numConst);
+        calceph_swapdblarray(res->constVal, res->H1.numConst);
 
     /* ajuste le nombre de composantes pour inpop */
     if (res->H1.DENUM == EPHEMERIS_INPOP)
@@ -795,7 +795,7 @@ static int calceph_inpop_prefetch_memarcoeff(t_memarcoeff * pcoeftime_array)
             pcoeftime_array->mmap_size = (size_t) newlen;
             /* swap the data if necessary */
             if (pcoeftime_array->swapbyteorder)
-                swapdblarray(pcoeftime_array->mmap_buffer, pcoeftime_array->mmap_size / sizeof(double));
+                calceph_swapdblarray(pcoeftime_array->mmap_buffer, pcoeftime_array->mmap_size / sizeof(double));
         }
         free(pcoeftime_array->Coeff_Array);
         pcoeftime_array->Coeff_Array = pcoeftime_array->mmap_buffer + pcoeftime_array->offfile / sizeof(double);
@@ -1525,7 +1525,7 @@ static int calceph_interpol_PV_planet(struct calcephbin_inpop *p_pbinfile, treal
 /*--------------------------------------------------------------------------*/
 void calceph_interpol_PV_lowlevel(stateType * X, const treal * A, treal Tc, treal scale, int N, int ncomp)
 {
-#if __STDC_VERSION__ > 199901L
+#if __STDC_VERSION__ >= 199901L
 #define NSTACK_INTERPOL (N + 1)
 #else
 #define NSTACK_INTERPOL 15000

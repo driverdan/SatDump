@@ -6,7 +6,7 @@
   \author  M. Gastineau
            Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2013-2025, CNRS
+   Copyright, 2013-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -109,11 +109,7 @@ void calceph_spice_tablelinkbody_init(struct SPICEtablelinkbody *table)
     table->initemrat = 0;
     table->array_cache = NULL;
     table->shortestpathmaxlink = NULL;
-#if HAVE_PTHREAD
-    pthread_mutex_init(&(table->mutex), NULL);
-#elif HAVE_WIN32API
-    table->mutex = CreateMutex(NULL, FALSE, NULL);
-#endif
+    calceph_mtx_init_plain(&(table->mutex));
 }
 
 /*--------------------------------------------------------------------------*/
@@ -126,11 +122,7 @@ void calceph_spice_tablelinkbody_close(struct SPICEtablelinkbody *table)
 {
     int k;
 
-#if HAVE_PTHREAD
-    pthread_mutex_destroy(&(table->mutex));
-#elif HAVE_WIN32API
-    CloseHandle(table->mutex);
-#endif
+    calceph_mtx_destroy(&(table->mutex));
 
     for (k = 0; k < table->count_body; k++)
     {
@@ -284,21 +276,15 @@ int calceph_spice_tablelinkbody_locatelinktime_complex(struct SPICEtablelinkbody
     if (res)
     {
         /* acquire the ressource */
-#if HAVE_PTHREAD
-        pthread_mutex_lock(&(table->mutex));
-#elif HAVE_WIN32API
-        WaitForSingleObject(table->mutex, INFINITE);
-#endif
+        calceph_mtx_lock(&(table->mutex));
+
         if (table->matrix_countlisttime[postarget * table->line_size + poscenter] == 0)
         {
             res = calceph_spice_tablelinkbody_makecomplexlink(table, postarget, poscenter);
         }
         /* release the ressource */
-#if HAVE_PTHREAD
-        pthread_mutex_unlock(&(table->mutex));
-#elif HAVE_WIN32API
-        ReleaseMutex(table->mutex);
-#endif
+        calceph_mtx_unlock(&(table->mutex));
+
         *link = table->matrix_link + (postarget * table->line_size + poscenter);
         *countlisttime = table->matrix_countlisttime + (postarget * table->line_size + poscenter);
     }
@@ -1144,7 +1130,7 @@ static int calceph_spice_tablelinkbody_locate(struct SPICEtablelinkbody *table, 
 */
 /*--------------------------------------------------------------------------*/
 int calceph_spice_tablelinkbody_compute(struct calcephbin_spice *eph, double JD0, double time,
-                                        int target, int center, stateType * statetarget)
+                                        int target, int center, stateType *statetarget)
 {
     struct SPICEtablelinkbody *table = &eph->tablelink;
 
