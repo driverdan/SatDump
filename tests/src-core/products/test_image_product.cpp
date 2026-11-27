@@ -261,15 +261,16 @@ TEST_CASE("ImageProduct projection config helpers", "[products][image_product]")
     CHECK_THROWS(p.get_proj_cfg(3));
 }
 
-// Bug: image_product.h:125 reads contents["projection_cfg"] through the non-const
-// operator[], which inserts a null "projection_cfg" when there is none. Asking a product
-// without projection for a channel config makes has_proj_cfg() true from then on.
-TEST_CASE("ImageProduct get_proj_cfg does not add a projection to the product", "[products][image_product][!shouldfail]")
+TEST_CASE("ImageProduct get_proj_cfg does not add a projection to the product", "[products][image_product]")
 {
     ImageProduct p;
     p.images.push_back(holder(0, "0", patternImage(8, 4, 4, 1)));
     REQUIRE_FALSE(p.has_proj_cfg());
-    p.get_proj_cfg(0);
+    auto cfg = p.get_proj_cfg(0);
+    CHECK(cfg["width"] == 4);
+    CHECK_FALSE(cfg.contains("type"));
+    CHECK_FALSE(p.has_proj_cfg());
+    CHECK(p.get_proj_cfg(-1).is_null());
     CHECK_FALSE(p.has_proj_cfg());
 }
 

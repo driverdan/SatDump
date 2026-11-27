@@ -707,9 +707,16 @@ namespace satdump
             image_proj_valid = false;
             if (image::has_metadata_proj_cfg(image))
             {
-                image_proj = image::get_metadata_proj_cfg(image);
-                if (image_proj.init(0, 1))
-                    image_proj_valid = true;
+                try
+                {
+                    image_proj = image::get_metadata_proj_cfg(image);
+                    if (image_proj.init(0, 1))
+                        image_proj_valid = true;
+                }
+                catch (std::exception &e)
+                {
+                    logger->warn("Image has invalid projection info, ignoring it : %s", e.what());
+                }
             }
 
             image_calib_valid = false;

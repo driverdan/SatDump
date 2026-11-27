@@ -20,8 +20,18 @@ namespace satdump
 
         void UnitConverter::set_proj(nlohmann::json p)
         {
-            proj = p;
-            proj_valid = proj.init(0, 1);
+            // An invalid projection (eg, no image width/height) only disables
+            // the converters that need it, so it must not throw out of here
+            try
+            {
+                proj = p;
+                proj_valid = proj.init(0, 1);
+            }
+            catch (std::exception &e)
+            {
+                logger->warn("Invalid projection, calibration conversions needing it will be unavailable : %s", e.what());
+                proj_valid = false;
+            }
         }
 
         void UnitConverter::set_wavenumber(double w) { wavenumber = w; }
