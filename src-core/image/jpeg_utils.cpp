@@ -1,7 +1,9 @@
 #include "jpeg_utils.h"
 #include <csetjmp>
+#include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <vector>
 extern "C"
 {
 #include "libs/jpeg/jpeglib.h"
@@ -25,14 +27,32 @@ namespace satdump
             // longjmp(((jpeg_error_struct *)cinfo->err)->setjmp_buffer, 1);
         }
 
-        Image decompress_jpeg(uint8_t *data, int length, bool ignore_errors)
+        // Reads all scanlines with the libjpeg API of the right sample size
+        // (jpeg_read_scanlines, jpeg12_read_scanlines or jpeg16_read_scanlines)
+        template <typename T, typename F>
+        static void read_jpeg_samples(jpeg_decompress_struct &cinfo, std::vector<uint16_t> &samples, F read_scanlines)
         {
-            Image img;
-            unsigned char *jpeg_decomp = NULL;
+            std::vector<T> line(cinfo.output_width);
+            while (cinfo.output_scanline < cinfo.output_height)
+            {
+                T *buffer_array[1] = {line.data()};
+                JDIMENSION y = cinfo.output_scanline;
+                if (read_scanlines(&cinfo, buffer_array, 1) != 1)
+                    break;
+                for (JDIMENSION x = 0; x < cinfo.output_width; x++)
+                    samples[y * cinfo.output_width + x] = (uint16_t)line[x];
+            }
+        }
+
+        Image decompress_jpeg_samples(uint8_t *data, int length, bool ignore_errors, int &precision)
+        {
+            precision = 0;
+            std::vector<uint16_t> samples;
 
             // Huge thanks to https://gist.github.com/PhirePhly/3080633
             jpeg_error_struct jerr;
             jpeg_decompress_struct cinfo;
+            memset(&cinfo, 0, sizeof(cinfo));
 
             // Init
             cinfo.err = jpeg_std_error(&jerr.pub);
@@ -40,42 +60,61 @@ namespace satdump
 
             if (setjmp(jerr.setjmp_buffer))
             {
-                // Free memory
-                delete[] jpeg_decomp;
-                return img;
+                jpeg_destroy_decompress(&cinfo);
+                return Image();
             }
 
             jpeg_create_decompress(&cinfo);
 
             // Parse and start decompressing
-            jpeg_mem__src(&cinfo, data, length);
+            jpeg_mem_src(&cinfo, data, length);
             jpeg_read_header(&cinfo, FALSE);
+            cinfo.out_color_space = JCS_GRAYSCALE; // A single channel is returned, convert colour images
             jpeg_start_decompress(&cinfo);
 
             // Init output buffer
-            jpeg_decomp = new unsigned char[cinfo.image_width * cinfo.image_height];
+            int data_precision = cinfo.data_precision;
+            samples.resize((size_t)cinfo.output_width * cinfo.output_height);
 
-            // Decompress
-            while (cinfo.output_scanline < cinfo.output_height)
-            {
-                unsigned char *buffer_array[1];
-                buffer_array[0] = jpeg_decomp + (cinfo.output_scanline) * cinfo.image_width;
-                jpeg_read_scanlines(&cinfo, buffer_array, 1);
-            }
+            // Decompress. libjpeg-turbo has one API per sample size, which
+            // must match the data precision (lossless JPEGs can have 2 to 16
+            // bits, lossy ones 8 or 12)
+            if (data_precision <= 8)
+                read_jpeg_samples<JSAMPLE>(cinfo, samples, jpeg_read_scanlines);
+            else if (data_precision <= 12)
+                read_jpeg_samples<J12SAMPLE>(cinfo, samples, jpeg12_read_scanlines);
+            else
+                read_jpeg_samples<J16SAMPLE>(cinfo, samples, jpeg16_read_scanlines);
 
             // Cleanup
             // jpeg_finish_decompress(&cinfo);
             jpeg_destroy_decompress(&cinfo);
 
-            // Init CImg image
-            img = Image(8, cinfo.image_width, cinfo.image_height, 1);
+            // Init SatDump image
+            Image img(16, cinfo.output_width, cinfo.output_height, 1);
 
             // Copy over
-            for (int i = 0; i < (int)cinfo.image_width * (int)cinfo.image_height; i++)
-                img.set(i, jpeg_decomp[i]);
+            for (size_t i = 0; i < samples.size(); i++)
+                img.set(i, samples[i]);
 
-            // Free memory
-            delete[] jpeg_decomp;
+            precision = data_precision;
+            return img;
+        }
+
+        Image decompress_jpeg(uint8_t *data, int length, bool ignore_errors)
+        {
+            int precision;
+            Image samples = decompress_jpeg_samples(data, length, ignore_errors, precision);
+            if (samples.size() == 0)
+                return Image();
+
+            // Init SatDump image
+            Image img(8, samples.width(), samples.height(), 1);
+
+            // Copy over, scaling down data of more than 8 bits
+            int shift = precision > 8 ? precision - 8 : 0;
+            for (size_t i = 0; i < samples.size(); i++)
+                img.set(i, samples.get(i) >> shift);
 
             return img;
         }

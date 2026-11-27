@@ -118,7 +118,7 @@ src-core/libs/deepspace-turbo/*
 src-core/libs/dlfcn/*
 src-core/libs/fkyaml/*
 src-core/libs/jpeg/*
-src-core/libs/jpeg12/*
+src-core/libs/jpeg/wrapper/*
 src-core/libs/libintl-tiny/*
 src-core/libs/libopencl_loader/*
 src-core/libs/libopencl_loader/CL/*

@@ -1,5 +1,6 @@
 #include "image/image_test_helpers.h"
 #include "image/io.h"
+#include "image/jpeg_test_helpers.h"
 #include "image/jpeg_utils.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -77,6 +78,28 @@ TEST_CASE("image::load_jpeg from a memory buffer and via load_img", "[image][io]
     img::load_img(from_disp, data.data(), data.size());
     CHECK(image_test::samePixels(from_buf, from_file));
     CHECK(image_test::samePixels(from_disp, from_file));
+}
+
+TEST_CASE("image::load_jpeg scales JPEGs of more than 8 bits down to 8", "[image][io][jpeg]")
+{
+    // 12-bit lossy, and lossless with up to 16 bits
+    auto [precision, lossless] = GENERATE(std::make_pair(12, false), std::make_pair(12, true), std::make_pair(16, true));
+    INFO("precision " << precision << " lossless " << lossless);
+    const int w = 24, h = 16;
+    std::vector<int> samples(w * h);
+    for (int i = 0; i < w * h; i++)
+        samples[i] = (i % w) * ((1 << precision) - 1) / (w - 1); // smooth ramp
+    std::vector<uint8_t> data = jpeg_test::encodeJpeg(samples, w, h, precision, lossless);
+    REQUIRE(!data.empty());
+
+    Image out;
+    img::load_jpeg(out, data.data(), data.size());
+    REQUIRE(out.depth() == 8);
+    REQUIRE(out.channels() == 1);
+    REQUIRE(out.width() == size_t(w));
+    REQUIRE(out.height() == size_t(h));
+    for (int i = 0; i < w * h; i++)
+        REQUIRE(std::abs(out.get(i) - (samples[i] >> (precision - 8))) <= (lossless ? 0 : 3));
 }
 
 TEST_CASE("image::load_jpeg leaves the image untouched on missing or corrupt files", "[image][io][jpeg]")

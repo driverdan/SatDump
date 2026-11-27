@@ -1,15 +1,73 @@
-#define HAVE_PROTOTYPES 
-#define HAVE_UNSIGNED_CHAR 
-#define HAVE_UNSIGNED_SHORT 
-#undef NEED_FAR_POINTERS
-#undef INCOMPLETE_TYPES_BROKEN
+/*
+ * jconfig.h for SatDump.
+ *
+ * Upstream's CMake generates this file from src/jconfig.h.in. SatDump builds
+ * the library from its own CMake, so this is a hand-written equivalent of the
+ * generated file for libjpeg-turbo 3.2.1, built with the defaults
+ * (libjpeg v6b API/ABI, arithmetic coding, in-memory source/destination
+ * managers) and without the SIMD extensions.
+ */
 
+/* Rename every global symbol, see satdump_jpeg_prefix.h */
+#include "satdump_jpeg_prefix.h"
 
-#define const
-#define NEED_SHORT_EXTERNAL_NAMES
-#define INLINE 
+/* Version ID for the JPEG library.
+ * Might be useful for tests like "#if JPEG_LIB_VERSION >= 60".
+ */
+#define JPEG_LIB_VERSION  62
 
-#undef DEFAULT_MAX_MEM
-#undef NO_MKTEMP
+/* libjpeg-turbo version */
+#define LIBJPEG_TURBO_VERSION  3.2.1
 
-#define NO_GETENV
+/* libjpeg-turbo version in integer form */
+#define LIBJPEG_TURBO_VERSION_NUMBER  3002001
+
+/* Support arithmetic encoding when using 8-bit samples */
+#define C_ARITH_CODING_SUPPORTED 1
+
+/* Support arithmetic decoding when using 8-bit samples */
+#define D_ARITH_CODING_SUPPORTED 1
+
+/* Support in-memory source/destination managers */
+#define MEM_SRCDST_SUPPORTED  1
+
+/* Use accelerated SIMD routines when using 8-bit samples */
+/* #undef WITH_SIMD */
+
+/* This version of libjpeg-turbo supports run-time selection of data precision,
+ * so BITS_IN_JSAMPLE is no longer used to specify the data precision at build
+ * time.  However, some downstream software expects the macro to be defined.
+ * Since 12-bit data precision is an opt-in feature that requires explicitly
+ * calling 12-bit-specific libjpeg API functions and using 12-bit-specific data
+ * types, the unmodified portion of the libjpeg API still behaves as if it were
+ * built for 8-bit precision, and JSAMPLE is still literally an 8-bit data
+ * type.  Thus, it is correct to define BITS_IN_JSAMPLE to 8 here.
+ */
+#ifndef BITS_IN_JSAMPLE
+#define BITS_IN_JSAMPLE  8
+#endif
+
+#ifdef _WIN32
+
+#undef RIGHT_SHIFT_IS_UNSIGNED
+
+/* Define "boolean" as unsigned char, not int, per Windows custom */
+#ifndef __RPCNDR_H__            /* don't conflict if rpcndr.h already read */
+typedef unsigned char boolean;
+#endif
+#define HAVE_BOOLEAN            /* prevent jmorecfg.h from redefining it */
+
+/* Define "INT32" as int, not long, per Windows custom */
+#if !(defined(_BASETSD_H_) || defined(_BASETSD_H))   /* don't conflict if basetsd.h already read */
+typedef short INT16;
+typedef signed int INT32;
+#endif
+#define XMD_H                   /* prevent jmorecfg.h from redefining it */
+
+#else
+
+/* Define if your (broken) compiler shifts signed values as if they were
+   unsigned. */
+/* #undef RIGHT_SHIFT_IS_UNSIGNED */
+
+#endif
