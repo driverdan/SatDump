@@ -13,7 +13,7 @@ First time here? See the reference documents below to get started using SatDump.
 - [ImGui](https://github.com/ocornut/imgui), for the user interface
 - [imgui_markdown](https://github.com/enkisoftware/imgui_markdown), to render composite info popups and this very file!
 - [implot](https://github.com/epezent/implot), to display images in the explorer
-- [libaec](https://gitlab.dkrz.de/k202009/libaec), with OpenSatelliteProject's path
+- [libaec](https://github.com/MathisRosenhauer/libaec), for Rice (CCSDS 121.0) decompression
 - [libcorrect](https://github.com/quiet/libcorrect), for Reed-Solomon decoding
 - [libjpeg](https://ijg.org/), from the Independent JPEG Group
 - [libOpenCL-loader](https://github.com/robertwgh/libOpenCL-loader), for OpenCL on Android

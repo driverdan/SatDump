@@ -14,6 +14,7 @@
 //   in the order they were completed. cadu() frames one for a .cadu file.
 
 #include "common/ccsds/ccsds.h"
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <stdexcept>
@@ -275,6 +276,7 @@ namespace xrit_test
         Bytes pixels;
         bool lost = false;    // The packet is not sent at all
         bool bad_crc = false; // The packet is sent with a wrong CRC
+        size_t cut = 0;       // Bytes cut from the end of the compressed line
     };
 
     inline std::vector<Bytes> riceImagePackets(const Bytes &headers, const std::vector<RiceLine> &lines, uint16_t apid, uint16_t first_count = 0)
@@ -285,7 +287,11 @@ namespace xrit_test
         std::vector<Bytes> packets = {packet(apid, SEQ_FIRST, first_count, first)};
         for (size_t i = 0; i < lines.size(); i++)
             if (!lines[i].lost)
-                packets.push_back(packet(apid, i == lines.size() - 1 ? SEQ_LAST : SEQ_CONTINUATION, first_count + 1 + i, riceLine(lines[i].pixels), lines[i].bad_crc));
+            {
+                Bytes compressed = riceLine(lines[i].pixels);
+                compressed.resize(compressed.size() - std::min(lines[i].cut, compressed.size()));
+                packets.push_back(packet(apid, i == lines.size() - 1 ? SEQ_LAST : SEQ_CONTINUATION, first_count + 1 + i, compressed, lines[i].bad_crc));
+            }
         return packets;
     }
 

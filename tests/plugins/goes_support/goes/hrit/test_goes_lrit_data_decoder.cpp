@@ -936,6 +936,20 @@ TEST_CASE("GOESLRITDataDecoderModule decompresses Rice compressed images", "[plu
     CHECK_FALSE(env.log.contains("Rice decompression failed"));
 }
 
+TEST_CASE("GOESLRITDataDecoderModule keeps the lines after a Rice compressed line cut short in place", "[plugins][goes_support][goes_lrit_data_decoder]")
+{
+    // The Rice decoder decodes such a line as far as its input goes, and only reports that part
+    DecoderEnv env;
+    Mux mux;
+    auto lines = imageLines();
+    lines[9].cut = riceLine(lines[9].pixels).size() / 2;
+    mux.add(VCID, riceImagePackets(riceImageHeaders("IMAGE.lrit"), lines, APID));
+    decode(env, mux);
+
+    CHECK(savedLines(env.path("IMAGES/IMAGE.lrit.png")) == linesWith({{9, -2}}));
+    CHECK_FALSE(env.log.contains("Rice decompression failed"));
+}
+
 TEST_CASE("GOESLRITDataDecoderModule fill_missing replaces the lost lines of an image", "[plugins][goes_support][goes_lrit_data_decoder]")
 {
     DecoderEnv env;

@@ -316,19 +316,19 @@
         "src-core/libs/aec"
       ],
       "upstream_url": "https://github.com/MathisRosenhauer/libaec",
-      "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded in the files.",
+      "version": "1.1.8",
+      "commit": "f495d5328a6bc17f93356c4784ef0065f3c4806e",
+      "commit_verified": true,
+      "version_source": "The v1.1.8 tag (AEC_VERSION_* in libaec.h). decode.c, decode.h, encode.c, encode.h, encode_accessors.c, encode_accessors.h, sz_compat.c, vector.c and vector.h are src/ of the tag, szlib.h is include/szlib.h, LICENSE.txt and README.md are from the top level; all identical apart from the local changes. libaec.h is include/libaec.h.in with the version filled in, as upstream's CMake generates it.",
       "license": "BSD-2-Clause",
       "local_changes": {
         "status": "yes",
-        "details": "Patched locally for #49 (see also #83). Not yet split out from the upstream code."
+        "details": "decode.c: aec_decode_init() only allows the standard block sizes (8, 16, 32, 64) unless AEC_NOT_ENFORCE is set, as aec_encode_init() does (#36, #47); upstream allows every even size up to 256. sz_compat.c: check_params() has no limit of 4096 pixels per scanline, as GOES HRIT (5424) and Landsat TIRS (6000) lines are longer; the RSI limit of 4096 blocks in aec_decode_init() still applies. szlib.h includes \"libaec.h\" instead of <libaec.h>. config.h is SatDump's own (upstream generates it from include/config.h.in). graec.c, utime.c and the build files are not copied."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 285,
-      "notes": "resources/credits.md says it is included \"with OpenSatelliteProject's patch\" (credits link: https://gitlab.dkrz.de/k202009/libaec, the old upstream location)."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #285 from upstream 459aa6b (v0.3.4-7, 2016-10-07), patched locally for #47 and #49 and with the second extension table check of OpenSatelliteProject's patch. Upstream since then has the fixes of #49 (62f82d0, 8cb693a, 4dda29b) and of #83 (477a055, fe0fbef, 031a999), a correct second extension table bound, sticky data errors, and SZ_BufftoBuffDecompress() only reporting what was decoded when the input is truncated (it reported whole lines before, for scanlines that are not a whole number of blocks; the GOES HRIT decoder now pads short lines itself). Upstream also adds RSI offset and range decoding functions (aec_decode_range() etc., vector.c), which SatDump does not use. When updating, re-apply the local changes above: without the sz_compat.c one GOES HRIT full disk and Landsat TIRS lines fail with SZ_PARAM_ERROR."
     },
     {
       "id": "openjpeg",

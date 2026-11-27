@@ -2,19 +2,7 @@
  * @file libaec.h
  *
  * @section LICENSE
- * Copyright 2012 - 2016
- *
- * Mathis Rosenhauer, Moritz Hanke, Joerg Behrens
- * Deutsches Klimarechenzentrum GmbH
- * Bundesstr. 45a
- * 20146 Hamburg Germany
- *
- * Luis Kornblueh
- * Max-Planck-Institut fuer Meteorologie
- * Bundesstr. 53
- * 20146 Hamburg
- * Germany
- *
+ * Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,14 +38,36 @@
 #ifndef LIBAEC_H
 #define LIBAEC_H 1
 
+#define AEC_VERSION_MAJOR 1
+#define AEC_VERSION_MINOR 1
+#define AEC_VERSION_PATCH 8
+#define AEC_VERSION_STR "1.1.8"
+
 #include <stddef.h>
 
-#if BUILDING_LIBAEC && HAVE_VISIBILITY
-#  define LIBAEC_DLL_EXPORTED __attribute__((__visibility__("default")))
-#elif BUILDING_LIBAEC && defined _MSC_VER
-#  define LIBAEC_DLL_EXPORTED __declspec(dllexport)
-#elif defined _MSC_VER
-#  define LIBAEC_DLL_EXPORTED __declspec(dllimport)
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+#if defined _WIN32 || defined __CYGWIN__
+#  define LIBAEC_HELPER_DLL_IMPORT __declspec(dllimport)
+#  define LIBAEC_HELPER_DLL_EXPORT __declspec(dllexport)
+#else
+#  if __GNUC__ >= 4
+#    define LIBAEC_HELPER_DLL_IMPORT
+#    define LIBAEC_HELPER_DLL_EXPORT __attribute__ ((visibility ("default")))
+#  else
+#    define LIBAEC_HELPER_DLL_IMPORT
+#    define LIBAEC_HELPER_DLL_EXPORT
+#  endif
+#endif
+
+#ifdef LIBAEC_SHARED
+#  ifdef LIBAEC_BUILD
+#    define LIBAEC_DLL_EXPORTED LIBAEC_HELPER_DLL_EXPORT
+#  else
+#    define LIBAEC_DLL_EXPORTED LIBAEC_HELPER_DLL_IMPORT
+#  endif
 #else
 #  define LIBAEC_DLL_EXPORTED
 #endif
@@ -87,7 +97,7 @@ struct aec_stream {
     /* block size in samples */
     unsigned int block_size;
 
-    /* Reference sample interval, the number of Coded Data Sets
+    /* Reference sample interval, the number of blocks
      * between consecutive reference samples (up to 4096). */
     unsigned int rsi;
 
@@ -117,7 +127,9 @@ struct aec_stream {
 /* Use restricted set of code options */
 #define AEC_RESTRICTED 16
 
-/* Pad RSI to byte boundary. Only for decoding CCSDS sample data. */
+/* Pad RSI to byte boundary. Only used for decoding some CCSDS sample
+ * data. Do not use this to produce new data as it violates the
+ * standard. */
 #define AEC_PAD_RSI 32
 
 /* Do not enforce standard regarding legal block sizes. */
@@ -131,6 +143,7 @@ struct aec_stream {
 #define AEC_STREAM_ERROR (-2)
 #define AEC_DATA_ERROR (-3)
 #define AEC_MEM_ERROR (-4)
+#define AEC_RSI_OFFSETS_ERROR (-5)
 
 /************************/
 /* Options for flushing */
@@ -144,19 +157,28 @@ struct aec_stream {
  * set AEC_FLUSH to drain all output.
  *
  * It is not possible to continue encoding of the same stream after it
- * has been flushed because the last byte may be padded with fill
- * bits. */
+ * has been flushed. For one, the last block may be padded zeros after
+ * preprocessing. Secondly, the last encoded byte may be padded with
+ * fill bits. */
 #define AEC_FLUSH 1
 
 /*********************************************/
 /* Streaming encoding and decoding functions */
 /*********************************************/
 LIBAEC_DLL_EXPORTED int aec_encode_init(struct aec_stream *strm);
+LIBAEC_DLL_EXPORTED int aec_encode_enable_offsets(struct aec_stream *strm);
+LIBAEC_DLL_EXPORTED int aec_encode_count_offsets(struct aec_stream *strm, size_t *rsi_offsets_count);
+LIBAEC_DLL_EXPORTED int aec_encode_get_offsets(struct aec_stream *strm, size_t *rsi_offsets, size_t rsi_offsets_count);
+LIBAEC_DLL_EXPORTED int aec_buffer_seek(struct aec_stream *strm, size_t offset);
 LIBAEC_DLL_EXPORTED int aec_encode(struct aec_stream *strm, int flush);
 LIBAEC_DLL_EXPORTED int aec_encode_end(struct aec_stream *strm);
 
 LIBAEC_DLL_EXPORTED int aec_decode_init(struct aec_stream *strm);
+LIBAEC_DLL_EXPORTED int aec_decode_enable_offsets(struct aec_stream *strm);
+LIBAEC_DLL_EXPORTED int aec_decode_count_offsets(struct aec_stream *strm, size_t *rsi_offsets_count);
+LIBAEC_DLL_EXPORTED int aec_decode_get_offsets(struct aec_stream *strm, size_t *rsi_offsets, size_t rsi_offsets_count);
 LIBAEC_DLL_EXPORTED int aec_decode(struct aec_stream *strm, int flush);
+LIBAEC_DLL_EXPORTED int aec_decode_range(struct aec_stream *strm, const size_t *rsi_offsets, size_t rsi_offsets_count, size_t pos, size_t size);
 LIBAEC_DLL_EXPORTED int aec_decode_end(struct aec_stream *strm);
 
 /***************************************************************/
@@ -164,5 +186,9 @@ LIBAEC_DLL_EXPORTED int aec_decode_end(struct aec_stream *strm);
 /***************************************************************/
 LIBAEC_DLL_EXPORTED int aec_buffer_encode(struct aec_stream *strm);
 LIBAEC_DLL_EXPORTED int aec_buffer_decode(struct aec_stream *strm);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LIBAEC_H */

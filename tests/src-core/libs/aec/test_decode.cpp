@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <tuple>
 #include <vector>
 
 extern "C"
@@ -164,6 +165,25 @@ namespace
         return out;
     }
 
+    // The samples as the decoder writes signed samples with preprocessing: sign extended to the
+    // size they are stored in. The encoder takes them as bits_per_sample bit two's complement.
+    std::vector<uint8_t> signExtended(const AecConfig &c, std::vector<uint8_t> samples)
+    {
+        size_t bytes = bytesPerSample(c);
+        bool msb = c.flags & AEC_DATA_MSB;
+        for (size_t i = 0; i < samples.size(); i += bytes)
+        {
+            uint32_t x = 0;
+            for (size_t b = 0; b < bytes; b++)
+                x |= (uint32_t)samples[i + b] << (msb ? 8 * (bytes - 1 - b) : 8 * b);
+            if (c.bits_per_sample < 32 && (x >> (c.bits_per_sample - 1)) & 1)
+                x |= ~((UINT32_C(1) << c.bits_per_sample) - 1);
+            for (size_t b = 0; b < bytes; b++)
+                samples[i + b] = x >> (msb ? 8 * (bytes - 1 - b) : 8 * b);
+        }
+        return samples;
+    }
+
     std::vector<uint8_t> encode(const AecConfig &c, const std::vector<uint8_t> &samples)
     {
         std::vector<uint8_t> out(samples.size() * 2 + 1024);
@@ -277,6 +297,81 @@ TEST_CASE("aec_decode decodes what aec_encode makes, for every block and sample 
     CHECK(failed_in_pieces == 0);
 }
 
+TEST_CASE("aec_decode decodes what aec_encode makes of signed samples, for every block and sample size", "[libs][aec]")
+{
+    // #83: with 1 bit samples xmax was computed with a shift by 32, and the signed pre- and
+    // postprocessing overflowed int32_t for 32 bit samples. Fixed by updating libaec (#285).
+    unsigned int block_size = GENERATE(8, 16, 32, 64);
+    test_helpers::Lcg rng(block_size + 100);
+
+    int cases = 0, failed = 0, failed_in_pieces = 0;
+    for (unsigned int bits = 1; bits <= 32; bits++)
+        for (unsigned int flags : {0u, (unsigned int)AEC_DATA_MSB, (unsigned int)AEC_DATA_PREPROCESS, (unsigned int)(AEC_DATA_MSB | AEC_DATA_PREPROCESS)})
+            for (int kind = 0; kind < 4; kind++)
+            {
+                AecConfig c = {bits, block_size, 1 + (unsigned int)rng.below(70), flags | AEC_DATA_SIGNED};
+                std::vector<uint8_t> samples = makeSamples(c, 500 + rng.below(300), kind, rng);
+                std::vector<uint8_t> encoded = encode(c, samples);
+                // Without preprocessing the samples are only coded as bits
+                std::vector<uint8_t> expected = (flags & AEC_DATA_PREPROCESS) ? signExtended(c, samples) : samples;
+                cases++;
+                if (!decodesTo(c, encoded, expected))
+                    failed++;
+                if (!decodesInPiecesTo(c, encoded, expected, rng))
+                    failed_in_pieces++;
+            }
+    CHECK(cases == 32 * 4 * 4);
+    CHECK(failed == 0);
+    CHECK(failed_in_pieces == 0);
+}
+
+TEST_CASE("SZ_BufftoBuffDecompress decodes scanlines longer than 4096 pixels", "[libs][aec]")
+{
+    // Upstream libaec limits SZ scanlines to 4096 pixels. SatDump does not: GOES HRIT full disk
+    // lines have 5424 pixels (8 bit) and Landsat TIRS lines 6000 (16 bit, 16 pixels per block).
+    auto settings = GENERATE(std::make_tuple(8, 32, 5424), std::make_tuple(8, 16, 5424), std::make_tuple(16, 16, 6000));
+    SZ_com_t p = lineSettings(std::get<1>(settings), std::get<2>(settings));
+    p.bits_per_pixel = std::get<0>(settings);
+
+    size_t bytes = (size_t)std::get<2>(settings) * (p.bits_per_pixel / 8) * 3; // 3 scanlines
+    std::vector<uint8_t> lines(bytes);
+    for (size_t i = 0; i < lines.size(); i++)
+        lines[i] = (i / 64) * 3 + (i % 5);
+
+    std::vector<uint8_t> compressed(lines.size() * 2 + 64);
+    size_t compressed_size = compressed.size();
+    REQUIRE(SZ_BufftoBuffCompress(compressed.data(), &compressed_size, lines.data(), lines.size(), &p) == SZ_OK);
+
+    std::vector<uint8_t> out(lines.size());
+    size_t out_size = out.size();
+    REQUIRE(SZ_BufftoBuffDecompress(out.data(), &out_size, compressed.data(), compressed_size, &p) == SZ_OK);
+    CHECK(out_size == lines.size());
+    CHECK(test_helpers::bytesDiff(out, lines) == "");
+}
+
+TEST_CASE("SZ_BufftoBuffDecompress only reports the decoded part of a line cut short", "[libs][aec]")
+{
+    // Before libaec 1.1.8, a scanline that is not a whole number of blocks (5424 pixels with 32
+    // per block, as GOES-R sends them) was always reported in full, with what was not decoded
+    // taken from uninitialized memory
+    int pixels_per_block = GENERATE(16, 32);
+    SZ_com_t p = lineSettings(pixels_per_block, 5424);
+    std::vector<uint8_t> line(5424);
+    for (size_t i = 0; i < line.size(); i++)
+        line[i] = 20 + (i * 7) % 200;
+
+    std::vector<uint8_t> compressed(line.size() * 2 + 64);
+    size_t compressed_size = compressed.size();
+    REQUIRE(SZ_BufftoBuffCompress(compressed.data(), &compressed_size, line.data(), line.size(), &p) == SZ_OK);
+
+    std::vector<uint8_t> out(line.size());
+    size_t out_size = out.size();
+    REQUIRE(SZ_BufftoBuffDecompress(out.data(), &out_size, compressed.data(), compressed_size / 2, &p) == SZ_OK);
+    CHECK(out_size > 0);
+    CHECK(out_size < line.size());
+    CHECK(std::equal(out.begin(), out.begin() + out_size, line.begin()));
+}
+
 TEST_CASE("aec_decode reports split blocks whose fundamental sequences use up the input", "[libs][aec]")
 {
     // #49: the fast path only checked once per block that the input held the longest valid block.
@@ -286,9 +381,10 @@ TEST_CASE("aec_decode reports split blocks whose fundamental sequences use up th
     w.put(2, 3); // Option ID of a split block with k = 1, for 8 bit samples
     for (int i = 0; i < 7; i++)
         w.put(1, 1); // Fundamental sequences of 0
-    // Long enough for the fast path. The last fundamental sequence runs to the end of the input,
-    // or ends on its last bit and leaves nothing for the binary part.
-    const size_t size = 29;
+    // Long enough for the fast path: 24 bytes after the 7 that libaec 1.1.8 reads with the option
+    // ID. The last fundamental sequence runs to the end of the input, or ends on its last bit and
+    // leaves nothing for the binary part.
+    const size_t size = 32;
     bool ends_on_last_bit = GENERATE(false, true);
     std::vector<uint8_t> in = withGuard(w.bytes, size, 64);
     if (ends_on_last_bit)
