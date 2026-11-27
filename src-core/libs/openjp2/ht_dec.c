@@ -149,7 +149,7 @@ static INLINE OPJ_UINT32 read_le_uint32(const void* dataIn)
   *  Each run represents the number of zero events before a one event.
   */
 typedef struct dec_mel {
-    // data decoding machinary
+    // data decoding machinery
     OPJ_UINT8* data;  //!<the address of data (or bitstream)
     OPJ_UINT64 tmp;   //!<temporary buffer for read data
     int bits;         //!<number of bits stored in tmp
@@ -307,7 +307,7 @@ void mel_decode(dec_mel_t *melp)
   *  @param [in]  scup is the length of MEL+VLC segments
   */
 static INLINE
-void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
+OPJ_BOOL mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
 {
     int num;
     int i;
@@ -329,7 +329,9 @@ void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
         OPJ_UINT64 d;
         int d_bits;
 
-        assert(melp->unstuff == OPJ_FALSE || melp->data[0] <= 0x8F);
+        if (melp->unstuff == OPJ_TRUE && melp->data[0] > 0x8F) {
+            return OPJ_FALSE;
+        }
         d = (melp->size > 0) ? *melp->data : 0xFF; // if buffer is consumed
         // set data to 0xFF
         if (melp->size == 1) {
@@ -345,6 +347,7 @@ void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
     }
     melp->tmp <<= (64 - melp->bits); //push all the way up so the first bit
     // is the MSB
+    return OPJ_TRUE;
 }
 
 //************************************************************************/
@@ -613,7 +616,7 @@ void rev_read_mrp(rev_struct_t *mrp)
   *         an architecture that read size must be compatible with the
   *         alignment of the read address
   *
-  *  There is another simiar subroutine rev_init.  This subroutine does
+  *  There is another similar subroutine rev_init.  This subroutine does
   *  NOT skip the first 12 bits, and starts with unstuff set to true.
   *
   *  @param [in]  mrp is a pointer to rev_struct structure
@@ -898,7 +901,7 @@ typedef struct frwd_struct {
   *  X controls this value.
   *
   *  Unstuffing prevent sequences that are more than 0xFF7F from appearing
-  *  in the conpressed sequence.  So whenever a value of 0xFF is coded, the
+  *  in the compressed sequence.  So whenever a value of 0xFF is coded, the
   *  MSB of the next byte is set 0 and must be ignored during decoding.
   *
   *  Reading can go beyond the end of buffer by up to 3 bytes.
@@ -1029,7 +1032,7 @@ OPJ_UINT32 frwd_fetch(frwd_struct_t *msp)
 //************************************************************************/
 /** @brief Allocates T1 buffers
   *
-  *  @param [in, out]  t1 is codeblock cofficients storage
+  *  @param [in, out]  t1 is codeblock coefficients storage
   *  @param [in]       w is codeblock width
   *  @param [in]       h is codeblock height
   */
@@ -1076,7 +1079,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
         if (flagssize > t1->flagssize) {
 
             opj_aligned_free(t1->flags);
-            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize);
+            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize * sizeof(opj_flag_t));
             if (!t1->flags) {
                 /* FIXME event manager error callback */
                 return OPJ_FALSE;
@@ -1084,7 +1087,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
         }
         t1->flagssize = flagssize;
 
-        memset(t1->flags, 0, flagssize);
+        memset(t1->flags, 0, flagssize * sizeof(opj_flag_t));
     }
 
     t1->w = w;
@@ -1093,11 +1096,31 @@ static OPJ_BOOL opj_t1_allocate_buffers(
     return OPJ_TRUE;
 }
 
+/**
+Decode 1 HT code-block
+@param t1 T1 handle
+@param cblk Code-block coding parameters
+@param orient
+@param roishift Region of interest shifting value
+@param cblksty Code-block style
+@param p_manager the event manager
+@param p_manager_mutex mutex for the event manager
+@param check_pterm whether PTERM correct termination should be checked
+*/
+OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
+                               opj_tcd_cblk_dec_t* cblk,
+                               OPJ_UINT32 orient,
+                               OPJ_UINT32 roishift,
+                               OPJ_UINT32 cblksty,
+                               opj_event_mgr_t *p_manager,
+                               opj_mutex_t* p_manager_mutex,
+                               OPJ_BOOL check_pterm);
+
 //************************************************************************/
 /** @brief Decodes one codeblock, processing the cleanup, siginificance
   *         propagation, and magnitude refinement pass
   *
-  *  @param [in, out]  t1 is codeblock cofficients storage
+  *  @param [in, out]  t1 is codeblock coefficients storage
   *  @param [in]       cblk is codeblock properties
   *  @param [in]       orient is the subband to which the codeblock belongs (not needed)
   *  @param [in]       roishift is region of interest shift
@@ -1200,6 +1223,9 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
 
         /* Concatenate all chunks */
         cblkdata = t1->cblkdatabuffer;
+        if (cblkdata == NULL) {
+            return OPJ_FALSE;
+        }
         cblk_len = 0;
         for (i = 0; i < cblk->numchunks; i++) {
             memcpy(cblkdata + cblk_len, cblk->chunks[i].data, cblk->chunks[i].len);
@@ -1387,7 +1413,17 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
     }
 
     // init structures
-    mel_init(&mel, coded_data, lcup, scup);
+    if (mel_init(&mel, coded_data, lcup, scup) == OPJ_FALSE) {
+        if (p_manager_mutex) {
+            opj_mutex_lock(p_manager_mutex);
+        }
+        opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
+                      "Incorrect MEL segment sequence.\n");
+        if (p_manager_mutex) {
+            opj_mutex_unlock(p_manager_mutex);
+        }
+        return OPJ_FALSE;
+    }
     rev_init(&vlc, coded_data, lcup, scup);
     frwd_init(&magsgn, coded_data, lcup - scup, 0xFF);
     if (num_passes > 1) { // needs to be tested
@@ -1579,7 +1615,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
         }
 
         //first quad, starting at first sample in quad and moving on
-        if (qinf[0] & 0x10) { //is it signifcant? (sigma_n)
+        if (qinf[0] & 0x10) { //is it significant? (sigma_n)
             OPJ_UINT32 val;
 
             ms_val = frwd_fetch(&magsgn);         //get 32 bits of magsgn data
@@ -1829,14 +1865,14 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
             if ((qinf[0] & 0xF0) & ((qinf[0] & 0xF0) - 1)) { // is \gamma_q 1?
                 OPJ_UINT32 E = (ls0 & 0x7Fu);
                 E = E > (lsp[1] & 0x7Fu) ? E : (lsp[1] & 0x7Fu); //max(E, E^NE, E^NF)
-                //since U_q alread has u_q + 1, we subtract 2 instead of 1
+                //since U_q already has u_q + 1, we subtract 2 instead of 1
                 U_q[0] += E > 2 ? E - 2 : 0;
             }
 
             if ((qinf[1] & 0xF0) & ((qinf[1] & 0xF0) - 1)) { //is \gamma_q 1?
                 OPJ_UINT32 E = (lsp[1] & 0x7Fu);
                 E = E > (lsp[2] & 0x7Fu) ? E : (lsp[2] & 0x7Fu); //max(E, E^NE, E^NF)
-                //since U_q alread has u_q + 1, we subtract 2 instead of 1
+                //since U_q already has u_q + 1, we subtract 2 instead of 1
                 U_q[1] += E > 2 ? E - 2 : 0;
             }
 
@@ -2166,13 +2202,13 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                 nxt_sig = y & 0x4 ? sigma1 : sigma2; //future samples
                 nxt_mbr = y & 0x4 ? mbr1 : mbr2;     //future samples
                 val = 3u << (p - 2); // sample values for newly discovered
-                // signficant samples including the bin center
+                // significant samples including the bin center
                 for (i = 0; i < width;
                         i += 8, cur_sig++, cur_mbr++, nxt_sig++, nxt_mbr++) {
                     OPJ_UINT32 ux, tx;
                     OPJ_UINT32 mbr = *cur_mbr;
                     OPJ_UINT32 new_sig = 0;
-                    if (mbr) { //are there any samples that migt be signficant
+                    if (mbr) { //are there any samples that might be significant
                         OPJ_INT32 n;
                         for (n = 0; n < 8; n += 4) {
                             OPJ_UINT32 col_mask;
@@ -2200,7 +2236,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                                     continue;
                                 }
 
-                                //scan mbr to find a new signficant sample
+                                //scan mbr to find a new significant sample
                                 sample_mask = 0x11111111u & col_mask; // LSB
                                 if (mbr & sample_mask) {
                                     assert(dp[0] == 0); // the sample must have been 0
@@ -2209,7 +2245,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                                         OPJ_UINT32 t;
                                         new_sig |= sample_mask;  // new significant samples
                                         t = 0x32u << (j * 4);// propagation to neighbors
-                                        mbr |= t & inv_sig; //remove already signifcant samples
+                                        mbr |= t & inv_sig; //remove already significant samples
                                     }
                                     cwd >>= 1;
                                     ++cnt; //consume bit and increment number of
@@ -2267,7 +2303,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
                                 for (j = n; j < end; ++j, ++dp, col_mask <<= 4) {
                                     OPJ_UINT32 sample_mask;
 
-                                    if ((col_mask & new_sig) == 0) { //if non is signficant
+                                    if ((col_mask & new_sig) == 0) { //if non is significant
                                         continue;
                                     }
 
