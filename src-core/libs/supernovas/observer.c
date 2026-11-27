@@ -1,9 +1,6 @@
 /**
  * @file
  *
- * @date Created  on Mar 6, 2025
- * @author Attila Kovacs and G. Kaplan
- *
  *  This module provides a set of functions that define an astronomical observer location, or ones
  *  that relate to observer location.
  *
@@ -25,22 +22,22 @@
  *  4. Solar-system locations via `make_solar_system_observer()`, specifying a momentary
  *     barycentric (that is w.r.t. the SSB) position and velocity vector.
  *
+ *  5. Dynamic observer locations via `make_dynamic_observer()` or `make_comoving_observer()`,
+ *     where the observer's position and velocity state vectors are provided on demand for the
+ *     time of observation.
+ *
  * Once an observer is defined, it maybe used to set up an observing frame for a specific time of
  * observation. Observing frames allow efficient and precise position calculations from an
  * observer's point-of-view.
  *
- * This module also provides functions otherwise relating to the observer locations.
+ * @date Created  on Mar 6, 2025
+ * @author Attila Kovacs and G. Kaplan
  *
- * For Earth-based geodetic locations, the module provides a set of functions to convert between
- * various (local) coordinate systems. For example, calculating parallactic angles (a.k.a.
- * vertical position angle or VPA), for converting between horizontal and equatorial offsets,
- * and various functions for converting equatorial vectors to a line-of-sight, or _u_, _v_, _w_
- * coordinate bases, and vice-versa.
- *
- * @sa timescale.c, frame.c
+ * @sa timescale.c, frame.c, system.c, itrf.c
  */
 
 #include <string.h>
+#include <stddef.h>
 #include <errno.h>
 
 /// \cond PRIVATE
@@ -54,33 +51,33 @@
 #define ANTARCTIC_LATITUDE                (-66.55)  ///< [deg] latitude below which to use Antarctic lapse rate
 
 #define PRESSURE_SCALE_HEIGHT             9.1e3     ///< [m] Scale height of atmospheric pressure
-
-
 /// \endcond
 
 /**
  * @deprecated    It is recommended that you use one of the more specific ways of initializing
  *                the observer data structure, e.g. with `make_itrf_observer()`,
  *                `make_gps_observer()`, `make_observer_at_site()`, `make_airborne_observer()`
- *                `make_solar_system_observer(), or `make_observer_at_geocenter()`. This function
+ *                `make_solar_system_observer()`, or `make_observer_at_geocenter()`. This function
  *                will be available for the foreseeable future also.
  *
  * Populates an 'observer' data structure given the parameters. The output data structure may
- * be used an the the inputs to NOVAS-C functions, such as `make_frame()` or `place()`.
+ * be used as the inputs to NOVAS-C functions, such as `make_frame()` or `place()`.
  *
  * @param where         The location type of the observer
  * @param loc_surface   Pointer to data structure that defines a location on Earth's surface.
- *                      Used only if 'where' is NOVAS_OBSERVER_ON_EARTH, otherwise can be
- *                      NULL.
+ *                      Used only if 'where' is NOVAS_OBSERVER_ON_EARTH or
+ *                      NOVAS_AIRBORNE_OBSERVER. Otherwise, it can be NULL.
  * @param loc_space     Pointer to data structure that defines a near-Earth location in space.
- *                      Used only if 'where' is NOVAS_OBSERVER_IN_EARTH_ORBIT, otherwise can
- *                      be NULL.
+ *                      Used only if 'where' is NOVAS_OBSERVER_IN_EARTH_ORBIT,
+ *                      NOVAS_AIRBORNE_OBSERVER, or NOVAS_SOLAR_SYSTEM_OBSERVER. Otherwise, it
+ *                      can be NULL.
  * @param[out] obs      Pointer to observer data structure to populate.
  * @return              0 if successful, -1 if a required argument is NULL, or 1 if the 'where'
  *                      argument is invalid.
  *
  * @sa make_observer_at_geocenter(), make_itrf_observer(), make_gps_observer(),
  *     make_airborne_observer(), make_observer_in_space(), make_solar_system_observer()
+ *     make_dynamic_observer(), make_comoving_observer()
  */
 short make_observer(enum novas_observer_place where, const on_surface *loc_surface, const in_space *loc_space, observer *obs) {
   static const char *fn = "make_observer";
@@ -89,7 +86,9 @@ short make_observer(enum novas_observer_place where, const on_surface *loc_surfa
     return novas_error(-1, EINVAL, fn, "NULL output observer pointer");
 
   // Initialize the output structure.
-  memset(obs, 0, sizeof(*obs));
+  // To stay binary compatible with versions <1.8, initialize only up to the added state_call field.
+  // TODO [v.2] initialize fully
+  memset(obs, 0, offsetof(observer, state_call));
   obs->where = where;
 
   // Populate the output structure based on the value of 'where'.
@@ -101,7 +100,7 @@ short make_observer(enum novas_observer_place where, const on_surface *loc_surfa
       if(!loc_space)
         return novas_error(-1, EINVAL, fn, "NULL in space location (for velocity)");
 
-      memcpy(&obs->near_earth.sc_vel, loc_space->sc_vel, sizeof(loc_space->sc_vel)); // @suppress("No break at end of case")
+      memcpy(obs->near_earth.sc_vel, loc_space->sc_vel, sizeof(loc_space->sc_vel)); // @suppress("No break at end of case")
       /* fallthrough */
 
     case NOVAS_OBSERVER_ON_EARTH:
@@ -128,7 +127,7 @@ short make_observer(enum novas_observer_place where, const on_surface *loc_surfa
 
 /**
  * Populates an 'observer' data structure for a hypothetical observer located at Earth's
- * geocenter. The output data structure may be used an the the inputs to NOVAS-C functions,
+ * geocenter. The output data structure may be used as the inputs to NOVAS-C functions,
  * such as `make_frame()` or `place()`.
  *
  * @param[out] obs    Pointer to data structure to populate.
@@ -136,6 +135,7 @@ short make_observer(enum novas_observer_place where, const on_surface *loc_surfa
  *
  * @sa make_gps_observer(), make_itrf_observer(), make_observer_at_site(),
  *     make_airborne_observer(), make_observer_in_space(), make_solar_system_observer()
+ *     make_comoving_observer(), make_dynamic_observer()
  * @sa novas_make_frame()
  */
 int make_observer_at_geocenter(observer *restrict obs) {
@@ -157,16 +157,15 @@ int make_observer_at_geocenter(observer *restrict obs) {
  * this call.
  *
  * NOTES:
- * <ol>
- * <li>You can convert coordinates among ITRF realization using `novas_itrf_transform()`,
- * possibly after `novas_geodetic_to_cartesian()` with `NOVAS_GRS80_ELLIPSOID` as necessary for
- * polar ITRF coordinates.</li>
- * <li>You can convert ITRF Cartesian _xyz_ locations to geodetic locations by using
- * `novas_cartesian_to_geodetic()` with `NOVAS_GRS80_ELLIPSOID` as the reference ellipsoid
- * parameter.</li>
- * <li>If you have longitude, latitude, and height defined as GPS (WGS84) values, you might want
- * to use make_gps_observer() intead</li>
- * </ol>
+ *
+ *  1. You can convert coordinates among ITRF realization using `novas_itrf_transform()`,
+ *     possibly after `novas_geodetic_to_cartesian()` with `NOVAS_GRS80_ELLIPSOID` as necessary for
+ *     polar ITRF coordinates.
+ *  2. You can convert ITRF Cartesian _xyz_ locations to geodetic locations by using
+ *     `novas_cartesian_to_geodetic()` with `NOVAS_GRS80_ELLIPSOID` as the reference ellipsoid
+ *     parameter.
+ *  3. If you have longitude, latitude, and height defined as GPS (WGS84) values, you might want
+ *     to use make_gps_observer() intead
  *
  * @param latitude      [deg] Geodetic (ITRF / GRS80) latitude; north positive.
  * @param longitude     [deg] Geodetic (ITRF / GRS80) longitude; east positive.
@@ -218,6 +217,9 @@ int make_observer_at_site(const on_surface *restrict site, observer *restrict ob
   if(!obs)
     return novas_error(-1, EINVAL, fn, "output observer is NULL");
 
+  // To stay binary compatible with versions <1.8, initialize only up to the added state_call field.
+  // TODO [v.2] initialize fully
+  memset(obs, 0, offsetof(observer, state_call));
   obs->where = NOVAS_OBSERVER_ON_EARTH;
   obs->on_surf = *site;
 
@@ -253,7 +255,7 @@ int make_observer_at_site(const on_surface *restrict site, observer *restrict ob
  *     novas_make_frame()
  */
 int make_itrf_observer(double latitude, double longitude, double height, observer *obs) {
-  on_surface site; memset(&site, 0, sizeof(on_surface));
+  on_surface site = {0};
   make_itrf_site(latitude, longitude, height, &site);
   prop_error("make_itrf_observer", make_observer_at_site(&site, obs), 0);
   return 0;
@@ -284,7 +286,7 @@ int make_itrf_observer(double latitude, double longitude, double height, observe
  *     novas_geodetic_transform_site()
  */
 int make_gps_observer(double latitude, double longitude, double height, observer *obs) {
-  on_surface site; memset(&site, 0, sizeof(on_surface));
+  on_surface site = {0};
   make_gps_site(latitude, longitude, height, &site);
   prop_error("make_gps_observer", make_observer_at_site(&site, obs), 0);
   return 0;
@@ -293,8 +295,8 @@ int make_gps_observer(double latitude, double longitude, double height, observer
 /**
  * Populates an 'observer' data structure, for an observer situated on a near-Earth spacecraft,
  * with the specified geocentric position and velocity vectors. Both input vectors are with
- * respect to true equator and equinox of date. The output data structure may be used an the
- * the inputs to NOVAS-C functions, such as `make_frame()` or `place()`.
+ * respect to true equator and equinox of date. The output data structure may be used as the
+ * inputs to NOVAS-C functions, such as `make_frame()` or `place()`.
  *
  * @param sc_pos        [km] Geocentric (x, y, z) position vector.
  * @param sc_vel        [km/s] Geocentric (x, y, z) velocity vector.
@@ -302,7 +304,8 @@ int make_gps_observer(double latitude, double longitude, double height, observer
  * @return          0 if successful, or -1 if the output argument is NULL.
  *
  * @sa make_gps_observer(), make_itrf_observer(), make_observer_at_site(),
- *     make_airborne_observer(), make_observer_at_geocenter(), make_solar_system_observer()
+ *     make_airborne_observer(), make_observer_at_geocenter(), make_solar_system_observer(),
+ *     make_comoving_observer(), make_dynamic_observer()
  * @sa novas_make_frame()
  */
 int make_observer_in_space(const double *sc_pos, const double *sc_vel, observer *obs) {
@@ -324,27 +327,25 @@ int make_observer_in_space(const double *sc_pos, const double *sc_vel, observer 
  * given parameters.
  *
  * Note, that because this is an original NOVAS C routine, it does not have an argument to set a
- * humidity value (e.g. for radio refraction). As such, the humidity is set to a a default mean
+ * humidity value (e.g. for radio refraction). As such, the humidity is set to a default mean
  * annual value for the location. To set an actual humidity, set the output structure's field
  * after calling this funcion.
  *
- * NOTES
- * <ol>
- * <li>This implementation breaks strict v1.0 ABI compatibility since it writes to (initializes)
- * a field (`humidity`) that was not yet part of the `on_surface` structure in v1.0. As such,
- * linking SuperNOVAS v1.1 or later with application code compiled for SuperNOVAS v1.0 can result
- * in memory corruption or segmentation fault when this function is called. To be safe, make sure
- * your application has been (re)compiled against SuperNOVAS v1.1 or later.</li>
- * <li>You can convert coordinates among ITRF realization using `novas_itrf_transform()`,
- * possibly after `novas_geodetic_to_cartesian()` with `NOVAS_GRS80_ELLIPSOID` as necessary for
- * polar ITRF coordinates.</li>
- * <li>You can convert Cartesian _xyz_ locations to geodetic locations by using
- * `novas_cartesian_to_geodetic()` with `NOVAS_GRS80_ELLIPSOID` as the reference
- * ellipsoid parameter.</li>
- * <li>If you have longitude, latitude, and height defined as GPS (WGS84) values, you might want
- * to use `make_gps_site()` instead, and then set weather parameters afterwards as necessary.
- * </li>
- * </ol>
+ * NOTES:
+ *
+ *  1. This implementation breaks strict v1.0 ABI compatibility since it writes to (initializes)
+ *     a field (`humidity`) that was not yet part of the `on_surface` structure in v1.0. As such,
+ *     linking SuperNOVAS v1.1 or later with application code compiled for SuperNOVAS v1.0 can result
+ *     in memory corruption or segmentation fault when this function is called. To be safe, make sure
+ *     your application has been (re)compiled against SuperNOVAS v1.1 or later.
+ *  2. You can convert coordinates among ITRF realization using `novas_itrf_transform()`,
+ *     possibly after `novas_geodetic_to_cartesian()` with `NOVAS_GRS80_ELLIPSOID` as necessary for
+ *     polar ITRF coordinates.
+ *  3. You can convert Cartesian _xyz_ locations to geodetic locations by using
+ *     `novas_cartesian_to_geodetic()` with `NOVAS_GRS80_ELLIPSOID` as the reference
+ *     ellipsoid parameter.
+ *  4. If you have longitude, latitude, and height defined as GPS (WGS84) values, you might want
+ *     to use `make_gps_site()` instead, and then set weather parameters afterwards as necessary.
  *
  * @param latitude      [deg] Geodetic (ITRF / GRS80) latitude; north positive.
  * @param longitude     [deg] Geodetic (ITRF / GRS80) longitude; east positive.
@@ -486,7 +487,7 @@ int make_xyz_site(const double *restrict xyz, on_surface *restrict site) {
   double lon = 0.0, lat = 0.0, alt = 0.0;
 
   if(!xyz)
-    return novas_error(-1, EINVAL, fn, "input xzy position is NULL");
+    return novas_error(-1, EINVAL, fn, "input xyz position is NULL");
 
   prop_error(fn, novas_cartesian_to_geodetic(xyz, NOVAS_GRS80_ELLIPSOID, &lon, &lat, &alt), 0);
   prop_error(fn, make_itrf_site(lat, lon, alt, site), 0);
@@ -530,25 +531,28 @@ int make_in_space(const double *sc_pos, const double *sc_vel, in_space *loc) {
  *
  * @param location    Current geodetic location, e.g. as populated with `make_gps_site()` or
  *                    similar.
- * @param vel         [km/s] Surface velocity.
+ * @param itrs_vel    [km/s] Surface velocity (in ITRS).
  * @param[out] obs    Pointer to data structure to populate.
  * @return            0 if successful, or -1 if the output argument is NULL.
  *
  *
  * @sa make_itrf_site(), make_gps_site(), make_xyz_site()
  * @sa make_gps_observer(), make_itrf_observer(), make_observer_at_site(), make_observer_in_space(),
- *     make_solar_system_observer(), make_observer_at geocenter(), novas_make_frame()
+ *     make_solar_system_observer(), make_observer_at_geocenter(), make_dynamic_observer(),
+ *     novas_make_frame()
  *
  * @since 1.1
  * @author Attila Kovacs
+ *
+ * @sa novas_enu_to_itrs()
  */
-int make_airborne_observer(const on_surface *location, const double *vel, observer *obs) {
+int make_airborne_observer(const on_surface *location, const double *itrs_vel, observer *obs) {
   in_space motion = IN_SPACE_INIT;
 
-  if(!vel)
+  if(!itrs_vel)
     return novas_error(-1, EINVAL, "make_airborne_observer", "NULL velocity");
 
-  memcpy(motion.sc_vel, vel, sizeof(motion.sc_vel));
+  memcpy(motion.sc_vel, itrs_vel, sizeof(motion.sc_vel));
 
   prop_error("make_airborne_observer", make_observer(NOVAS_AIRBORNE_OBSERVER, location, &motion, obs), 0);
   return 0;
@@ -566,14 +570,15 @@ int make_airborne_observer(const on_surface *location, const double *vel, observ
  * @return              0 if successful, or -1 if the output argument is NULL.
  *
  * @sa make_gps_observer(), make_itrf_observer(), make_observer_at_site(),
- *     make_airborne_observer(), make_observer_in_space(), make_solar_system_observer()
+ *     make_airborne_observer(), make_observer_in_space(), make_comoving_observer(),
+ *     make_dynamic_observer()
  * @sa novas_make_frame()
  *
  * @since 1.1
  * @author Attila Kovacs
  */
 int make_solar_system_observer(const double *sc_pos, const double *sc_vel, observer *obs) {
-  static const char *fn = "make_observer_in_space";
+  static const char *fn = "make_solar_system_observer";
   in_space loc;
   prop_error(fn, make_in_space(sc_pos, sc_vel, &loc), 0);
   prop_error(fn, make_observer(NOVAS_SOLAR_SYSTEM_OBSERVER, NULL, &loc, obs), 0);
@@ -581,19 +586,246 @@ int make_solar_system_observer(const double *sc_pos, const double *sc_vel, obser
 }
 
 /**
+ * Populates an 'observer' data structure, for an observer whose position and velocity state
+ * vectors are determined dynamically for the time of observation.
+ *
+ * NOTES:
+ *
+ *  1. Unlike most SuperNOVAS functions, which typically copy data, this one tracks the pointer
+ *     reference to the call arguments directly. Therefore, you must make sure that the data
+ *     pointed at remains valid in the scope in which the observer exists or is being used.
+ *
+ * @param call      the function that provides the observer's Solar System Barycentric position
+ *                  and velocity vectors.
+ * @param arg       (optional) additional parameters to pass to the call, as needed, or NULL if
+ *                  the call does not require additional data. When the pointer is not NULL, you
+ *                  should make sure that the data pointed at exists and remains valid in the
+ *                  scope as the observer that is populated here.
+ * @param[out] obs  Pointer to the data structure to populate
+ * @return          0 if successful, or -1 if either argument is NULL.
+ *
+ * @sa make_gps_observer(), make_itrf_observer(), make_observer_at_site(),
+ *     make_airborne_observer(), make_observer_in_space(), make_solar_system_observer()
+ *
+ * @since 1.8
+ * @author Attila Kovacs
+ *
+ * @sa make_comoving_observer(), make_solar_system_observer(), make_observer_at_geocenter(),
+ *     make_observer_in_space()
+ */
+int make_dynamic_observer(novas_state_provider call, const void *restrict arg, observer *restrict obs) {
+  static const char *fn = "make_dynamic_observer";
+
+  if(!call)
+    return novas_error(-1, EINVAL, fn, "input state provider function is null");
+  if(!obs)
+    return novas_error(-1, EINVAL, fn, "output observer is null");
+
+  memset(obs, 0, sizeof(observer));
+  obs->where = NOVAS_DYNAMIC_OBSERVER;
+  obs->state_call = call;
+  obs->call_arg = arg;
+  return 0;
+}
+
+/**
+ * Populates an 'observer' data structure, for an observer that is comoving with a Solar-system body
+ * or location, and whose momentary position is consequently provided by an `ephemeris()` call for that
+ * body or place.
+ *
+ * Examples of comoving observers are virtual observers located at the centers of planets, asteroids,
+ * or comets, travelling on a spacecraft (which has ephemeris data), or defined by Keplerian orbital
+ * parameters around a major Solar-system body or barycenter position.
+ *
+ * NOTES:
+ *
+ *  1. Unlike most SuperNOVAS functions, which typically copy data, this one uses the pointer
+ *     reference to the observing place directly. Therefore, you must make sure that the `object` data
+ *     pointed at remains valid in the scope in which the observer exists or is being used.
+ *
+ * @param loc     the Solar-system body or location to which defines the momentary position of the
+ *                observer at all times. The call will use the pointer reference directly. Therefore
+ *                you sohould make sure that the data pointed at exists and remains valid in the
+ *                scope as the observer that is populated here.
+ * @param obs     Pointer to the data structure to populate
+ * @return        0 if successful, or -1 if either argument is NULL (errno set to EINVAL), or
+ *                if the place is not in the Solar-system (errno set to ERANGE).
+ *
+ * @since 1.8
+ *
+ * @sa ephemeris(), make_solar_system_observer(), make_observer_at_geocenter()
+ */
+int make_comoving_observer(const object *restrict loc, observer *restrict obs) {
+  static const char *fn = "make_comoving_observer";
+
+  if(!loc)
+    return novas_error(-1, EINVAL, fn, "input place is NULL");
+
+  if(!obs)
+    return novas_error(-1, EINVAL, fn, "output observer is NULL");
+
+  if((unsigned) loc->type >= NOVAS_OBJECT_TYPES)
+    return novas_error(-1, ERANGE, fn, "input place type %d is out of range", (int) loc->type);
+
+  if(loc->type == NOVAS_CATALOG_OBJECT)
+    return novas_error(-1, ERANGE, fn, "got catalog source, but need a Solar-system place");
+
+  prop_error(fn, make_dynamic_observer(novas_ephem_state, loc, obs), 0);
+  return 0;
+}
+
+/**
+ * Computes the geocentric GCRS position and velocity of an observer.
+ *
+ * NOTES:
+ *
+ *  - For Earth-based observers, this function does not include polar wobble corrections, so the
+ *    returned GCRS positions are accurate at the tens of meters level only. You might use
+ *    `novas_site_gcrs_posvel()` instead if higher accuracy is required for Earth-based observers.
+ *
+ * @param jd_tt       [day] Terrestrial Time (TT) based Julian date.
+ * @param ut1_to_tt   [s] TT - UT1 time difference in seconds
+ * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
+ * @param obs         observer location.
+ * @param[out] pos    [AU] Position 3-vector of observer, with respect to origin at geocenter,
+ *                    referred to GCRS axes, components in AU. (It may be NULL if not required.)
+ * @param[out] vel    [AU/day] Velocity 3-vector of observer, with respect to origin at geocenter,
+ *                    referred to GCRS axes, components in AU/day. (It must be distinct from the
+ *                    pos output vector, and may be NULL if not required)
+ * @return            0 if successful, -1 if the 'obs' is NULL or the two output vectors are
+ *                    the same, or else 1 if 'accuracy' is invalid, or 2 if 'obserrver->where' is
+ *                    invalid.
+ *
+ * @sa novas_site_gcrs_posvel(), novas_make_frame(), make_observer(), get_ut1_to_tt()
+ */
+short geo_posvel(double jd_tt, double ut1_to_tt, enum novas_accuracy accuracy, const observer *restrict obs,
+        double *restrict pos, double *restrict vel) {
+  static const char *fn = "geo_posvel";
+
+  double pos1[3], vel1[3];
+
+  if(!obs)
+    return novas_error(-1, EINVAL, fn, "NULL observer location pointer");
+
+  if(pos == vel)
+    return novas_error(-1, EINVAL, fn, "identical output pos and vel 3-vectors @ %p", pos);
+
+  // Invalid value of 'accuracy'.
+  if(accuracy != NOVAS_FULL_ACCURACY && accuracy != NOVAS_REDUCED_ACCURACY)
+    return novas_error(1, EINVAL, fn, "invalid accuracy: %d", accuracy);
+
+  switch(obs->where) {
+
+    case NOVAS_OBSERVER_AT_GEOCENTER:                   // Observer at geocenter.  Trivial case.
+      if(pos)
+        memset(pos, 0, XYZ_VECTOR_SIZE);
+      if(vel)
+        memset(vel, 0, XYZ_VECTOR_SIZE);
+      return 0;
+
+      // Other two cases: Get geocentric position and velocity vectors of
+      // observer wrt equator and equinox of date.
+
+    case NOVAS_OBSERVER_ON_EARTH:
+    case NOVAS_AIRBORNE_OBSERVER: {                     // Observer on surface of Earth.
+      const double kms = DAY / AU_KM;
+
+      // Compute UT1 and sidereal time.
+      double jd_ut1 = jd_tt - (ut1_to_tt / DAY);
+
+      if(novas_get_debug_mode() == NOVAS_DEBUG_EXTRA)
+        return novas_error(-1, EINVAL, fn, "the returned vectors may be inaccurate without polar offsets. [DEBUG_EXTRA]");
+
+      // Function 'terra' does the hard work, given sidereal time.
+      terra(&obs->on_surf, novas_gast(jd_ut1, ut1_to_tt, accuracy), pos1, vel1);
+
+      if(obs->where == NOVAS_AIRBORNE_OBSERVER) {
+        int i;
+        // Add in the aircraft motion
+        for(i = 0; i < 3; i++)
+          vel1[i] = novas_add_vel(vel1[i], obs->near_earth.sc_vel[i] * kms);
+      }
+
+      break;
+    }
+
+    case NOVAS_OBSERVER_IN_EARTH_ORBIT: {               // Observer on near-earth spacecraft.
+      const double kms = DAY / AU_KM;
+      int i;
+
+      // Convert units to AU and AU/day.
+      for(i = 3; --i >= 0;) {
+        pos1[i] = obs->near_earth.sc_pos[i] / AU_KM;
+        vel1[i] = obs->near_earth.sc_vel[i] * kms;
+      }
+
+      break;
+    }
+
+    case NOVAS_SOLAR_SYSTEM_OBSERVER:
+    case NOVAS_DYNAMIC_OBSERVER: {               // Observer in Solar orbit
+      const object earth = NOVAS_EARTH_INIT;
+      const double tdb[2] = { jd_tt, tt2tdb(jd_tt) / DAY };
+      double opos[3] = {0.0}, ovel[3] = {0.0};
+      const double *ssbPos, *ssbVel;
+
+      int i;
+
+      // Get the position and velocity of the geocenter rel. to SSB
+      prop_error(fn, ephemeris(tdb, &earth, NOVAS_BARYCENTER, accuracy, pos1, vel1), 0);
+
+      if(obs->where == NOVAS_DYNAMIC_OBSERVER) {
+        prop_error(fn, obs->state_call(tdb[0] + tdb[1], accuracy, obs->call_arg, opos, ovel), 0);
+        ssbPos = opos;
+        ssbVel = ovel;
+      }
+      else {
+        ssbPos = obs->near_earth.sc_pos;
+        ssbVel = obs->near_earth.sc_vel;
+      }
+
+      // Return velocities w.r.t. the geocenter.
+      for(i = 3; --i >= 0;) {
+        if(pos)
+          pos[i] = ssbPos[i] - pos1[i];
+        if(vel)
+          vel[i] = novas_add_vel(ssbVel[i], -vel1[i]);
+      }
+
+      // Already in GCRS...
+      return 0;
+    }
+
+    default:
+      return novas_error(2, EINVAL, fn, "invalid observer type (where): %d", obs->where);
+  }
+
+  // For these calculations we can assume TDB = TT (< 2 ms difference)...
+
+  // Transform geocentric position vector of observer to GCRS.
+  if(pos)
+    tod_to_gcrs(jd_tt, accuracy, pos1, pos); // Use TT for TDB
+
+  // Transform geocentric velocity vector of observer to GCRS.
+  if(vel)
+    tod_to_gcrs(jd_tt, accuracy, vel1, vel); // Use TT for TDB
+
+  return 0;
+}
+
+
+/**
  * Corrects position vector for aberration of light.  Algorithm includes relativistic terms.
  *
  * NOTES:
- * <ol>
- * <li>This function is called by `place()` to account for aberration when calculating the
- * position of the source.</li>
- * </ol>
+ *
+ *  1. This function is called by `place()` to account for aberration when calculating the
+ * position of the source.
  *
  * REFERENCES:
- * <ol>
- * <li>Murray, C. A. (1981) Mon. Notices Royal Ast. Society 195, 639-648.</li>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * </ol>
+ *
+ *  1. Murray, C. A. (1981) Mon. Notices Royal Ast. Society 195, 639-648.
+ *  2. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
  *
  * @param pos         [AU]  Position vector of source relative to observer
  * @param vobs        [AU/day]  Velocity vector of observer, relative to the solar system
@@ -646,9 +878,16 @@ int aberration(const double *pos, const double *vobs, double lighttime, double *
  * Calculates the ICRS position and velocity of the observer relative to the Solar System
  * Barycenter (SSB).
  *
+ * NOTES:
+ *
+ *  1. This implementation does not take polar wobble corrections into account for Earth-based
+ *     (ITRS) observing locations. Thus for ITRS, it provides position vectors with an accuracy at
+ *     the tens of meters level only.
+ *
  * @param jd_tdb        [day] Barycentric Dynamical Time (TDB) based Julian date.
  * @param ut1_to_tt     [s] TT - UT1 time difference. Used only when 'location->where' is
- *                      NOVAS_OBSERVER_ON_EARTH (1) or NOVAS_OBSERVER_IN_EARTH_ORBIT (2).
+ *                      NOVAS_OBSERVER_ON_EARTH (1) or NOVAS_OBSERVER_IN_EARTH_ORBIT (2), or
+ *                      NOVAS_AIRBORNE_OBSERVER (3).
  * @param accuracy      NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
  * @param obs           The observer location, relative to which the output positions and
  *                      velocities are to be calculated
@@ -669,16 +908,16 @@ int aberration(const double *pos, const double *vobs, double lighttime, double *
  * @author Attila Kovacs
  * @since 1.3
  *
- * @see novas_make_frame()
+ * @sa novas_make_frame()
  */
 int obs_posvel(double jd_tdb, double ut1_to_tt, enum novas_accuracy accuracy, const observer *restrict obs,
         const double *restrict geo_pos, const double *restrict geo_vel, double *restrict pos, double *restrict vel) {
-  static const char *fn = "get_obs_posvel";
+  static const char *fn = "obs_posvel";
 
   if(!obs)
     return novas_error(-1, EINVAL, fn, "NULL observer parameter");
 
-  if(obs->where < 0 || obs->where >= NOVAS_OBSERVER_PLACES)
+  if((unsigned) obs->where >= NOVAS_OBSERVER_PLACES)
     return novas_error(-1, EINVAL, fn, "Invalid observer location: %d", obs->where);
 
   if(pos == vel)
@@ -742,14 +981,113 @@ int obs_posvel(double jd_tdb, double ut1_to_tt, enum novas_accuracy accuracy, co
 }
 
 /**
+ * Returns precise ITRS position and velocity vectors for an observer located on or near Earth's
+ * surface.
+ *
+ * @param ts        Astrometric time of oservation
+ * @param site      ITRF / GRS80 geodetic location on Earth
+ * @param v_itrs    [km/s] surface velocity vector in ITRS, or NULL if observing from a fixed
+ *                  Earth location.
+ * @param[out] pos  ITRS position vector of observer. It may be NULL if not required.
+ * @param[out] vel  ITRS velocity vector of observer. It may be NULL if not required.
+ * @return          0 if successful, or else -1 if any of the input pointers is NULL or if
+ *                  both output pointers are NULL (errno will be set to EINVAL).
+ *
+ * @author Attila Kovacs
+ * @since 1.8
+ *
+ * @sa novas_site_gcrs_posvel(), geo_posvel()
+ */
+int novas_site_itrs_posvel(const novas_timespec *restrict ts, const on_surface *restrict site, const double *restrict v_itrs,
+        double *restrict pos, double *restrict vel) {
+  static const char *fn = "novas_site_gcrs_posvel";
+
+  if(!ts)
+    return novas_error(-1, EINVAL, fn, "input time specification is NULL");
+
+  if(!site)
+    return novas_error(-1, EINVAL, fn, "input site is NULL");
+
+  if(pos == vel)
+    return novas_error(-1, EINVAL, fn, "identical output vectors pos = vel");
+
+  // ITRS
+  terra(site, 0.0, pos, vel);
+
+  // Add surface velocity...
+  if(vel && v_itrs) {
+    int k;
+    double kms = NOVAS_KMS / NOVAS_AU_PER_DAY;
+    for(k = 0; k < 3; k++)
+      vel[k] = novas_add_vel(vel[k], v_itrs[k] * kms);
+  }
+
+  return 0;
+}
+
+
+/**
+ * Returns precise GCRS position and velocity vectors for an observer located on or near Earth's
+ * surface.
+ *
+ * NOTES:
+ *
+ *  1. unlike the original NOVAS `geo_posvel()`, this implementation takes the polar offsets into
+ *     account.
+ *
+ * @param ts        Astrometric time of oservation
+ * @param site      ITRF / GRS80 geodetic location on Earth
+ * @param v_itrs    [km/s] surface velocity vector in ITRS, or NULL if observing from a fixed
+ *                  Earth location.
+ * @param xp        [arcsec] Earth orientation parameter, polar offset in _x_, e.g. from the
+ *                  IERS Bulletins, and including diurnal libration and ocean tides. You can use
+ *                  0.0 if sub-arcsecond accuracy is not required.
+ * @param yp        [arcsec] Earth orientation parameter, polar offset in _y_, e.g. from the
+ *                  IERS Bulletins, and including diurnal libration and ocean tides. You can use
+ *                  0.0 if sub-arcsecond accuracy is not required.
+ * @param accuracy  NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
+ * @param[out] pos  GCRS position vector of observer. It may be NULL if not required.
+ * @param[out] vel  GCRS velocity vector of observer. It may be NULL if not required.
+ * @return          0 if successful, or else -1 if any of the input pointers is NULL or if
+ *                  both output pointers are NULL (errno will be set to EINVAL).
+ *
+ * @author Attila Kovacs
+ * @since 1.6
+ *
+ * @sa geo_posvel()
+ */
+int novas_site_gcrs_posvel(const novas_timespec *restrict ts, const on_surface *restrict site, const double *restrict v_itrs,
+        double xp, double yp, enum novas_accuracy accuracy, double *restrict pos, double *restrict vel) {
+  static const char *fn = "novas_site_gcrs_posvel";
+
+  if(accuracy != NOVAS_FULL_ACCURACY && accuracy != NOVAS_REDUCED_ACCURACY)
+    return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", accuracy);
+
+  prop_error(fn, novas_site_itrs_posvel(ts, site, v_itrs, pos, vel), 0);
+  double tdb = novas_get_time(ts, NOVAS_TDB);
+
+  // ITRS -> GCRS
+  if(pos) {
+    itrs_to_tod(ts->ijd_tt, ts->fjd_tt, ts->ut1_to_tt, accuracy, xp, yp, pos, pos);
+    tod_to_gcrs(tdb, accuracy, pos, pos);
+  }
+
+  if(vel) {
+    itrs_to_tod(ts->ijd_tt, ts->fjd_tt, ts->ut1_to_tt, accuracy, xp, yp, vel, vel);
+    tod_to_gcrs(tdb, accuracy, vel, vel);
+  }
+
+  return 0;
+}
+
+/**
  * Moves the origin of coordinates from the barycenter of the solar system to the observer
  * (or the geocenter); i.e., this function accounts for parallax (annual+geocentric or just
  * annual).
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
  *
  * @param pos             [AU] Position vector, referred to origin at solar system barycenter.
  * @param pos_obs         [AU] Position vector of observer (or the geocenter), with respect to
@@ -805,7 +1143,7 @@ int bary2obs(const double *pos, const double *pos_obs, double *out, double *rest
  *                      mask bits will have have positions and velocities calculated. See enum
  *                      novas_planet for the enumeration of planet numbers.
  * @return              0 if successful, -1 if any of the pointer arguments is NULL or if the
- *                      output vector is the same as pos_obs, or the error from ephemeris().
+ *                      output vector is the same as pos_obs, or the error code from ephemeris().
  *
  * @sa enum novas_planet, grav_planets(), grav_undo_planets(), set_planet_provider(),
  *     set_planet_provider_hp()
@@ -834,7 +1172,7 @@ int obs_planets(double jd_tdb, enum novas_accuracy accuracy, const double *restr
   // Set up the structures of type 'object' containing the body information.
   if(!initialized) {
     for(i = 0; i < NOVAS_PLANETS; i++)
-      make_planet(i, &body[i]);
+      make_planet((enum novas_planet) i, &body[i]);
     initialized = 1;
   }
 
@@ -865,14 +1203,16 @@ int obs_planets(double jd_tdb, enum novas_accuracy accuracy, const double *restr
   // Re-enable debug traces
   novas_debug(dbmode);
 
-  // If could not calculate deflection due to Sun, return with error
-  if((planets->mask & (1 << NOVAS_SUN)) == 0)
-    prop_error("grav_init_planet:sun", error, 0);
+  if(error) {
+    // If could not calculate deflection due to Sun, return with error
+    if((pl_mask & (1 << NOVAS_SUN)) != 0 && (planets->mask & (1 << NOVAS_SUN)) == 0)
+      return novas_error(error, EAGAIN, "obs_planets", "Missing required Sun position");
 
-  // If could not get positions for another gravitating body then
-  // return error only if in extra debug mode...
-  if(planets->mask != pl_mask && novas_get_debug_mode() == NOVAS_DEBUG_EXTRA)
-    prop_error(fn, error, 0);
+    // If could not get positions for another gravitating body then
+    // return error only if in extra debug mode...
+    if(planets->mask != pl_mask && novas_get_debug_mode() == NOVAS_DEBUG_EXTRA)
+      return novas_trace(fn, error, 0);
+  }
 
   return 0;
 }
@@ -883,11 +1223,10 @@ int obs_planets(double jd_tdb, enum novas_accuracy accuracy, const double *restr
  * this returns the antedated source velocity vector also.
  *
  * NOTES:
- * <ol>
- * <li>This function is called by `novas_geom_posvel()` or `place()` to calculate observed
- * positions, radial velocity, and distance for the time when the observed light originated
- * from the source.</li>
- * </ol>
+ *
+ *  1. This function is called by `novas_geom_posvel()` or `place()` to calculate observed
+ *     positions, radial velocity, and distance for the time when the observed light originated
+ *     from the source.
  *
  * @param jd_tdb          [day] Barycentric Dynamical Time (TDB) based Julian date
  * @param body            Pointer to structure containing the designation for the solar system
@@ -895,7 +1234,7 @@ int obs_planets(double jd_tdb, enum novas_accuracy accuracy, const double *restr
  * @param pos_obs         [AU] Position 3-vector of observer (or the geocenter), with respect
  *                        to origin at solar system barycenter, referred to ICRS axes.
  * @param tlight0         [day] First approximation to light-time (can be set to 0.0 if not
- *                        readily avasilable -- so it will be calculated as needed).
+ *                        readily available -- so it will be calculated as needed).
  * @param accuracy        NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
  * @param[out] p_src_obs  [AU] Position 3-vector of body, relative to observer, referred to ICRS
  *                        axes, components in AU.
@@ -919,7 +1258,7 @@ int light_time2(double jd_tdb, const object *restrict body, const double *restri
   static const char *fn = "light_time2";
   int iter = 0;
 
-  double tol, jd[2] = {0};
+  double tol, jd[2] = {0.0};
 
   if(!tlight)
     return novas_error(-1, EINVAL, fn, "NULL 'tlight' output pointer");
@@ -951,6 +1290,7 @@ int light_time2(double jd_tdb, const object *restrict body, const double *restri
     double dt = 0.0;
 
     error = ephemeris(jd, body, NOVAS_BARYCENTER, accuracy, p_src_obs, v_ssb);
+
     bary2obs(p_src_obs, pos_obs, p_src_obs, tlight);
     prop_error(fn, error, 10);
 
@@ -981,7 +1321,7 @@ int light_time2(double jd_tdb, const object *restrict body, const double *restri
  *                            as either of the inputs.
  * @param[out] tlight [day] Calculated light time
  *
- * @return            0 if successful, -1 if any of the poiinter arguments is NULL, 1 if the
+ * @return            0 if successful, -1 if any of the pointer arguments is NULL, 1 if the
  *                    algorithm failed to converge after 10 iterations, or 10 + the error from
  *                    ephemeris().
  *
@@ -992,322 +1332,6 @@ short light_time(double jd_tdb, const object *restrict body, const double *pos_o
   double vel[3];
   prop_error("light_time", light_time2(jd_tdb, body, pos_obs, tlight0, accuracy, pos_src_obs, vel, tlight), 0);
   return 0;
-}
-
-/**
- * Converts a 3D line-of-sight vector (&delta;&phi;, &delta;&theta; &delta;r) to a rectangular
- * equatorial (&delta;x, &delta;y, &delta;z) vector.
- *
- * @param los         [arb.u.] Line-of-sight 3-vector (&delta;&phi;, &delta;&theta; &delta;r).
- * @param lon         [deg] Line-of-sight longitude.
- * @param lat         [deg] Line-of-sight latitude.
- * @param[out] xyz    [arb.u.] Output rectangular equatorial 3-vector (&delta;x, &delta;y, &delta;z),
- *                    in the same units as the input. It may be the same vector as the input.
- * @return            0 if successful, or else -1 if either vector argument is NULL (errno will be
- *                    set to EINVAL).
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_xyz_to_los(), novas_uvw_to_xyz()
- */
-int novas_los_to_xyz(const double *los, double lon, double lat, double *xyz) {
-  static const char *fn = "novas_los_to_xyz";
-
-  double slon, clon, slat, clat;
-  double dlon, dlat, dr, clatdr_m_slatdlat;
-
-  if(!xyz)
-    return novas_error(-1, EINVAL, fn, "output xyz vector is NULL");
-
-  if(xyz != los)
-    memset(xyz, 0, XYZ_VECTOR_SIZE);
-
-  if(!los)
-    return novas_error(-1, EINVAL, fn, "input los vector is NULL");
-
-  lon *= DEGREE;
-  lat *= DEGREE;
-
-  slon = sin(lon);
-  clon = cos(lon);
-  slat = sin(lat);
-  clat = cos(lat);
-
-  dlon = los[0];
-  dlat = los[1];
-  dr = los[2];
-
-  clatdr_m_slatdlat = clat * dr - slat * dlat;
-
-  // Transform motion vector to equatorial system.
-  xyz[0] = clon * clatdr_m_slatdlat - slon * dlon;
-  xyz[1] = clon * dlon + slon * clatdr_m_slatdlat;
-  xyz[2] = clat * dlat + slat * dr;
-
-  return 0;
-}
-
-/**
- * Converts a 3D rectangular equatorial (&delta;x, &delta;y, &delta;z) vector to a polar
- * (&delta;&phi;, &delta;&theta; &delta;r) vector along a line-of-sight.
- *
- * @param xyz         [arb.u.] Rectangular equatorial 3-vector (&delta;x, &delta;y, &delta;z).
- * @param lon         [deg] Line-of-sight longitude.
- * @param lat         [deg] Line-of-sight latitude.
- * @param[out] los    [arb.u.] Output line-of-sight 3-vector (&delta;&phi;, &delta;&theta;
- *                    &delta;r), in the same units as the input. It may be the same vector as the
- *                    input.
- * @return            0 if successful, or else -1 if either vector argument is NULL (errno will be
- *                    set to EINVAL).
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_los_to_xyz(), novas_xyz_to_uvw()
- */
-int novas_xyz_to_los(const double *xyz, double lon, double lat, double *los) {
-  static const char *fn = "novas_xyz_to_los";
-
-  double slon, clon, slat, clat;
-  double x, y, z, clonx_slony;
-
-  if(!los)
-    return novas_error(-1, EINVAL, fn, "output los vector is NULL");
-
-  if(los != xyz)
-    memset(los, 0, XYZ_VECTOR_SIZE);
-
-  if(!xyz)
-    return novas_error(-1, EINVAL, fn, "input xyz vector is NULL");
-
-  lon *= DEGREE;
-  lat *= DEGREE;
-
-  slon = sin(lon);
-  clon = cos(lon);
-  slat = sin(lat);
-  clat = cos(lat);
-
-  x = xyz[0];
-  y = xyz[1];
-  z = xyz[2];
-
-  clonx_slony = clon * x + slon * y;
-
-  // Transform motion vector to equatorial system.
-  los[0] = clon * y - slon * x;
-  los[1] = clat * z - slat * clonx_slony;
-  los[2] = clat * clonx_slony + slat * z;
-
-  return 0;
-}
-
-/**
- * Converts rectangular telescope x,y,z (absolute or relative) coordinates (in ITRS) to equatorial
- * u,v,w projected coordinates for a specified line of sight.
- *
- * x,y,z are Cartesian coordinates w.r.t the Greenwich meridian, in the ITRS frame. The directions
- * are x: long=0, lat=0; y: long=90, lat=0; z: lat=90.
- *
- * u,v,w are Cartesian coordinates (u,v) along the local equatorial R.A. and declination
- * directions as seen from a direction on the sky (w). As such, they are effectively ITRS-based
- * line-of-sight (LOS) coordinates.
- *
- * @param xyz           [arb.u.] Absolute or relative x,y,z coordinates (double[3]).
- * @param ha            [h] Hourangle (LST - RA) i.e., the difference between the Local (apparent)
- *                      Sidereal Time and the apparent (true-of-date) Right Ascension of observed
- *                      source.
- * @param dec           [deg] Apparent (true-of-date) declination of source
- * @param[out] uvw      [arb.u.] Converted u,v,w coordinates (double[3]) in same units as xyz.
- *                      It may be the same vector as the input.
- *
- * @return              0 if successful, or else -1 if either vector argument is NULL (errno will
- *                      be set to EINVAL)
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_uvw_to_xyz()
- */
-int novas_xyz_to_uvw(const double *xyz, double ha, double dec, double *uvw) {
-  prop_error("novas_xyz_to_uvw", novas_xyz_to_los(xyz, -15.0 * ha, dec, uvw), 0);
-  return 0;
-}
-
-/**
- * Converts equatorial u,v,w projected (absolute or relative) coordinates to rectangular telescope
- * x,y,z coordinates (in ITRS) to for a specified line of sight.
- *
- * u,v,w are Cartesian coordinates (u,v) along the local equatorial R.A. and declination
- * directions as seen from a direction on the sky (w). As such, they are effectively ITRS-based
- * line-of-sight (LOS) coordinates.
- *
- * x,y,z are Cartesian coordinates w.r.t the Greenwich meridian in the ITRS frame. The directions
- * are x: long=0, lat=0; y: long=90, lat=0; z: lat=90.
- *
- * @param xyz           [arb.u.] Absolute or relative u,v,w coordinates (double[3]).
- * @param ha            [h] Hourangle (LST - RA) i.e., the difference between the Local (apparent)
- *                      Sidereal Time and the apparent (true-of-date) Right Ascension of observed
- *                      source.
- * @param dec           [deg] Apparent (true-of-date) declination of source
- * @param[out] uvw      [arb.u.] Converted x,y,z coordinates (double[3]) in the same unit as uvw.
- *                      It may be the same vector as the input.
- *
- * @return              0 if successful, or else -1 if either vector argument is NULL
- *                      (errno will be set to EINVAL)
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_xyz_to_uvw()
- */
-int novas_uvw_to_xyz(const double *uvw, double ha, double dec, double *xyz) {
-  prop_error("novas_uvw_to_xyz", novas_los_to_xyz(uvw, -15.0 * ha, dec, xyz), 0);
-  return 0;
-}
-
-/**
- * Returns the horizontal Parallactic Angle (PA) calculated for a gorizontal Az/El location of the
- * sky. The PA is the angle between the local horizontal coordinate directions and the local
- * true-of-date equatorial coordinate directions at the given location. The polar wobble is not
- * included in the calculation.
- *
- * The Parallactic Angle is sometimes referrred to as the Vertical Position Angle (VPA). Both
- * define the same quantity.
- *
- * @param az    [deg] Azimuth angle
- * @param el    [deg] Elevation angle
- * @param lat   [deg] Geodetic latitude of observer
- * @return      [deg] Parallactic Angle (PA). I.e., the clockwise position angle of the
- *              declination direction w.r.t. the elevation axis in the horizontal system. Same as
- *              the the clockwise position angle of the elevation direction w.r.t. the declination
- *              axis in the equatorial system.
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_epa(), novas_h2e_offset()
- */
-double novas_hpa(double az, double el, double lat) {
-  double s, c;
-
-  lat *= DEGREE;
-  az *= DEGREE;
-  el *= DEGREE;
-
-  s = sin(lat);
-  c = cos(lat);
-
-  return atan2(-c * sin(az), s * cos(el) - c * sin(el) * cos(az)) / DEGREE;
-}
-
-/**
- * Returns the equatorial Parallactic Angle (PA) calculated for an R.A./Dec location of the sky at
- * a given sidereal time. The PA is the angle between the local horizontal coordinate directions
- * and the local true-of-date equatorial coordinate directions, at the given location and time.
- * The polar wobble is not included in the calculation.
- *
- * The Parallactic Angle is sometimes referrred to as the Vertical Position Angle (VPA). Both
- * define the same quantity.
- *
- * @param ha      [h] Hour angle (LST - RA) i.e., the difference between the Local (apparent)
- *                Sidereal Time and the apparent (true-of-date) Right Ascension of observed
- *                source.
- * @param dec     [deg] Apparent (true-of-date) declination of observed source
- * @param lat     [deg] Geodetic latitude of observer
- * @return        [deg] Parallactic Angle (PA). I.e., the clockwise position angle of the
- *                elevation direction w.r.t. the declination axis in the equatorial system. Same
- *                as the clockwise position angle of the declination direction w.r.t. the
- *                elevation axis, in the horizontal system.
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_hpa(), novas_e2h_offset()
- */
-double novas_epa(double ha, double dec, double lat) {
-  double coslat;
-
-  ha *= HOURANGLE;
-  lat *= DEGREE;
-  dec *= DEGREE;
-
-  coslat = cos(lat);
-  return atan2(coslat * sin(ha), sin(lat) * cos(dec) - coslat * sin(dec) * cos(ha)) / DEGREE;
-}
-
-/**
- * Converts coordinate offsets, from the local horizontal system to local equatorial offsets.
- * Converting between local flat projections and spherical coordinates usually requires a WCS
- * projection.
- *
- * REFERENCES:
- * <ol>
- * <li>Calabretta, M.R., &amp; Greisen, E.W., (2002), Astronomy &amp; Astrophysics, 395, 1077-1122.</li>
- * </ol>
- *
- * @param daz         [arcsec] Projected offset position in the azimuth direction. The projected
- *                    offset between two azimuth positions at the same reference elevation is
- *                    &delta;Az = (Az2 - Az1) * cos(El<sub>0</sub>).
- * @param del         [arcsec] projected offset position in the elevation direction
- * @param pa          [deg] Parallactic Angle
- * @param[out] dra    [arcsec] Output offset position in the local true-of-date R.A. direction. It
- *                    can be a pointer to one of the input coordinates, or NULL if not required.
- * @param[out] ddec   [arcsec] Output offset position in the local true-of-date declination
- *                    direction. It can be a pointer to one of the input coordinates, or NULL if
- *                    not required.
- * @return            0
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_e2h_offset(), novas_hpa()
- */
-int novas_h2e_offset(double daz, double del, double pa, double *restrict dra, double *restrict ddec) {
-  double dx = daz, dy = del, c, s;
-
-  pa *= DEGREE;
-  c = cos(pa);
-  s = sin(pa);
-
-  if(dra)
-    *dra =  s * dy - c * dx;
-  if(ddec)
-    *ddec = s * dx + c * dy;
-
-  return 0;
-}
-
-/**
- * Converts coordinate offsets, from the local equatorial system to local horizontal offsets.
- * Converting between local flat projections and spherical coordinates usually requires a WCS
- * projection.
- *
- * REFERENCES:
- * <ol>
- * <li>Calabretta, M.R., &amp; Greisen, E.W., (2002), Astronomy &amp; Astrophysics, 395, 1077-1122.</li>
- * </ol>
- *
- * @param dra         [arcsec] Projected ffset position in the apparent true-of-date R.A.
- *                    direction. E.g. The projected offset between two RA coordinates at a same
- *                    reference declination, is &delta;RA = (RA2 - RA1) * cos(Dec<sub>0</sub>).
- * @param ddec        [arcsec] Projected offset position in the apparent true-of-date declination
- *                    direction.
- * @param pa          [deg] Parallactic Angle
- * @param[out] daz    [arcsec] Output offset position in the local azimuth direction. It can be a
- *                    pointer to one of the input coordinates, or NULL if not required.
- * @param[out] del    [arcsec] Output offset position in the local elevation direction. It can be a
- *                    pointer to one of the input coordinates, or NULL if not required.
- * @return            0
- *
- * @since 1.3
- * @author Attila Kovacs
- *
- * @sa novas_h2e_offset(), novas_epa()
- */
-int novas_e2h_offset(double dra, double ddec, double pa, double *restrict daz, double *restrict del) {
-  return novas_h2e_offset(dra, ddec, pa, daz, del);
 }
 
 /**
@@ -1323,12 +1347,10 @@ int novas_e2h_offset(double dra, double ddec, double pa, double *restrict daz, d
  * a best guess default model of sorts.
  *
  * REFERENCES:
- * <ol>
- * <li>Feulner, G., Rahmstorf, S., Levermann, A., and Volkwardt, S. (2013), Journal of Climate 26, 7136</li>
- * <li>Mendez-Astudillo, J., et al. (2021), Urban Heat Island (UHI) Mitigation (pp.43-59),
- * DOI:10.1007/978-981-33-4050-3_3
- * </li>
- * </ol>
+ *
+ *  1. Feulner, G., Rahmstorf, S., Levermann, A., and Volkwardt, S. (2013), Journal of Climate 26, 7136
+ *  2. Mendez-Astudillo, J., et al. (2021), Urban Heat Island (UHI) Mitigation (pp.43-59),
+ *     DOI:10.1007/978-981-33-4050-3_3
  *
  * @param[in, out] site       Site containing geodetic loation as input, and poulated with typical
  *                            mean weather parameters for the output.
@@ -1366,3 +1388,168 @@ int novas_set_default_weather(on_surface *site) {
 
   return 0;
 }
+
+/**
+ * Returns _u_,_v_,_w_ coordinates for a space-based interferometer station. That is, it returns
+ * the _u_,_v_,_w_ coordinates of this astrometric place (of a station), measured relative to a
+ * reference point (array reference), for a given apparent line-of-sight on the sky (source) at
+ * the same time as when the station location is defined. The _u_ and _v_ coordinates are the
+ * projections of the site in the direction of the local East and North respectively, as seen
+ * from the source, relative to the array reference, while _w_ is the distance (inverse delay)
+ * from the array reference along the line of sight.
+ *
+ * For space-based interferometers, this astrometric place can represent the momentary position of
+ * a station, relative to the array reference. As such, the returned  _uvw_ coordinates are
+ * relative to the array reference.
+ *
+ *
+ * @param station_pos     [AU] 3D position vector of interferometric station, relative to the
+ *                        array reference. It can be defined in any system, as long as the
+ *                        phase center is defined in the same coordinate reference system.
+ * @param station_vel     [AU/day] 3D position vector of interferometric station, relative to the
+ *                        array reference, in the same coordinate reference system as the
+ *                        position. It may be NULL for a station that is not moving relative
+ *                        to the array reference.
+ * @param phase_center    [AU] %Apparent position vector of the interferometric phase center
+ *                        (observed source), as seen from the reference location at the time of
+ *                        observation, in the same coordinate reference system, in which the
+ *                        station vectors are defined.
+ * @param[out] uvw        [m] output _u_, _v_, _w_ coordinates, relative to reference place.
+ *                        The _u_, and _v_ coordinates are aligned with the local East and
+ *                        North directions in the system, in which the coordinates were
+ *                        specified.
+ * @return                0 if successful or else -1 if the station position or phase center is
+ *                        NULL (errno will be set to EINVAL).
+ *
+ * @since 1.6
+ * @author Attila Kovacs
+ *
+ * @sa novas_site_uvw()
+ */
+int novas_uvw(const double *restrict station_pos, const double *restrict station_vel, const double *restrict phase_center,
+        double *restrict uvw) {
+  static const char *fn = "novas_uvw";
+
+  double los[3] = {0.0};
+  double ra = 0.0, dec = 0.0;
+  int i;
+
+  if(!station_pos)
+    return novas_error(-1, EINVAL, fn, "input observer station is NULL");
+
+  if(!phase_center)
+    return novas_error(-1, EINVAL, fn, "input phase_center is NULL");
+
+  if(!uvw)
+    return novas_error(-1, EINVAL, fn, "output uvw position is NULL");
+
+  // Calculate station line-of-sight, and convert velocity to AU/day
+  for(i = 0; i < 3; i++)
+    los[i] = phase_center[i] - station_pos[i];
+
+  // Correct for aberration as necessary for a moving station, relative to array reference.
+  if(station_vel)
+    aberration(los, station_vel, 0.0, los);
+
+  // Line-of-sight projection
+  vector2radec(los, &ra, &dec);
+  novas_xyz_to_los(station_pos, 15.0 * ra, dec, uvw);
+
+  for(i = 0; i < 3; i++)
+    uvw[i] *= NOVAS_AU;
+
+  return 0;
+}
+
+/**
+ * Returns geocentric _u_,_v_,_w_ coordinates for a ground-based interferometer station. That is,
+ * it returns _u_,_v_,_w_ coordinates, for a geodetic station, relative to the geocenter, for a
+ * given apparent line-of-sight on the sky, observed at the specified time. The _u_ and _v_
+ * coordinates are the projections of the site in the GCRS direction of the local East and North
+ * respectively, as seen from the source, relative to the geocenter, while _w_ is the distance
+ * (inverse delay) from the geocenter along the line of sight.
+ *
+ * For interferometers, each station is its own specific site, and the array is usually referenced
+ * to one of the stations, or to some other reference location (a virtual site). As such, one
+ * is typically interested in _uvw_ coordinates relative to the reference position, which can be
+ * obtained from the geocentric _uvw_ provided by this method, via simple vector differencing.
+ *
+ * NOTES:
+ *
+ *  1. This method supports down to nanometer precision for sites on Earth or in Low Earth Orbit
+ *     (LEO), and sub-micron (&lt;&mu;m) precision even at the distance of the Moon. However,
+ *     because its calculations are based on geocentric positions, the precision degrades with
+ *     increasing distance from Earth, and may not be suitable for interferometers far from Earth.
+ *     When precision is a concern, you might use the more generic `novas_uvw()` instead, with
+ *     positions (and velocities) of the stations defined relative to the array center -- enabling
+ *     higher precision projections than this function.
+ *
+ * @param ts                  Astrometric time of observation.
+ * @param station             Interferometric station site.
+ * @param geocentric_source   [AU] %Apparent true-of-date (TOD) position of a source, as seen from
+ *                            the geocenter at the time of observation.
+ * @param xp                  [arcsec] IERS polar offset _x_<sub>p</sub>, such as obtained from
+ *                            the IERS bulletins or online service.
+ * @param yp                  [arcsec] IERS polar offset _y_<sub>p</sub>, such as obtained from
+ *                            the IERS bulletins or online service.
+ * @param accuracy            NOVAS_FULL_ACCYRACY (0) or NOVAS_REDUCED_ACCURACY (1)
+ * @param[out] uvw            [m] output _u_, _v_, _w_ coordinates, relative to geocenter, the
+ *                            _u_, and _v_ coordinates are aligned with the local East and
+ *                            North directions in the GCRS.
+ * @return                    0 if successful or else -1 if any of the pointer arguments are NULL
+ *                            or if the accuracy is invalid (errno will be set to EINVAL).
+ * @since 1.6
+ * @author Attila Kovacs
+ *
+ * @sa novas_uvw()
+ */
+int novas_site_uvw(const novas_timespec *restrict ts, const on_surface *restrict station, const double *restrict geocentric_source,
+        double xp, double yp, enum novas_accuracy accuracy, double *restrict uvw) {
+  static const char *fn = "novas_site_uvw";
+
+  double p[3] = {0.0}, v[3] = {0.0}, los[3] = {0.0};
+
+  if(novas_site_gcrs_posvel(ts, station, NULL, xp, yp, accuracy, p, v) != 0)
+    return novas_trace(fn, -1, 0);
+
+  tod_to_gcrs(novas_get_time(ts, NOVAS_TDB), accuracy, geocentric_source, los);
+  prop_error(fn, novas_uvw(p, v, los, uvw), 0);
+
+  return 0;
+}
+
+/**
+ * A novas_state_provider adapter function for planets, ephemeris objects, or Keplerian orbital
+ * objects. It routes the observer position / velocity to an ephemeris() call.
+ *
+ * @param jd_tdb        The Barycentric Dynamic Time (TDB) based Julian date
+ * @param accuracy      NOVAS_FULL_ACCURACY or NOVAS_REDUCED_ACCURACY
+ * @param p_object      Pointer to the Solar-system body definition of `novas_object` type.
+ * @param[out] ssb_pos  [AU] The output ICRS equatorial position vector with respect to the Solar
+ *                      System Barycenter (SSB)
+ * @param[out] ssb_vel  [AU/day] the output ICRS equatorial velocity vector with respect to the
+ *                      Solar System Barycenter (SSB)
+ *
+ * @return          0 if successful or else -1 in there is an error (errno should be set
+ *                  appropriately to indicate the type of error).
+ *
+ * @since 1.8
+ *
+ * @sa novas_state_provider(), ephemeris()
+ */
+int novas_ephem_state(double jd_tdb, enum novas_accuracy accuracy, const void *p_object, double *restrict ssb_pos, double *restrict ssb_vel) {
+  static const char *fn = "novas_ephem_state";
+
+  const double tdb2[] = { jd_tdb, 0.0 };
+
+  if(!p_object)
+    return novas_error(-1, EINVAL, fn, "input object pointer is NULL");
+
+  if(!ssb_pos || !ssb_vel)
+    return novas_error(-1, EINVAL, fn, "NULL output vector: pos = %p, vel = %p", ssb_pos, ssb_vel);
+
+  prop_error(fn, ephemeris(tdb2, (const object *) p_object, NOVAS_BARYCENTER, accuracy, ssb_pos, ssb_vel), 0);
+  return 0;
+}
+
+

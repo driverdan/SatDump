@@ -1,11 +1,13 @@
 /**
  * @file
  *
+ * Various functions to deal with gravitational effects of the major Solar-system bodies on
+ * the astrometry.
+ *
  * @date Created  on Mar 6, 2025
  * @author Attila Kovacs and G. Kaplan
  *
- *  Various functions to deal with gravitational effects of the major Solar-system bodies on
- *  the astrometry.
+ * @sa solsys-calceph.c, solsys-cspice.c, ephemeris.c
  */
 
 #include <string.h>
@@ -13,8 +15,9 @@
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
+
+#include "novas.h"
 
 // Defined in novas.h
 int grav_bodies_reduced_accuracy = DEFAULT_GRAV_BODIES_REDUCED_ACCURACY;
@@ -23,28 +26,28 @@ int grav_bodies_reduced_accuracy = DEFAULT_GRAV_BODIES_REDUCED_ACCURACY;
 int grav_bodies_full_accuracy = DEFAULT_GRAV_BODIES_FULL_ACCURACY;
 
 /**
- * Computes the total gravitational deflection of light for the observed object due to the
- * major gravitating bodies in the solar system.  This function valid for an observed body
- * within the solar system as well as for a star.
+ * (_primarily for internal use_) Computes the total gravitational deflection of light for
+ * the observed object due to the major gravitating bodies in the solar system.  This function
+ * valid for an observed body within the solar system as well as for a star.
  *
  * If 'accuracy' is NOVAS_FULL_ACCURACY (0), the deflections due to the Sun, Jupiter, Saturn,
  * and Earth are calculated.  Otherwise, only the deflection due to the Sun is calculated.
  * In either case, deflection for a given body is ignored if the observer is within ~1500 km
  * of the center of the gravitating body.
  *
+ * The number of bodies used at full and reduced accuracy can be set by changing the
+ * `grav_bodies_reduced_accuracy`, and `grav_bodies_full_accuracy` lobal variables.
+ *
  * NOTES:
- * <ol>
- * <li>This function is called by place() and `novas_sky_pos()` to calculate gravitational
- * deflections as appropriate for positioning sources precisely. The gravitational deflection due
- * to planets requires a planet calculator function to be configured, e.g.
- * via set_planet_provider().
- * </li>
- * </ol>
+ *
+ *  1. This function is called by `novas_sky_pos()`, `novas_app_to_geom()`, `novas_geom_to_app()`
+ *     and `place()` to calculate gravitational deflections as appropriate for positioning sources
+ *     precisely. The gravitational deflection due to planets requires a planet calculator function to
+ *     be configured, e.g. via set_planet_provider_hp().
  *
  * REFERENCES:
- * <ol>
- * <li>Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.</li>
- * </ol>
+ *
+ *  1. Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.
  *
  * @param jd_tdb      [day] Barycentric Dynamical Time (TDB) based Julian date
  * @param unused      The type of observer frame (no longer used)
@@ -67,12 +70,8 @@ int grav_bodies_full_accuracy = DEFAULT_GRAV_BODIES_FULL_ACCURACY;
  *                    obs_planets().
  *
  * @sa grav_undef()
- * @sa novas_geom_to_app()
- * @sa novas_app_to_geom()
- * @sa set_planet_provider()
- * @sa set_planet_provider_hp()
- * @sa grav_bodies_full_accuracy
- * @sa grav_bodies_reduced_accuracy
+ * @sa novas_sky_pos(), novas_geom_to_app(), novas_app_to_geom(), set_planet_provider_hp(),
+ *     grav_bodies_full_accuracy, grav_bodies_reduced_accuracy
  */
 short grav_def(double jd_tdb, enum novas_observer_place unused, enum novas_accuracy accuracy, const double *pos_src, const double *pos_obs,
         double *out) {
@@ -92,23 +91,20 @@ short grav_def(double jd_tdb, enum novas_observer_place unused, enum novas_accur
 }
 
 /**
- * Corrects position vector for the deflection of light in the gravitational field of an
- * arbitrary body.  This function valid for an observed body within the solar system as
- * well as for a star.
+ * (_primarily for internal use_) Corrects position vector for the deflection of light in the
+ * gravitational field of anarbitrary body.  This function valid for an observed body within the
+ * solar system as well as for a star.
  *
  * NOTES:
- * <ol>
- * <li>This function is called by grav_def() to calculate appropriate gravitational
- * deflections for sources.
- * </li>
- * </ol>
+ *
+ *  1. This function is called by grav_def() to calculate appropriate gravitational deflections
+ * around the massive Solar-system objects.
  *
  * REFERENCES:
- * <ol>
- * <li>Murray, C.A. (1981) Mon. Notices Royal Ast. Society 195, 639-648.</li>
- * <li>See also formulae in Section B of the Astronomical Almanac, or</li>
- * <li>Kaplan, G. et al. (1989) Astronomical Journal 97, 1197-1210, section iii f.</li>
- * </ol>
+ *
+ *  1. Murray, C.A. (1981) Mon. Notices Royal Ast. Society 195, 639-648.
+ *  2. See also formulae in Section B of the Astronomical Almanac, or
+ *  3. Kaplan, G. et al. (1989) Astronomical Journal 97, 1197-1210, section iii f.
  *
  * @param pos_src   [AU] Position 3-vector of observed object, with respect to origin at
  *                  observer (or the geocenter), components in AU.
@@ -171,7 +167,7 @@ int grav_vec(const double *pos_src, const double *pos_obs, const double *pos_bod
     const double qdote = novas_vdot(qhat, ehat);
 
     // Compute scalar factors.
-    const double fac1 = 2.0 * GS / (C * C * emag * AU * rmass);
+    const double fac1 = 2.0 * GS / (NOVAS_C2 * emag * NOVAS_AU * rmass);
     const double fac2 = 1.0 + qdote;
 
     // Construct corrected position vector 'pos2'.
@@ -183,13 +179,12 @@ int grav_vec(const double *pos_src, const double *pos_obs, const double *pos_bod
 }
 
 /**
- * Computes the gravitationally undeflected position of an observed source position due to the
- * specified Solar-system bodies.
+ * (_primarily for internal use_) Computes the gravitationally undeflected position of an
+ * observed source position due to the specified Solar-system bodies.
  *
  * REFERENCES:
- * <ol>
- * <li>Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.</li>
- * </ol>
+ *
+ *  1. Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.
  *
  * @param pos_app     [AU] Apparent position 3-vector of observed object, with respect to origin at
  *                    observer (or the geocenter), referred to ICRS axes, components
@@ -205,9 +200,8 @@ int grav_vec(const double *pos_src, const double *pos_obs, const double *pos_bod
  *                    the same as pos_obs.
  * @return            0 if successful, -1 if any of the pointer arguments is NULL.
  *
- * @sa obs_planets()
- * @sa grav_planets()
- * @sa novas_app_to_geom()
+ * @sa grav_planets(), grav_undef()
+ * @sa novas_app_to_geom(), obs_planets()
  *
  * @since 1.1
  * @author Attila Kovacs
@@ -256,22 +250,21 @@ int grav_undo_planets(const double *pos_app, const double *pos_obs, const novas_
 }
 
 /**
- * Computes the gravitationally undeflected position of an observed source position due to the
- * major gravitating bodies in the solar system.  This function valid for an observed body within
- * the solar system as well as for a star.
+ * (_primarily for internal use_) Computes the gravitationally undeflected position of an
+ * observed source position due to the major gravitating bodies in the solar system. This
+ * function is valid for an observed body within the solar system as well as for a star.
  *
  * If 'accuracy' is set to zero (full accuracy), three bodies (Sun, Jupiter, and Saturn) are
  * used in the calculation.  If the reduced-accuracy option is set, only the Sun is used in
  * the calculation.  In both cases, if the observer is not at the geocenter, the deflection
  * due to the Earth is included.
  *
- * The number of bodies used at full and reduced accuracy can be set by making a change to
- * the code in this function as indicated in the comments.
+ * he number of bodies used at full and reduced accuracy can be set by changing the
+ * `grav_bodies_reduced_accuracy`, and `grav_bodies_full_accuracy` global variables.
  *
  * REFERENCES:
- * <ol>
- * <li>Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.</li>
- * </ol>
+ *
+ *  1. Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.
  *
  * @param jd_tdb      [day] Barycentric Dynamical Time (TDB) based Julian date
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
@@ -290,11 +283,8 @@ int grav_undo_planets(const double *pos_app, const double *pos_obs, const novas_
  *                    obs_planets().
  *
  * @sa grav_def()
- * @sa novas_app_to_geom()
- * @sa set_planet_provider()
- * @sa set_planet_provider_hp()
- * @sa grav_bodies_full_accuracy
- * @sa grav_bodies_reduced_accuracy
+ * @sa novas_app_to_geom(), set_planet_provider_hp(),  grav_bodies_full_accuracy,
+ *     grav_bodies_reduced_accuracy
  *
  * @since 1.1
  * @author Attila Kovacs
@@ -314,20 +304,18 @@ int grav_undef(double jd_tdb, enum novas_accuracy accuracy, const double *pos_ap
 }
 
 /**
- * Computes the total gravitational deflection of light for the observed object due to the
- * specified gravitating bodies in the solar system.  This function is valid for an observed body
- * within the solar system as well as for a star.
+ * (_primarily for internal use_) Computes the total gravitational deflection of light for
+ * the observed object due to the specified gravitating bodies in the solar system. This function
+ * is valid for an observed body within the solar system as well as for a star.
  *
  * NOTES:
- * <ol>
- * <li>The gravitational deflection due to planets requires a planet calculator function to be
- * configured, e.g. via set_planet_provider().</li>
- * </ol>
+ *
+ *  1. The gravitational deflection due to planets requires a planet calculator function to be
+ *     configured, e.g. via set_planet_provider_hp().
  *
  * REFERENCES:
- * <ol>
- * <li>Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.</li>
- * </ol>
+ *
+ *  1. Klioner, S. (2003), Astronomical Journal 125, 1580-1597, Section 6.
  *
  * @param pos_src     [AU] Position 3-vector of observed object, with respect to origin at
  *                    observer (or the geocenter), referred to ICRS axes, components
@@ -344,12 +332,8 @@ int grav_undef(double jd_tdb, enum novas_accuracy accuracy, const double *pos_ap
  * @return            0 if successful, -1 if any of the pointer arguments is NULL
  *                    or if the output vector is the same as pos_obs.
  *
- * @sa obs_planets()
- * @sa grav_undo_planets()
- * @sa grav_def()
- * @sa novas_geom_to_app()
- * @sa grav_bodies_full_accuracy
- * @sa grav_bodies_reduced_accuracy
+ * @sa grav_def(), grav_undo_planets()
+ * @sa novas_sky_pos(), novas_geom_to_app(), obs_planets()
  *
  * @since 1.1
  * @author Attila Kovacs
@@ -418,23 +402,21 @@ int grav_planets(const double *pos_src, const double *pos_obs, const novas_plane
 }
 
 /**
- * Returns the gravitational redshift (_z_) for light emitted near a massive spherical body
- * at some distance from its center, and observed at some very large (infinite) distance away.
+ * Returns the gravitational redshift (_z_) for light emitted near a massive spherical body at
+ * some distance from its center, and observed at some very large (infinite) distance away.
  *
  * @param M_kg    [kg] Mass of gravitating body that is contained inside the emitting radius.
  * @param r_m     [m] Radius at which light is emitted.
  * @return        The gravitational redshift (_z_) for an observer at very large  (infinite)
  *                distance from the gravitating body.
  *
- * @sa redshift_vrad()
- * @sa unredshift_vrad()
- * @sa novas_z_add()
+ * @sa redshift_vrad(), unredshift_vrad(), novas_z_add()
  *
  * @since 1.2
  * @author Attila Kovacs
  */
 double grav_redshift(double M_kg, double r_m) {
-  static const double twoGoverC2 = 2.0 * 6.6743e-11 / (C * C); // 2G/c^2 in SI units.
+  static const double twoGoverC2 = 2.0 * 6.6743e-11 / NOVAS_C2; // 2G/c^2 in SI units.
   return 1.0 / sqrt(1.0 - twoGoverC2 * M_kg / r_m) - 1.0;
 }
 

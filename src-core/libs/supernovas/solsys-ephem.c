@@ -1,15 +1,12 @@
 /**
  * @file
  *
- * SuperNOVAS major planet ephemeris handler via the same generic ephemeris reader that is
- * configured by set_ephem_provider() prior to calling this routine.
+ * Major planet ephemeris lookup via the function, which was configured by set_ephem_provider().
  *
  * @date Created  on Jan 29, 2024
  * @author Attila Kovacs
  *
- * @sa solarsystem.h
- * @sa solsys-calceph.c
- * @sa solsys-cspice.c
+ * @sa ephemeris.c, solsys-calceph.c, solsys-cspice.c, orbital.c
  */
 
 #include <errno.h>
@@ -56,7 +53,7 @@ short planet_ephem_provider_hp(const double jd_tdb[restrict 2], enum novas_plane
   if(origin != NOVAS_BARYCENTER && origin != NOVAS_HELIOCENTER)
     return novas_error(1, EINVAL, fn, "invalid origin: %d", origin);
 
-  if(body < 0 || body >= NOVAS_PLANETS)
+  if((unsigned) body >= NOVAS_PLANETS)
     return novas_error(-1, EINVAL, fn, "planet number %d out of range [0:%d]", body, NOVAS_PLANETS - 1);
 
   prop_error(fn, ephem_call(names[body], body, jd_tdb[0], jd_tdb[1], &o, position, velocity), 0);
@@ -82,7 +79,8 @@ short planet_ephem_provider_hp(const double jd_tdb[restrict 2], enum novas_plane
 /**
  * Major planet ephemeris data via the same generic ephemeris provider that is configured by
  * set_ephem_provider() prior to calling this routine. This is the regular (reduced) precision
- * version.
+ * version, but in reality it's exactly the same as the high-precision version, except for the
+ * way the TDB-based Julian date is specified.
  *
  * @param jd_tdb         [day] Barycentric Dynamical Time (TDB) based Julian date.
  * @param body           Major planet number (or that for Sun, Moon, SSB...)
@@ -92,13 +90,12 @@ short planet_ephem_provider_hp(const double jd_tdb[restrict 2], enum novas_plane
  *                       coordinates in AU referred to the ICRS.
  * @param[out] velocity  [AU/day] Velocity vector of 'body' at jd_tdb; equatorial rectangular
  *                       system referred to the ICRS, in AU/day.
- * @return               0 if successful, or else an error code of solarsystem().
+ * @return               0 if successful, or else an error code defined by novas_planet_provider.
  *
  * @since 1.0
  * @author Attila Kovacs
  *
  * @sa planet_ephem_provider_hp(), set_ephem_provider()
- * @sa solarsystem()
  */
 short planet_ephem_provider(double jd_tdb, enum novas_planet body, enum novas_origin origin,
         double *restrict position, double *restrict velocity) {
@@ -106,16 +103,4 @@ short planet_ephem_provider(double jd_tdb, enum novas_planet body, enum novas_or
   prop_error("planet_ephem_provider", planet_ephem_provider_hp(jd_tdb2, body, origin, position, velocity), 0);
   return 0;
 }
-
-#if !BUILTIN_SOLSYS_EPHEM_READER
-short solarsystem(double jd_tdb, short body, short origin, double *restrict position, double *restrict velocity) {
-  prop_error("solarsystem", planet_ephem_provider(jd_tdb, body, origin, position, velocity), 0);
-  return 0;
-}
-
-short solarsystem_hp(const double jd_tdb[restrict 2], short body, short origin, double *restrict position, double *restrict velocity) {
-  prop_error("solarsystem_hp", planet_ephem_provider_hp(jd_tdb, body, origin, position, velocity), 0);
-  return 0;
-}
-#endif
 

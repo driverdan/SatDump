@@ -1,26 +1,27 @@
 /**
  * @file
  *
- * @date Created  on Aug 26, 2025
- * @author Attila Kovacs
- *
  *  Transformations of station coordinates, velocities, and Earth orinetation parameters (EOP)
  *  between various ITRF realizations, and conversion between Cartesian (x, y, z) and geodetic
  *  (longitude, latitude, altitude) coordinates w.r.t. the reference ellipsoid.
  *
  *  REFERENCES:
- *  <ol>
- *  <li>ITRS Conventions Chapter 4, see https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf</li>
- *  </ol>
+ *
+ *   1. ITRS Conventions Chapter 4, see https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf
+ *
+ * @date Created  on Aug 26, 2025
+ * @author Attila Kovacs
+ * @since 1.5
+ *
+ * @sa observer.c
  */
+
+#include <string.h>
+#include <errno.h>
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__      ///< Use definitions meant for internal use by SuperNOVAS only
 /// \endcond
-
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 
 #include "novas.h"
 
@@ -32,7 +33,7 @@ typedef struct {
 } itrf_terms;
 
 typedef struct {
-  int year;		        ///< [yr] Realization yesr, e.g. 1992 for ITRF92, etc.
+  int year;		        ///< [yr] Realization year, e.g. 1992 for ITRF92, etc.
   double epoch;       ///< [yr] Epoch for which values are defined
   itrf_terms terms;	  ///< The time invariant transformation terms
   itrf_terms rates;	  ///< [/yr] The 1st order time dependence terms
@@ -46,31 +47,27 @@ typedef struct {
  *
  */
 static const itrf_transform realizations[] = { //
-        { 1988, 2015.0, //
-                { {  24.5,   -3.9, -169.9 },  11.47, {    0.10,    0.00,    0.36 } }, //
-                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        { 2020, 2015.0, //
+                {{0, 0, 0}, 0, {0, 0, 0}},
+                {{0, 0, 0}, 0, {0, 0, 0}}
         }, //
-        { 1989, 2015.0, //
-                { {  29.5,   32.1, -145.9 },   8.37, {    0.00,    0.00,    0.36 } }, //
-                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        { 2014, 2015.0,
+                { {   -1.4,  -0.9,    1.4 },  -0.42, {    0.00,    0.00,    0.00 } }, //
+                { {    0.0,   0.1,    0.2 },   0.00, {    0.00,    0.00,    0.00 } }  //
         }, //
-        { 1990, 2015.0, //
-                { {  24.5,    8.1, -107.9 },   4.97, {    0.00,    0.00,    0.36 } }, //
-                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        { 2008, 2015.0, //
+                { {    0.2,   1.0,    3.3 },  -0.29, {    0.00,    0.00,    0.00 } }, //
+                { {    0.2,   1.0,    3.3 },  -0.29, {    0.00,    0.00,    0.00 } }  //
         }, //
-        { 1991, 2015.0, //
-                { {  26.5,   12.1,  -91.9 },   4.67, {    0.00,    0.00,    0.36 } }, //
-                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        { 2005, 2015.0, //
+                { {    2.7,   0.1,   -1.4 },   0.65, {    0.00,    0.00,    0.00 } }, //
+                { {    0.3,  -0.1,    0.1 },   0.03, {    0.00,    0.00,    0.00 } }  //
         }, //
-        { 1992, 2015.0, //
-                { {  14.5,   -1.9,  -85.9 },   3.27, {    0.00,    0.00,    0.36 } }, //
-                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        { 2000, 2015.0, //
+                { {   -0.2,   0.8,  -34.2 },   2.25, {    0.00,    0.00,    0.00 } }, //
+                { {    0.1,   0.0,   -1.7 },   0.11, {    0.00,    0.00,    0.00 } }  //
         }, //
-        { 1993, 2015.0, //
-                { {  -65.8,   1.9,  -71.3 },   4.47, {   -3.36,   -4.33,    0.75 } }, //
-                { {   -2.8,  -0.2,   -2.3 },   0.12, {   -0.11,   -0.19,    0.07 } }  //
-        }, //
-        { 1994, 2015.0, //
+        { 1997, 2015.0, //
                 { {    6.5,  -3.9,  -77.9 },   3.98, {    0.00,    0.00,    0.36 } }, //
                 { {    0.1,  -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
@@ -78,31 +75,35 @@ static const itrf_transform realizations[] = { //
                 { {    6.5,  -3.9,  -77.9 },   3.98, {    0.00,    0.00,    0.36 } }, //
                 { {    0.1,  -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        { 1997, 2015.0, //
+        { 1994, 2015.0, //
                 { {    6.5,  -3.9,  -77.9 },   3.98, {    0.00,    0.00,    0.36 } }, //
                 { {    0.1,  -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        { 2000, 2015.0, //
-                { {   -0.2,   0.8,  -34.2 },   2.25, {    0.00,    0.00,    0.00 } }, //
-                { {    0.1,   0.0,   -1.7 },   0.11, {    0.00,    0.00,    0.00 } }  //
+        { 1993, 2015.0, //
+                { {  -65.8,   1.9,  -71.3 },   4.47, {   -3.36,   -4.33,    0.75 } }, //
+                { {   -2.8,  -0.2,   -2.3 },   0.12, {   -0.11,   -0.19,    0.07 } }  //
         }, //
-        { 2005, 2015.0, //
-                { {    2.7,   0.1,   -1.4 },   0.65, {    0.00,    0.00,    0.00 } }, //
-                { {    0.3,  -0.1,    0.1 },   0.03, {    0.00,    0.00,    0.00 } }  //
+        { 1992, 2015.0, //
+                { {  14.5,   -1.9,  -85.9 },   3.27, {    0.00,    0.00,    0.36 } }, //
+                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        { 2008, 2015.0, //
-                { {    0.2,   1.0,    3.3 },  -0.29, {    0.00,    0.00,    0.00 } }, //
-                { {    0.2,   1.0,    3.3 },  -0.29, {    0.00,    0.00,    0.00 } }  //
+        { 1991, 2015.0, //
+                { {  26.5,   12.1,  -91.9 },   4.67, {    0.00,    0.00,    0.36 } }, //
+                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        { 2014, 2015.0,
-                { {   -1.4,  -0.9,    1.4 },  -0.42, {    0.00,    0.00,    0.00 } }, //
-                { {    0.0,   0.1,    0.2 },   0.00, {    0.00,    0.00,    0.00 } }  //
+        { 1990, 2015.0, //
+                { {  24.5,    8.1, -107.9 },   4.97, {    0.00,    0.00,    0.36 } }, //
+                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        { 2020, 2015.0, //
-                {{0,0,0},0,  {0,0,0}},
-                {{0,0,0},0,  {0,0,0}}
+        { 1989, 2015.0, //
+                { {  29.5,   32.1, -145.9 },   8.37, {    0.00,    0.00,    0.36 } }, //
+                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
         }, //
-        {0,0, {{0,0,0},0,  {0,0,0}}, {{0,0,0},0,  {0,0,0}}}
+        { 1988, 2015.0, //
+                { {  24.5,   -3.9, -169.9 },  11.47, {    0.10,    0.00,    0.36 } }, //
+                { {   0.1,   -0.6,   -3.1 },   0.12, {    0.00,    0.00,    0.02 } }  //
+        }, //
+        {0, 0, {{0, 0, 0}, 0, {0, 0, 0}}, {{0, 0, 0}, 0, {0, 0, 0}}}
 };
 
 
@@ -122,7 +123,7 @@ static const itrf_transform *get_transform(int y) {
   for(i = 0; realizations[i].year; i++) {
     const itrf_transform *T = &realizations[i];
 
-    if(y <= T->year)
+    if(y >= T->year)
       return T;
   }
 
@@ -152,16 +153,15 @@ static void get_diff_terms(const itrf_terms *a, const itrf_terms *b, itrf_terms 
  * ITRF frame.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions, Chapter 4, Eq. 4.3, see https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions, Chapter 4, Eq. 4.3, see https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf
  *
  * @param[in] in      Input 3-vector
  * @param R           [rad] Small angle rotation angles R1, R2, R3
  * @param[out] out    Output 3-vector populated with the rotational offsets.
  */
 static void itrf_rotation(const double *in, const double *R, double *out) {
-  out[0] = -R[2] * in[1] + R[2] * in[2];
+  out[0] = -R[2] * in[1] + R[1] * in[2];
   out[1] = R[2] * in[0] - R[0] * in[2];
   out[2] = -R[1] * in[0] + R[0] * in[1];
 }
@@ -195,10 +195,9 @@ static void itrf_rotation(const double *in, const double *R, double *out) {
  * ```
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions, Chapter 4, Eq. 4.13 and Table 4.1. See
- * https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions, Chapter 4, Eq. 4.13 and Table 4.1. See
+ *     https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf
  *
  * @param from_year       [yr] ITRF realization year of input coordinates / rates. E.g. 1992 for
  *                        ITRF92.
@@ -228,7 +227,7 @@ int novas_itrf_transform(int from_year, const double *restrict from_coords, cons
   const itrf_transform *to = get_transform((int) floor(to_year));
   const double dt = (to->epoch - from->epoch);
 
-  itrf_terms T0, T1; memset(&T0, 0, sizeof(itrf_terms)); memset(&T1, 0, sizeof(itrf_terms));
+  itrf_terms T0 = {0}, T1 = {0};
   double x[3] = {0.0}, r[3] = {0.0}, RX[3], R1X[3];
   int i;
 
@@ -249,13 +248,15 @@ int novas_itrf_transform(int from_year, const double *restrict from_coords, cons
     memcpy(r, from_rates,  sizeof(r));
 
   for (i = 0; i < 3; i++) {
+    double dri = T1.T[i] + T1.D * x[i] + R1X[i];
+
     // x' = x' + T' + D'x + R'(x)
     if(from_rates)
-      r[i] += T1.T[i] + T1.D * x[i] + R1X[i];
+      r[i] += dri;
 
     // x = x + (t-t0) x' + T + Dx + R(x) + (t - tk) * (T' + D'x + R'(x))
     if(to_coords)
-      x[i] += T0.T[i] + T0.D * x[i] + RX[i] + dt * (T1.T[i] + T1.D * x[i] + R1X[i]);
+      x[i] += T0.T[i] + T0.D * x[i] + RX[i] + dri * dt;
   }
 
   if(to_coords)
@@ -274,11 +275,16 @@ int novas_itrf_transform(int from_year, const double *restrict from_coords, cons
  * either the site location or the EOP between different realizations to match.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions, Chapter 4, Eq. 4.14 and Table 4.1. See
- * https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf</li>
- * </ol>
  *
+ *  1. IERS Conventions, Chapter 4, Eq. 4.14 and Table 4.1. See
+ *     https://iers-conventions.obspm.fr/content/chapter4/icc4.pdf
+ *
+ * NOTES:
+ *
+ *  - Equation 4.14 of the IERS Conventions 2010 has UT' = UT + R3 / f. However the 1/f factor
+ *    for Earth flattening does not make sense here. And R3 rotation translates to a change
+ *    of UT1 directly. And for a spherical Earth (f = 0.0), this would result in an infinite
+ *    UT1 correction. This must be an error in the conventions.
  *
  * @param from_year       [yr] ITRF realization year of input coordinates / rates. E.g. 1992 for
  *                        ITRF92.
@@ -300,7 +306,7 @@ int novas_itrf_transform(int from_year, const double *restrict from_coords, cons
  * @since 1.5
  * @author Attila Kovacs
  *
- * @sa novas_itrf_transform(), novas_itrf_transform_site()
+ * @sa novas_itrf_transform(), novas_itrf_transform_site(), novas_get_eop_itrf_year()
  * @sa novas_make_frame(), novas_timespec, wobble()
  */
 int novas_itrf_transform_eop(int from_year, double from_xp, double from_yp, double from_dut1,
@@ -308,7 +314,7 @@ int novas_itrf_transform_eop(int from_year, double from_xp, double from_yp, doub
   const itrf_transform *from = get_transform((int) floor(from_year));
   const itrf_transform *to = get_transform((int) floor(to_year));
 
-  itrf_terms T0; memset(&T0, 0, sizeof(itrf_terms));
+  itrf_terms T0 = {0};
 
   get_diff_terms(&to->terms, &from->terms, &T0);
 
@@ -320,9 +326,10 @@ int novas_itrf_transform_eop(int from_year, double from_xp, double from_yp, doub
   if(to_yp)
     *to_yp = from_yp + T0.R[0] / ARCSEC;
 
-  // UT +- 1/f R3
+  // UT += R3
+  // Note that Eq. 4.14 has a 1/f factor, which makes no sense. Contacted IERS about it.
   if(to_dut1)
-    *to_dut1 = from_dut1 + T0.R[2] / NOVAS_EARTH_FLATTENING * (NOVAS_DAY / TWOPI);
+    *to_dut1 = from_dut1 + T0.R[2] * (NOVAS_DAY / TWOPI);
 
   return 0;
 }
@@ -347,8 +354,8 @@ int novas_itrf_transform_eop(int from_year, double from_xp, double from_yp, doub
  * @since 1.5
  * @author Attila Kovacs
  *
- * @sa novas_itrf_transform_eop(), novas_itrf_transform(), make_itrf_site(), make_itrf_observer()
- * @sa novas_transform_ellipsoid()
+ * @sa novas_geodetic_transform_site(), novas_itrf_transform_eop(), novas_itrf_transform(),
+ *     make_itrf_site(), make_itrf_observer()
  */
 int novas_itrf_transform_site(int from_year, const on_surface *in, int to_year, on_surface *out) {
   static const char *fn = "novas_itrf_transform_site";
@@ -416,9 +423,8 @@ int novas_geodetic_transform_site(enum novas_reference_ellipsoid from_ellipsoid,
  * Returns the equatorial radius and flattening for the given Earth reference ellipsoid model.
  *
  * REFERENCES:
- * <ol>
- * <li>https://en.wikipedia.org/wiki/Earth_ellipsoid</li>
- * </ol>
+ *
+ *  1. https://en.wikipedia.org/wiki/Earth_ellipsoid
  *
  * @param ellipsoid   The reference ellipsoid model
  * @param[out] a      [m] Equatorial radius
@@ -439,11 +445,11 @@ static int get_ellipsoid(enum novas_reference_ellipsoid ellipsoid, double *a, do
       break;
     case NOVAS_IERS_1989_ELLIPSOID:
       *a = 6378136.0;
-      *f = 298.257;
+      *f = 1.0 / 298.257;
       break;
     case NOVAS_IERS_2003_ELLIPSOID:
       *a = 6378136.6;
-      *f = 298.25642;
+      *f = 1.0 / 298.25642;
       break;
     default:
       return novas_error(-1, EINVAL, "get_ellipsoid", "invalid reference ellipsoid: %d", ellipsoid);
@@ -504,24 +510,17 @@ int novas_geodetic_to_cartesian(double lon, double lat, double alt, enum novas_r
  * ellipsoid.
  *
  * NOTES:
- * <ol>
- * <li>Adapted from the IERS `GCONV2.F` source code, see
- * https://iers-conventions.obspm.fr/content/chapter4/software/GCONV2.F.
- * </li>
- * </ol>
+ *
+ *  1. Adapted from the IERS `GCONV2.F` source code, see
+ *     https://iers-conventions.obspm.fr/content/chapter4/software/GCONV2.F.
  *
  * REFERENCES:
- * <ol>
- * <li>
- *     Fukushima, T., "Transformation from Cartesian to geodetic
+ *
+ *  1. Fukushima, T., "Transformation from Cartesian to geodetic
  *     coordinates accelerated by Halley's method", J. Geodesy (2006),
  *     79(12): 689-693
- * </li>
- * <li>
- *     Petit, G. and Luzum, B. (eds.), IERS Conventions (2010),
+ *  2. Petit, G. and Luzum, B. (eds.), IERS Conventions (2010),
  *     IERS Technical Note No. 36, BKG (2010)
- * </li>
- * </ol>
  *
  * @param[in] xyz     [m] Input geocentric Cartesian coordinates (x, y, z) 3-vector.
  * @param ellipsoid   Reference ellipsoid to use. For ITRF use `NOVAS_GRS80_ELLIPSOID`, for GPS

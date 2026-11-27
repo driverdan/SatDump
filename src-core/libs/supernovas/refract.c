@@ -1,25 +1,21 @@
 /**
  * @file
  *
- * @date Created  on Jun 27, 2024
- * @author Attila Kovacs and G. Kaplan
- *
  *  A collection of refraction models and utilities to use with novas_app_to_hor() or
  *  novas_hor_to_app().
  *
- * @sa novas_app_to_hor()
- * @sa novas_hor_to_app().
+ * @date Created  on Jun 27, 2024
+ * @author Attila Kovacs and G. Kaplan
+ *
+ * @sa novas_app_to_hor(), novas_hor_to_app()
  */
+
+#include <string.h>
+#include <errno.h>
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__      ///< Use definitions meant for internal use by SuperNOVAS only
 /// \endcond
-
-#include <stdio.h>
-#include <stdlib.h>
-//#include <unistd.h>
-#include <string.h>
-#include <errno.h>
 
 #include "novas.h"
 
@@ -39,10 +35,9 @@ static double lambda = NOVAS_DEFAULT_WAVELENGTH;      ///< [&mu;m] Observing wav
  * precise positioning.
  *
  * REFERENCES:
- * <ol>
- * <li>Explanatory Supplement to the Astronomical Almanac, p. 144.</li>
- * <li>Bennett, G. (1982), Journal of Navigation (Royal Institute) 35, pp. 255-259.</li>
- * </ol>
+ *
+ *  1. Explanatory Supplement to the Astronomical Almanac, p. 144.
+ *  2. Bennett, G. (1982), Journal of Navigation (Royal Institute) 35, pp. 255-259.
  *
  * @param location      Pointer to structure containing observer's location. It may also
  *                      contains weather data (optional) for the observer's location.
@@ -95,17 +90,15 @@ double refract_astro(const on_surface *restrict location, enum novas_refraction_
  * precise positioning.
  *
  * NOTES:
- * <ol>
- * <li>The standard temeperature model includes a very rough estimate of the mean annual
- * temeprature for the ovserver's latitude and elevation, rather than the 10 C everywhere
- * assumption in NOVAS C 3.1.<.li>
- * </ol>
+ *
+ *  1. The standard temeperature model includes a very rough estimate of the mean annual
+ *     temperature for the ovserver's latitude and elevation, rather than the 10 C everywhere
+ *     assumption in NOVAS C 3.1.
  *
  * REFERENCES:
- * <ol>
- * <li>Explanatory Supplement to the Astronomical Almanac, p. 144.</li>
- * <li>Bennett, G. (1982), Journal of Navigation (Royal Institute) 35, pp. 255-259.</li>
- * </ol>
+ *
+ *  1. Explanatory Supplement to the Astronomical Almanac, p. 144.
+ *  2. Bennett, G. (1982), Journal of Navigation (Royal Institute) 35, pp. 255-259.
  *
  * @param location      Pointer to structure containing observer's location. It may also
  *                      contains weather data (optional) for the observer's location.
@@ -126,7 +119,7 @@ double refract(const on_surface *restrict location, enum novas_refraction_model 
 
   double p, t, h, r;
 
-  if(model < 0 || model >= NOVAS_REFRACTION_MODELS) {
+  if((unsigned) model >= NOVAS_REFRACTION_MODELS) {
     novas_set_errno(EINVAL, fn, "invalid refraction model option: %d", model);
     return 0.0;
   }
@@ -183,7 +176,7 @@ static double novas_refraction(enum novas_refraction_model model, const on_surfa
   static const char *fn = "novas_refraction";
 
   if(!loc) {
-    novas_set_errno(EINVAL, fn, "NULL on surface observer location");
+    novas_set_errno(EINVAL, fn, "NULL surface observer location");
     return NAN;
   }
 
@@ -193,7 +186,7 @@ static double novas_refraction(enum novas_refraction_model model, const on_surfa
   if(type == NOVAS_REFRACT_ASTROMETRIC)
     return refract_astro(loc, model, 90.0 - el);
 
-  novas_set_errno(EINVAL, fn, "NULL on surface observer location");
+  novas_set_errno(EINVAL, fn, "invalid refraction type: %d", (int) type);
   return NAN;
 }
 
@@ -249,7 +242,7 @@ double novas_inv_refract(RefractionModel model, double jd_tt, const on_surface *
  *                  weather
  * @param type      Whether the input elevation is observed or astrometric: NOVAS_REFRACT_OBSERVED
  *                  (-1) or NOVAS_REFRACT_ASTROMETRIC (0).
- * @param el        [deg] Astrometric (unrefracted) source elevation
+ * @param el        [deg] Source elevation angle of the specified type.
  * @return          [deg] Estimated refraction, or NAN if there was an error (it should also
  *                  set errno to indicate the type of error).
  *
@@ -268,7 +261,7 @@ double novas_standard_refraction(double jd_tt, const on_surface *loc, enum novas
 /**
  * Returns an optical refraction correction using the weather parameters defined for the observer
  * location. As such, make sure that temperature and pressure are defined, e.g. set after
- * calling e.g. `make_gps_site()`, `make_itrf_site(), `make_xyz_site()`, or similar call that
+ * calling e.g. `make_gps_site()`, `make_itrf_site()`, `make_xyz_site()`, or similar call that
  * initializes the observing site.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian data of observation (unused in this
@@ -278,7 +271,7 @@ double novas_standard_refraction(double jd_tt, const on_surface *loc, enum novas
  * @param type      Whether the input elevation is observed or astrometric: NOVAS_REFRACT_OBSERVED
  *                  (-1) or NOVAS_REFRACT_ASTROMETRIC (0).
  * @param el        [deg] Astrometric (unrefracted) source elevation
- * @return          [arcsec] Estimated refraction, or NAN if there was an error (it should also
+ * @return          [deg] Estimated refraction, or NAN if there was an error (it should also
  *                  set errno to indicate the type of error).
  *
  * @sa novas_wave_refraction(), novas_radio_refraction(), novas_standard_refraction()
@@ -299,15 +292,14 @@ double novas_optical_refraction(double jd_tt, const on_surface *loc, enum novas_
  *
  * It uses the weather parameters defined for the location, including humidity. As such, make sure
  * the weather data is fully defined, and that the humidity was explicitly set after calling e.g.
- * `make_gps_site()`, `make_itrf_site(), `make_xyz_site()`, or similar call that initializes the
+ * `make_gps_site()`, `make_itrf_site()`, `make_xyz_site()`, or similar call that initializes the
  * observing site.
  *
  * Adapted from FORTAN code provided by Berman &amp; Rockwell 1976.
  *
  * REFERENCES:
- * <ol>
- * <li>Berman, Allan L., and Rockwell, Stephen T. (1976), NASA JPL Technical Report 32-1601</li>
- * </ol>
+ *
+ *  1. Berman, Allan L., and Rockwell, Stephen T. (1976), NASA JPL Technical Report 32-1601
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian data of observation (unused in this
  *                  implementation of RefractionModel)
@@ -316,7 +308,7 @@ double novas_optical_refraction(double jd_tt, const on_surface *loc, enum novas_
  *                  fully populated.
  * @param type      Whether the input elevation is observed or astrometric: NOVAS_REFRACT_OBSERVED
  *                  (-1) or NOVAS_REFRACT_ASTROMETRIC (0).
- * @param el        [deg] source elevation of the specified type.
+ * @param el        [deg] source elevation angle of the specified type.
  * @return          [deg] Estimated refraction, or NAN if there was an error (it should also
  *                  set errno to indicate the type of error). An error is returned if the location
  *                  is NULL, or if the weather parameters are way outside of their resonable
@@ -340,7 +332,7 @@ double novas_radio_refraction(double jd_tt, const on_surface *loc, enum novas_re
   (void) jd_tt;
 
   if(!loc) {
-    novas_set_errno(EINVAL, fn, "NULL on surface observer location");
+    novas_set_errno(EINVAL, fn, "NULL surface observer location");
     return NAN;
   }
 
@@ -421,20 +413,18 @@ int novas_refract_wavelength(double microns) {
  * implementation is not provided nor it is endorsed by SOFA. The original function has been
  * modified slightly, such as:
  *
- * <ol>
- * <li>Out-of-range weather parameters will return with an error (`errno` set to `EINVAL`), unlike
- * the SOFA implementation, which sets minimal or maximal allowed values for these.</li>
- * <li>The algorithm has been simplified to use fewer variables and simpler logic.</li>
- * <li>The SOFA function this implementation is based on returns A/B coefficients, whereas this
- * implementation returns the refraction correction angle.</li>
- * </ol>
+ * 1. Out-of-range weather parameters will return with an error (`errno` set to `EINVAL`), unlike
+ *    the SOFA implementation, which sets minimal or maximal allowed values for these.
+ * 2. The algorithm has been simplified to use fewer variables and simpler logic.
+ * 3. The SOFA function this implementation is based on returns A/B coefficients, whereas this
+ *    implementation returns the refraction correction angle.
  *
  * The refraction is calculated for the observing wavelenth previously set via
  * `novas_refract_wavelength()`, or for visible light at 550 nm by default.
  *
  * The function uses the weather parameters defined for the location, including humidity. As such,
  * make sure the weather data is fully defined, and that the humidity was explicitly set after
- * calling e.g. `make_gps_site()`, `make_itrf_site(), `make_xyz_site()`, or similar call that
+ * calling e.g. `make_gps_site()`, `make_itrf_site()`, `make_xyz_site()`, or similar call that
  * initializes the observing site.
  *
  * According to the documentation of SOFA's `iauRefco()` function, the model has the following
@@ -448,45 +438,26 @@ int novas_refract_wavelength(double microns) {
  *
  *
  * NOTES:
- * <ol>
- * <li>
- * From the SOFA documentation: "The model balances speed and accuracy to give good results in
- * applications where performance at low altitudes is not paramount. Performance is maintained
- * across a range of conditions, and applies to both optical/IR and radio."
- * </li>
- * <li>The model is divergent in the observed direction of the horizon. As such, it should not be
- * used for calculating refraction at or below the horizon itself.</li>
- * </ol>
+ *
+ *  1. From the SOFA documentation: "The model balances speed and accuracy to give good results in
+ *     applications where performance at low altitudes is not paramount. Performance is maintained
+ *     across a range of conditions, and applies to both optical/IR and radio."
+ *
+ *  2. The model is divergent in the observed direction of the horizon. As such, it should not be
+ *     used for calculating refraction at or below the horizon itself.
  *
  * REFERENCES:
- * <ol>
- * <li>
- *     Crane, R.K., Meeks, M.L. (ed), "Refraction Effects in the Neutral
- *     Atmosphere", Methods of Experimental Physics: Astrophysics 12B,
- *     Academic Press, 1976.
- * </li>
- * <li>
- *     Gill, Adrian E., "Atmosphere-Ocean Dynamics", Academic Press,
- *     1982.
- * </li>
- * <li>
- *     Green, R.M., "Spherical Astronomy", Cambridge University Press,
- *     1987.
- * </li>
- * <li>
- *     Hohenkerk, C.Y., &amp; Sinclair, A.T., NAO Technical Note No. 63,
- *     1985.
- * </li>
- * <li>
- *     Rueger, J.M., "Refractive Index Formulae for Electronic Distance
+ *
+ *  1. Crane, R.K., Meeks, M.L. (ed), "Refraction Effects in the Neutral Atmosphere", Methods of
+ *     Experimental Physics: Astrophysics 12B, Academic Press, 1976.
+ *  2. Gill, Adrian E., "Atmosphere-Ocean Dynamics", Academic Press, 1982.
+ *  3. Green, R.M., "Spherical Astronomy", Cambridge University Press, 1987.
+ *  4. Hohenkerk, C.Y., &amp; Sinclair, A.T., NAO Technical Note No. 63, 1985.
+ *  5. Rueger, J.M., "Refractive Index Formulae for Electronic Distance
  *     Measurement with Radio and Millimetre Waves", in Unisurv Report
  *     S-68, School of Surveying and Spatial Information Systems,
  *     University of New South Wales, Sydney, Australia, 2002.
- * </li>
- * <li>
- *     Stone, Ronald C., P.A.S.P. 108, 1051-1058, 1996.
- * </li>
- * </ol>
+ *  6. Stone, Ronald C., P.A.S.P. 108, 1051-1058, 1996.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian data of observation (unused in this
  *                  implementation of RefractionModel)
@@ -509,12 +480,12 @@ int novas_refract_wavelength(double microns) {
  * @sa make_gps_site(), make_itrf_site(), make_xyz_site(), make_gps_observer(), make_itrf_observer()
  */
 double novas_wave_refraction(double jd_tt, const on_surface *loc, enum novas_refraction_type type, double el) {
-  static const char *fn = "novas_wave_refration";
+  static const char *fn = "novas_wave_refraction";
 
   double p, t, r, ps = 0.0, pw = 0.0, gamma, beta, a, b, tanz;
 
   if(!loc) {
-    novas_set_errno(EINVAL, fn, "NULL on surface observer location");
+    novas_set_errno(EINVAL, fn, "NULL surface observer location");
     return NAN;
   }
 
@@ -534,7 +505,7 @@ double novas_wave_refraction(double jd_tt, const on_surface *loc, enum novas_ref
   }
 
   if(lambda < 0.1) {
-    novas_set_errno(EINVAL, fn, "wavelength too low: %g mirons", lambda);
+    novas_set_errno(EINVAL, fn, "wavelength too low: %g microns", lambda);
     return NAN;
   }
 
@@ -585,3 +556,4 @@ double novas_wave_refraction(double jd_tt, const on_surface *loc, enum novas_ref
 
   return tanz * (a + b * tanz * tanz) / DEGREE;
 }
+

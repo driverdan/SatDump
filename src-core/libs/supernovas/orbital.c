@@ -1,9 +1,6 @@
 /**
  * @file
  *
- * @date Created  on Mar 6, 2025
- * @author Attila Kovacs
- *
  *  Function relating to the use of Keplerian orbital elements. For example, the IAU Minor Planet
  *  Center publishes up-to-date Keplerial orbital elements for all asteroids, comets, and
  *  Near-Earth Objects (NEOs) regularly. On short timescales these can provide accurate positions
@@ -20,7 +17,7 @@
  *  (w.r.t. the ecliptic or equator of date) with `novas_set_orbsys_pole()`. E.g.:
  *
  *  ```c
- *    novas_orbit orb = NOVAS_ORBIT_INIT;
+ *    novas_orbital orb = NOVAS_ORBIT_INIT;
  *
  *    orb.a = ...    // [AU] semi-major axis
  *    ...            // populate the rest of the orbital parameters.
@@ -32,8 +29,9 @@
  *    novas_set_orbsys_pole(NOVAS_ICRS, ra_pole, dec_pole, &orb.system);
  *  ```
  *
- *  Once the orbital is defined, you can use it to define a generic @ref object via
- *  `make_orbital_object()` to enable the the same astrometric calculations as for ephemeris
+ * @cond C_API
+ *  Once the orbital is defined, you can use it to define an orbital @ref object via
+ *  `make_orbital_object()` to enable the same astrometric calculations as for ephemeris
  *  sources, e.g.:
  *
  *  ```c
@@ -47,31 +45,42 @@
  *  Or, you can calculate geometric orbital positions and velocities directly via
  *  `novas_orbit_posvel()`, while `novas_orbit_native_posvel()` will do the same, but in
  *  the native coordinate system in which the orbital is defined.
+ * @endcond
  *
- *  @sa make_orbital_object()
+ * @date Created  on Mar 6, 2025
+ * @author Attila Kovacs
+ * @since 1.2
+ *
+ * @sa novas_orbital, make_orbital_object()
+ * @sa ephemeris.c
  */
 
 #include <errno.h>
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
 
+#include "novas.h"
+
+/// \cond PRIVATE
+#  define EPREC               1e-12     ///< Required precision for eccentric anomaly in orbital calculation
+/// \endcond
 
 /**
- * Change xzy vectors to the new polar orientation. &theta, &phi define the orientation of the
- * input pole in the output system.
+ * Change _xyz_ vectors to the new polar orientation. &theta, &phi define the orientation of the
+ * input pole in the output system. (The origin of the orbital system is at the rising node,
+ * defined by the angle &Omega; in the output system.
  *
  * @param in        input 3-vector in the original system (pole = z)
- * @param theta     [deg] polar angle of original pole in the new system
- * @param phi       [deg] azimuthal angle of original pole in the new system
+ * @param obl       [deg] Obliquity of input system in output system
+ * @param Omega     [deg] Argument of the ascending node in output system
  * @param[out] out  output 3-vector in the new (rotated) system. It may be the same vector as the
  *                  input.
  * @return          0
  *
  */
-static int change_pole(const double *in, double theta, double phi, double *out) {
+static int change_pole(const double *in, double obl, double Omega, double *out) {
   double x, y, z;
   double ca, sa, cb, sb;
 
@@ -79,57 +88,25 @@ static int change_pole(const double *in, double theta, double phi, double *out) 
   y = in[1];
   z = in[2];
 
-  theta *= DEGREE;
-  phi *= DEGREE;
+  obl *= DEGREE;
+  Omega *= DEGREE;
 
-  ca = cos(phi);
-  sa = sin(phi);
-  cb = cos(theta);
-  sb = sin(theta);
+  ca = cos(Omega);
+  sa = sin(Omega);
+  cb = cos(obl);
+  sb = sin(obl);
 
   out[0] = ca * x - sa * (cb * y + sb * z);
   out[1] = sa * x + ca * (cb * y - sb * z);
-  out[2] = sb * y + cb * z;
+  out[2] =                sb * y + cb * z;
 
   return 0;
 }
 
 /**
- * Converts equatorial coordinates of a given type to GCRS equatorial coordinates
- *
- * @param jd_tdb    [day] Barycentric Dynamical Time (TDB) based Julian Date
- * @param sys       The type of equatorial system assumed for the input (ICRS / GCRS, J2000, TOD,
- *                  MOD, or CIRS). It must be an inertial celestial system, i.e. it cannot be a
- *                  reference system which co-rotates with Earth (like ITRS to TIRS).
- * @param[in, out] vec  vector to change to GCRS.
- * @return          0 if successful, or else -1 (errno set to EINVAL) if the 'sys' argument is
- *                  invalid or unsupported.
- *
- * @author Attila Kovacs
- * @since 1.2
- */
-static int equ2gcrs(double jd_tdb, enum novas_reference_system sys, double *vec) {
-  static const char *fn = "equ2gcrs";
-
-  switch(sys) {
-    case NOVAS_GCRS:
-    case NOVAS_ICRS:
-      return 0;
-    case NOVAS_CIRS:
-      return cirs_to_gcrs(jd_tdb, NOVAS_REDUCED_ACCURACY, vec, vec);
-    case NOVAS_J2000:
-      return j2000_to_gcrs(vec, vec);
-    case NOVAS_TOD:
-      return tod_to_gcrs(jd_tdb, NOVAS_REDUCED_ACCURACY, vec, vec);
-    case NOVAS_MOD:
-      return mod_to_gcrs(jd_tdb, vec, vec);
-    default:
-      return novas_error(-1, EINVAL, fn, "invalid orbital system type: %d", sys);
-  }
-}
-
-/**
- * Convert coordinates in an orbital system to GCRS equatorial coordinates
+ * Convert coordinates in an orbital system to GCRS equatorial coordinates. For orbits defined w.r.t.
+ * the ecliptic of date, but for a reference system based in J2000, the conversion includes transforming
+ * the mean ecliptic of date to the mean ecliptic of J2000, using Laskar 1986.
  *
  * @param jd_tdb        [day] Barycentric Dynamic Time (TDB) based Julian Date
  * @param sys           Orbital system specification
@@ -160,15 +137,15 @@ static int orbit2gcrs(double jd_tdb, const novas_orbital_system *sys, enum novas
         jd = NOVAS_JD_J2000;
         break;
       case NOVAS_J2000:
-        eq = NOVAS_TRUE_EQUATOR;
+        eq = NOVAS_MEAN_EQUATOR;
         jd = NOVAS_JD_J2000;
+        break;
+      case NOVAS_MOD:
+        eq = NOVAS_MEAN_EQUATOR;
         break;
       case NOVAS_TOD:
       case NOVAS_CIRS:
         eq = NOVAS_TRUE_EQUATOR;
-        break;
-      case NOVAS_MOD:
-        eq = NOVAS_MEAN_EQUATOR;
         break;
       default:
         return novas_error(-1, EINVAL, fn, "invalid reference system: %d", sys->type);
@@ -179,7 +156,7 @@ static int orbit2gcrs(double jd_tdb, const novas_orbital_system *sys, enum novas
   else if(sys->plane != NOVAS_EQUATORIAL_PLANE)
     return novas_error(-1, EINVAL, fn, "invalid orbital system reference plane type: %d", sys->type);
 
-  prop_error(fn, equ2gcrs(jd_tdb, sys->type, vec), 0);
+  prop_error(fn, novas_sys_to_icrs(sys->type, vec, jd_tdb, NOVAS_REDUCED_ACCURACY, vec), 0);
 
   return 0;
 }
@@ -233,13 +210,12 @@ static int novas_orbital_plane_pos(double M, double e, double *restrict E, doubl
  * defined (e.g. ecliptic for heliocentric orbitals).
  *
  * REFERENCES:
- * <ol>
- * <li>E.M. Standish and J.G. Williams 1992.</li>
- * <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- * <li>https://en.wikipedia.org/wiki/Orbital_elements</li>
- * <li>https://orbitalofficial.com/</li>
- * <li>https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf</li>
- * </ol>
+ *
+ *  1. E.M. Standish and J.G. Williams 1992.
+ *  2. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+ *  3. https://en.wikipedia.org/wiki/Orbital_elements
+ *  4. https://orbitalofficial.com/
+ *  5. https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
  *
  * @param jd_tdb    [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param orbit     Orbital parameters
@@ -277,11 +253,11 @@ int novas_orbit_native_posvel(double jd_tdb, const novas_orbital *restrict orbit
   nu *= DEGREE;
 
   omega = orbit->omega * DEGREE;
-  if(orbit->apsis_period > 0.0)
+  if(orbit->apsis_period != 0.0)
     omega += TWOPI * remainder(dt / orbit->apsis_period, 1.0);
 
   Omega = orbit->Omega * DEGREE;
-  if(orbit->node_period > 0.0)
+  if(orbit->node_period != 0.0)
     Omega += TWOPI * remainder(dt / orbit->node_period, 1.0);
 
   // pos = Rz(-Omega) . Rx(-i) . Rz(-omega) . orb
@@ -330,13 +306,12 @@ int novas_orbit_native_posvel(double jd_tdb, const novas_orbital *restrict orbit
  * for the specified time of observation.
  *
  * REFERENCES:
- * <ol>
- * <li>E.M. Standish and J.G. Williams 1992.</li>
- * <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- * <li>https://en.wikipedia.org/wiki/Orbital_elements</li>
- * <li>https://orbitalofficial.com/</li>
- * <li>https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf</li>
- * </ol>
+ *
+ *  1. E.M. Standish and J.G. Williams 1992.
+ *  2. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+ *  3. https://en.wikipedia.org/wiki/Orbital_elements
+ *  4. https://orbitalofficial.com/
+ *  5. https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
  *
  * @param jd_tdb    [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param orbit     Orbital parameters
@@ -382,14 +357,13 @@ int novas_orbit_posvel(double jd_tdb, const novas_orbital *restrict orbit, enum 
  * (90&deg; + `ra`).
  *
  * NOTES:
- * <ol>
- * <li>You should not expect much precision from the long-range orbital approximations for
- * planetary satellites. For applications that require precision at any level, you should rely
- * on appropriate ephemerides, or else on up-to-date short-term orbital elements.</li>
- * </ol>
+ *
+ *  1. You should not expect much precision from the long-range orbital approximations for
+ *     planetary satellites. For applications that require precision at any level, you should rely
+ *     on appropriate ephemerides, or else on up-to-date short-term orbital elements.
  *
  * @param type  Coordinate reference system in which `ra` and `dec` are defined (e.g. NOVAS_GCRS).
- * @param ra    [h] the R.A. of the pole of the oribtal reference plane.
+ * @param ra    [h] the R.A. of the pole of the orbital reference plane.
  * @param dec   [deg] the declination of the pole of the oribtal reference plane.
  * @param[out]  sys   Orbital system
  * @return      0 if successful, or else -1 (errno will be set to EINVAL) if the output `sys`
@@ -403,7 +377,7 @@ int novas_orbit_posvel(double jd_tdb, const novas_orbital *restrict orbit, enum 
 int novas_set_orbsys_pole(enum novas_reference_system type, double ra, double dec, novas_orbital_system *restrict sys) {
   static const char *fn = "novas_set_orbsys_pole";
 
-  if(type < 0 || type >= NOVAS_TIRS)
+  if((unsigned) type >= NOVAS_TIRS)
     return novas_error(-1, EINVAL, fn, "invalid orbital system type: %d", type);
 
   if(!sys)
@@ -416,5 +390,3 @@ int novas_set_orbsys_pole(enum novas_reference_system type, double ra, double de
 
   return 0;
 }
-
-
