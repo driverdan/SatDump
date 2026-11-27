@@ -27,8 +27,22 @@ namespace satdump
             float progress = 0;
         };
 
-        inline void to_json(nlohmann::json &j, const ActiveFilter &v) { j = v.cfg; }
-        inline void from_json(const nlohmann::json &j, ActiveFilter &v) { v.cfg = j; }
+        // Filters are stored as [enabled, cfg], the format of the presets in the
+        // instrument configs. A bare cfg (always enabled) is also accepted.
+        inline void to_json(nlohmann::json &j, const ActiveFilter &v) { j = nlohmann::json::array({v.enabled, v.cfg}); }
+        inline void from_json(const nlohmann::json &j, ActiveFilter &v)
+        {
+            if (j.is_array() && j.size() == 2 && j[0].is_boolean())
+            {
+                v.enabled = j[0].get<bool>();
+                v.cfg = j[1];
+            }
+            else
+            {
+                v.enabled = true;
+                v.cfg = j;
+            }
+        }
 
         /**
          * @brief The main standard ImageHandler.

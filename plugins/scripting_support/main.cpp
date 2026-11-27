@@ -28,7 +28,12 @@ void pipeline_done_processing_callback(const satdump::pipeline::events::Pipeline
             // TODOREWORK, maybe switch to using a function instead?
             asIScriptEngine *engine = asCreateScriptEngine();
 
-            satdump::script::registerAll(engine);
+            if (!satdump::script::registerAll(engine))
+            {
+                logger->error("Not calling %s, the script bindings failed to register", script_path.c_str());
+                engine->ShutDownAndRelease();
+                return;
+            }
 
             engine->SetDefaultNamespace("");
             engine->RegisterGlobalProperty("string pipeline_id", (void *)&evt.pipeline_id);

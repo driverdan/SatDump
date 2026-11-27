@@ -7,6 +7,7 @@
 #include <array>
 #include "products/image_product.h"
 #include "libs/miniz/miniz.h"
+#include "utils/file/zip_file_iterators.h"
 
 #include "common/calibration.h"
 
@@ -143,9 +144,8 @@ namespace nc2pro
 
         {
             mz_zip_archive zip{};
-            mz_zip_reader_init_file(&zip, zip_file.c_str(), 0);
-
-            //        logger->info("%s", mz_zip_get_error_string(mz_zip_get_last_error(&zip)));
+            if (!mz_zip_reader_init_file(&zip, zip_file.c_str(), 0))
+                throw satdump_exception("Invalid zip file! " + zip_file + " : " + mz_zip_get_error_string(mz_zip_get_last_error(&zip)));
 
             int numfiles = mz_zip_reader_get_num_files(&zip);
 
@@ -164,10 +164,13 @@ namespace nc2pro
                         int chnum = 0;
                         if (sscanf(name.c_str(), "Oa%2d_radiance", &chnum) == 1 && chnum <= 21 && name.find("_unc") == std::string::npos)
                         {
-                            size_t filesize = 0;
-                            void *file_ptr = mz_zip_reader_extract_to_heap(&zip, fi, &filesize, 0);
+                            std::vector<uint8_t> vec;
+                            if (!satdump::utils::extractZipEntry(&zip, fi, vec))
+                            {
+                                logger->error("Could not extract %s from zip!", filename);
+                                continue;
+                            }
 
-                            std::vector<uint8_t> vec((uint8_t *)file_ptr, (uint8_t *)file_ptr + filesize);
                             auto img = parse_sentinel3_ocli_channel(vec, (chnum < 10 ? "0" : "") + std::to_string(chnum));
                             all_channels[chnum - 1] = img.img;
 
@@ -190,16 +193,17 @@ namespace nc2pro
                                 timeS.tm_isdst = -1;
                                 prod_timestamp = timegm(&timeS);
                             }
-
-                            mz_free(file_ptr);
                         }
                         else if (name == "geo_coordinates")
                         {
-                            size_t filesize = 0;
-                            void *file_ptr = mz_zip_reader_extract_to_heap(&zip, fi, &filesize, 0);
-                            std::vector<uint8_t> vec((uint8_t *)file_ptr, (uint8_t *)file_ptr + filesize);
+                            std::vector<uint8_t> vec;
+                            if (!satdump::utils::extractZipEntry(&zip, fi, vec))
+                            {
+                                logger->error("Could not extract %s from zip!", filename);
+                                continue;
+                            }
+
                             gcps_all = parse_sentinel3_ocli_geo(vec);
-                            mz_free(file_ptr);
                         }
                     }
                 }

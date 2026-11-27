@@ -19,6 +19,14 @@ namespace satdump
         void registerProduct(std::string name, asIScriptEngine *engine);
         void registerImageProduct(asIScriptEngine *engine);
 
-        void registerAll(asIScriptEngine *engine);
+        /**
+         * @brief Registers the add-ons and all SatDump bindings
+         *
+         * Failed registrations are logged, even if the engine has no message callback.
+         *
+         * @param engine engine to register them in
+         * @return true if everything was registered. If not, the engine cannot build scripts
+         */
+        bool registerAll(asIScriptEngine *engine);
     } // namespace script
 } // namespace satdump

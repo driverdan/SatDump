@@ -390,10 +390,7 @@
   #define AS_MAX_PORTABILITY
 #endif
 
-// MacOS being annoying, at least on Intel
-#if defined(__APPLE__)
-  #define AS_MAX_PORTABILITY
-#endif
+
 
 // Embarcadero C++Builder
 #if defined(__BORLANDC__)
