@@ -27,15 +27,15 @@ namespace
         REQUIRE(novas_use_calceph(eph) == 0);
     }
 
-    // Geocentric frame at 2025-09-23 18:00:00 UTC, with fixed EOP values
-    novas_frame geocentricFrame()
+    // Geocentric frame at 2025-09-23 18:00:00 UTC, with the given EOP values (UT1-UTC in s, pole offsets in mas)
+    novas_frame geocentricFrame(double dut1 = 0.05, double xp_mas = 0.2, double yp_mas = 0.4)
     {
         novas_timespec t;
-        REQUIRE(novas_set_unix_time(1758650400, 0, 37, 0.05, &t) == 0);
+        REQUIRE(novas_set_unix_time(1758650400, 0, 37, dut1, &t) == 0);
         observer geo;
         REQUIRE(make_observer_at_geocenter(&geo) == 0);
         novas_frame f;
-        REQUIRE(novas_make_frame(NOVAS_FULL_ACCURACY, &geo, &t, 0.2, 0.4, &f) == 0);
+        REQUIRE(novas_make_frame(NOVAS_FULL_ACCURACY, &geo, &t, xp_mas, yp_mas, &f) == 0);
         return f;
     }
 
@@ -97,19 +97,24 @@ TEST_CASE("SuperNOVAS: geometric velocity is relative to the observer", "[supern
     CHECK(speed_kms < 1.1);
 }
 
-// The conversion that the AWS NavAtt reader uses on its ephemeris
+// The conversion that the AWS NavAtt reader uses on its ephemeris, with realistic EOP values.
+// The 1 mm tolerance (0.03 mas at 7000 km) catches the previous copy (6.5 mm off, as it lacked the
+// diurnal UT1 correction), missing pole offsets (12 m with xp = yp = 0) and UT1 errors of a few us.
 TEST_CASE("SuperNOVAS: J2000 to ITRS transform", "[supernovas]")
 {
+    // SatDump supplies its own EOP values: SuperNOVAS is built without cURL, so it never fetches them
+    CHECK(novas_is_auto_fetch_eop() == 0);
+
     useShippedEphemeris();
-    novas_frame f = geocentricFrame();
+    novas_frame f = geocentricFrame(0.0812, 153.0, 371.0);
 
     novas_transform T;
     REQUIRE(novas_make_transform(&f, NOVAS_J2000, NOVAS_ITRS, &T) == 0);
     double v[3] = {7000e3 / NOVAS_AU, 0, 0}, out[3];
     REQUIRE(novas_transform_vector(v, &T, out) == 0);
 
-    CHECK_THAT(out[0] * NOVAS_AU, WithinAbs(306056.2251, 1.0));
-    CHECK_THAT(out[1] * NOVAS_AU, WithinAbs(6993284.0474, 1.0));
-    CHECK_THAT(out[2] * NOVAS_AU, WithinAbs(17544.7660, 1.0));
+    CHECK_THAT(out[0] * NOVAS_AU, WithinAbs(306072.148844, 0.001));
+    CHECK_THAT(out[1] * NOVAS_AU, WithinAbs(6993283.319571, 0.001));
+    CHECK_THAT(out[2] * NOVAS_AU, WithinAbs(17557.104222, 0.001));
     CHECK_THAT(norm(out) * NOVAS_AU, WithinAbs(7000e3, 1e-3));
 }

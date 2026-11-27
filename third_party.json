@@ -413,7 +413,7 @@
       "consumption": "vendored",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "Updated in #289 from a 1.5.0 development snapshot (upstream 4bf8c1542df8e80edadb7fdea928a46e53370d17, v1.5.0-rc4-13). That copy also commented out the <unistd.h> includes and novas_set_current_time(), and used libs/strings_h_win.h on Windows; upstream now builds with MSVC without these. The upstream repository moved from Smithsonian/SuperNOVAS to Sigmyne/SuperNOVAS. To update: copy the files listed in version_source, then re-apply local_changes."
+      "notes": "Updated in #289 from a 1.5.0 development snapshot (upstream 4bf8c1542df8e80edadb7fdea928a46e53370d17, v1.5.0-rc4-13). That copy also commented out the <unistd.h> includes and novas_set_current_time(), and used libs/strings_h_win.h on Windows; upstream now builds with MSVC without these. The upstream repository moved from Smithsonian/SuperNOVAS to Sigmyne/SuperNOVAS. Known upstream bug in v1.8.0 (Sigmyne/SuperNOVAS issue #406, fixed by commit 8481599e45b49060caac909ae01b4b86a5b7d1ea, first in v1.8.1-rc1): novas_make_frame() in frames.c adds the diurnal pole correction (libration and ocean tides) as 0.001 * dxp, with dxp in arcsec and frame->dx in mas, so the correction is 10^6 too small and has no effect. Only the diurnal UT1 correction that novas_set_unix_time() adds is in effect. The fix is not backported; the next update will move ITRS results (J2000 -> ITRS, as in the AWS NavAtt reader) by up to about 0.6 mas, about 2 cm at 7000 km, so the reference values in tests/src-core/libs/supernovas/test_supernovas.cpp will need updating. To update: copy the files listed in version_source, then re-apply local_changes."
     },
     {
       "id": "mqtt-c",
