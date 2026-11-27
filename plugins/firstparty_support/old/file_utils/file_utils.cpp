@@ -1,5 +1,6 @@
 #include "file_utils.h"
 #include "libs/miniz/miniz.h"
+#include "utils/file/zip_file_iterators.h"
 #include <filesystem>
 
 #include <hdf5.h>
@@ -15,7 +16,8 @@ namespace satdump
             return f;
 
         mz_zip_archive zip{};
-        mz_zip_reader_init_file(&zip, zippath.c_str(), 0);
+        if (!mz_zip_reader_init_file(&zip, zippath.c_str(), 0))
+            return f;
 
         int numfiles = mz_zip_reader_get_num_files(&zip);
 
@@ -29,9 +31,11 @@ namespace satdump
 
                 if (ext == ".nc")
                 {
-                    size_t filesize = 0;
-                    void *file_ptr = mz_zip_reader_extract_to_heap(&zip, fi, &filesize, 0);
-                    hid_t file = H5LTopen_file_image(file_ptr, filesize, H5F_ACC_RDONLY);
+                    std::vector<uint8_t> vec;
+                    if (!utils::extractZipEntry(&zip, fi, vec) || vec.empty())
+                        continue;
+
+                    hid_t file = H5LTopen_file_image(vec.data(), vec.size(), H5F_ACC_RDONLY);
 
                     if (file > 0)
                     {
@@ -64,7 +68,6 @@ namespace satdump
                         }
                         H5Fclose(file);
                     }
-                    mz_free(file_ptr);
                 }
             }
         }
