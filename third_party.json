@@ -337,18 +337,18 @@
         "src-core/libs/openjp2"
       ],
       "upstream_url": "https://github.com/uclouvain/openjpeg",
-      "version": "2.5.0",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "OPJ_PACKAGE_VERSION in opj_config_private.h. t1.c is identical to the v2.5.0 tag, but j2k.c differs from it (it lacks typo fixes that are in v2.5.0, yet has TLM changes newer than v2.4.0), so the copy may be a pre-release snapshot or mixed.",
+      "version": "2.5.4",
+      "commit": "6c4a29b00211eb0430fa0e5e890f1ce5c80f409f",
+      "commit_verified": true,
+      "version_source": "The v2.5.4 tag (src/lib/openjp2), and OPJ_PACKAGE_VERSION in opj_config_private.h. Every file was compared with the tag: all are identical except the local changes in dwt.c, t1.c, j2k.c, openjpeg.c and openjpeg.h. opj_config.h and opj_config_private.h are hand-written in place of the CMake-generated ones. Before this update the copy was a pre-2.5.0 snapshot labelled 2.5.0.",
       "license": "BSD-2-Clause",
       "local_changes": {
         "status": "yes",
-        "details": "10 local commits (see #286). Not yet split out from the upstream code."
+        "details": "openjpeg.c/openjpeg.h: opj_buffer_info_t and opj_stream_create_buffer_stream() (memory streams, used by image/j2k_utils.cpp), and a posix_memalign() shim for Windows. j2k.c: the default \"Created by OpenJPEG version\" codestream comment is disabled (#if 0). dwt.c and t1.c: the AVX2 and AVX-512 code paths are disabled by renaming __AVX2__/__AVX512F__ to __AVX2__OFF/__AVX512F__OFF, the SSE paths are kept. opj_config.h and opj_config_private.h are hand-written (static build, malloc/memalign detection per platform)."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 286,
+      "upstream_state": "current",
+      "update_issue": null,
       "notes": "Security-relevant: decodes received data."
     },
     {
