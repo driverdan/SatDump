@@ -239,7 +239,8 @@ TEST_CASE("ndsp ReshapeBufferBlock applies a new buffer_size while running", "[d
 {
     auto b = std::make_shared<ReshapeBufferBlock<float>>();
     b->set_cfg("buffer_size", 100);
-    auto is = std::make_shared<DSPStream>(4);
+    // A single input buffer, so getting it back (below) tells when the block is done with the first feed
+    auto is = std::make_shared<DSPStream>(1);
     b->set_input({"in", getTypeSampleType<float>(), is}, 0);
     ndsp_test::Collector<float> col(b->get_output(0, 4).fifo);
     b->start();
@@ -251,6 +252,16 @@ TEST_CASE("ndsp ReshapeBufferBlock applies a new buffer_size while running", "[d
         REQUIRE(feed.wait());
     }
     REQUIRE(col.waitFor(200));
+    // Wait until the block gives back the only input buffer : it is then done
+    // with the first feed, and the last 50 samples were collected under the old
+    // size. Else it could see the new size first and put them in a 300 buffer, see #464
+    auto idle = std::async(std::launch::async,
+                           [is]()
+                           {
+                               DSPBuffer bf = is->newBufferSamples(0, sizeof(float));
+                               is->free(bf);
+                           });
+    REQUIRE(idle.wait_for(ndsp_test::kTimeout) == std::future_status::ready);
     b->set_cfg("buffer_size", 300);
     {
         ndsp_test::Feeder<float> feed(is, std::vector<float>(in.begin() + 250, in.end()), 50, 1);
