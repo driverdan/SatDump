@@ -5,23 +5,11 @@
          access and interpolate INPOP and JPL Ephemeris data.
 
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2008-2018, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
  
- History :
-  \bug M. Gastineau 01/03/05 : thread-safe version 
-  \bug M. Gastineau 11/05/06 : support DE411 and DE414
-  \bug M. Gastineau 22/07/08 : support TT-TDB pour INPOP
-  \bug M. Gastineau 17/10/08 : support DE421
-  \note M. Gastineau 04/05/10 : support DE423
-  \note M. Gastineau 12/10/10 : custom error handler
-  \note M. Gastineau 25/11/10 : fix warning with sun studio compiler
-  \note M. Gastineau 02/02/11 : fix warning with oracle studio compiler 12
-  \bug  M. Gastineau 16/02/11 : fix packing with gcc 64 bits on solaris
-  \note M. Gastineau 20/05/11 : remove explicit depedencies to record size for JPL DExxx
-  \note M. Gastineau 21/05/11 : support ephemerids files with asteroids
 */
 /*-----------------------------------------------------------------*/
 
@@ -105,6 +93,9 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
 #define TTMTDB 15
 #define TCGMTCB 16
 
+/* undefined timescale */
+#define CALCEPH_UNDEFINED_TIMESCALE 0
+
 /*-----------------------------------------------------------------*/
 /* structures */
 /*-----------------------------------------------------------------*/
@@ -124,6 +115,41 @@ struct calcephbin
         struct calcephbin_spice spkernel;   /*!< spice kernel */
         struct calcephbin_inpop binary; /*!< INPOP/JPL format */
     } data;
+    struct calceph_locale clocale;  /*!< C locale for the conversion : should be freed on close statement  */
+    int relationship_tdb_tt;    /*!< model to use for conversions tt<->tdb */
+};
+
+/*----------------------------------------------------------------------------*/
+/* structure for parsing dates */
+/*----------------------------------------------------------------------------*/
+struct calceph_time
+{
+    enum
+    {
+        CALCEPH_BAD_DATATYPE = 0,
+        CALCEPH_JULIANDATE,
+        CALCEPH_CALENDAR
+    } datatype;
+
+    union
+    {
+        struct
+        {
+            double integerpart;
+            double decimalpart;
+        } juliandate;
+        struct
+        {
+            int year;
+            int month;
+            int day;
+            int hour;
+            int minute;
+            double second;
+        } calendar;
+    } datetime;
+
+    int timescale;
 };
 
 /*----------------------------------------------------------------------------*/
@@ -133,8 +159,34 @@ t_calcephbin *calceph_open_array2(int n, char **filename);
 int calceph_unit_convert_quantities_time(stateType * Planet, int InputUnit, int OutputUnit);
 int calceph_unit_convert_quantities_time_array(int n, stateType * Planet, int InputUnit, int OutputUnit);
 
+/*! time parsing */
+int calceph_parse_time(struct calceph_locale *pclocale, const char *timestr, struct calceph_time *time);
+
+/*! time conversion */
+int calceph_time_get_delta_tt_utc(t_calcephbin * eph, double jd0_tt, double jdfrac_tt, double *delta_tt_utc);
+
+int calceph_time_get_delta_utc_tt(t_calcephbin * eph, double jd0_utc, double jdfrac_utc, double *delta_utc_tt);
+
+int calceph_time_get_delta_tt_tai(t_calcephbin * eph, double *delta_tt_tai);
+
+int calceph_time_get_delta_tai_utc(t_calcephbin * eph, double jd0_utc, double jdfrac_utc, double *delta_tai_utc);
+
+int calceph_time_get_delta_utc_tai(t_calcephbin * eph, double jd0_utc, double jdfrac_utc, double *delta_tai_utc);
+
+int calceph_time_get_delta_tdb_tt(t_calcephbin * eph, double *delta_tdb_tt);
+
+int calceph_time_cal_to_jd_day(int yy, int month, int day, long *jd_integer, double *jd_fraction);
+
+int calceph_time_jd_to_cal_day(double jd0, double jdfrac, int *yy, int *month, int *day, double *fd);
+
 /*----------------------------------------------------------------------------*/
 /* get constants */
 /*----------------------------------------------------------------------------*/
 double calceph_getEMRAT(t_calcephbin * p_pbinfile);
 double calceph_getAU(t_calcephbin * p_pbinfile);
+
+/*-----------------------------------------------------------------*/
+/*! create/destroy locale independante  */
+/*-----------------------------------------------------------------*/
+int calceph_locale_init(struct calceph_locale *clocale);
+void calceph_locale_clear(struct calceph_locale *clocale);

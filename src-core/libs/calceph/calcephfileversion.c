@@ -99,7 +99,7 @@ terms.
 
 */
 /*--------------------------------------------------------------------------*/
-int calceph_getfileversion(t_calcephbin * eph, char szversion[CALCEPH_MAX_CONSTANTVALUE])
+int calceph_getfileversion(t_calcephbin *eph, char szversion[CALCEPH_MAX_CONSTANTVALUE])
 {
     int res = 0;
 

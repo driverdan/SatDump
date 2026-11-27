@@ -220,7 +220,7 @@ void calceph_spk_interpol_Lagrange(int S, const double *drecord, const double *d
             Planet->Acceleration[i] = A_Sum;
         }
 
-        /* evaluate the second derivative of the polynomial at time tp  : jerks */
+        /* evaluate the third derivative of the polynomial at time tp  : jerks */
         if (Planet->order >= 3)
         {
             double J_Sum = 0.E0;

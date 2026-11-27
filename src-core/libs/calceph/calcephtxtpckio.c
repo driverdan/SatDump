@@ -5,9 +5,9 @@
          read all constants from a text PCK KERNEL Ephemeris data.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris.
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2011-2024, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -145,12 +145,96 @@ void calceph_txtpck_debug(const struct TXTPCKfile *header)
  @param res (out) descriptor of the ephemeris.
 */
 /*--------------------------------------------------------------------------*/
-int calceph_txtpck_open(FILE * file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res)
+int calceph_txtpck_open(FILE *file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res)
 {
     int ret;
 
     res->filetype = TXT_PCK;
     ret = calceph_txtpck_load(file, filename, "KPL/PCK", clocale, &res->filedata.txtpck);
+    if (ret == 0)
+    {
+        /* unload constants */
+#if DEBUG
+        printf("unload constants\n");
+#endif
+        calceph_txtpck_close(&res->filedata.txtpck);
+    }
+    return ret;
+}
+
+/*--------------------------------------------------------------------------*/
+/*!  Read the constants of the text IK kernel file
+
+  @return  1 on sucess and 0 on failure
+
+ @param file (inout) file descriptor.
+ @param filename (in) A character string giving the name of an ephemeris data file.
+ @param locale (in) C locale to handle the decimal point inside the conversion string to double
+ @param res (out) descriptor of the ephemeris.
+*/
+/*--------------------------------------------------------------------------*/
+int calceph_txtik_open(FILE *file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res)
+{
+    int ret;
+
+    res->filetype = TXT_IK;
+    ret = calceph_txtpck_load(file, filename, "KPL/IK", clocale, &res->filedata.txtpck);
+    if (ret == 0)
+    {
+        /* unload constants */
+#if DEBUG
+        printf("unload constants\n");
+#endif
+        calceph_txtpck_close(&res->filedata.txtpck);
+    }
+    return ret;
+}
+
+/*--------------------------------------------------------------------------*/
+/*!  Read the constants of the text LSK kernel file
+
+  @return  1 on sucess and 0 on failure
+
+ @param file (inout) file descriptor.
+ @param filename (in) A character string giving the name of an ephemeris data file.
+ @param locale (in) C locale to handle the decimal point inside the conversion string to double
+ @param res (out) descriptor of the ephemeris.
+*/
+/*--------------------------------------------------------------------------*/
+int calceph_txtlsk_open(FILE *file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res)
+{
+    int ret;
+
+    res->filetype = TXT_LSK;
+    ret = calceph_txtpck_load(file, filename, "KPL/LSK", clocale, &res->filedata.txtpck);
+    if (ret == 0)
+    {
+        /* unload constants */
+#if DEBUG
+        printf("unload constants\n");
+#endif
+        calceph_txtpck_close(&res->filedata.txtpck);
+    }
+    return ret;
+}
+
+/*--------------------------------------------------------------------------*/
+/*!  Read the constants of the text SCLK kernel file
+
+  @return  1 on sucess and 0 on failure
+
+ @param file (inout) file descriptor.
+ @param filename (in) A character string giving the name of an ephemeris data file.
+ @param locale (in) C locale to handle the decimal point inside the conversion string to double
+ @param res (out) descriptor of the ephemeris.
+*/
+/*--------------------------------------------------------------------------*/
+int calceph_txtsclk_open(FILE *file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res)
+{
+    int ret;
+
+    res->filetype = TXT_SCLK;
+    ret = calceph_txtpck_load(file, filename, "KPL/SCLK", clocale, &res->filedata.txtpck);
     if (ret == 0)
     {
         /* unload constants */
@@ -174,7 +258,7 @@ int calceph_txtpck_open(FILE * file, const char *filename, struct calceph_locale
  @param res (out) descriptor of the text file.
 */
 /*--------------------------------------------------------------------------*/
-int calceph_txtpck_load(FILE * file, const char *filename, const char *header,
+int calceph_txtpck_load(FILE *file, const char *filename, const char *header,
                         struct calceph_locale clocale, struct TXTPCKfile *res)
 {
     off_t lenfile;
@@ -470,7 +554,7 @@ void calceph_txtpck_load_appendvaluetoend(struct TXTPCKconstant *pnewcst, struct
 */
 /*--------------------------------------------------------------------------*/
 struct TXTPCKvalue *calceph_txtpck_load_decodevalue(char *buffer, off_t lenfile, off_t begkeyword,
-                                                    off_t endkeyword, const char *filename, off_t * pcurpos)
+                                                    off_t endkeyword, const char *filename, off_t *pcurpos)
 {
     off_t curpos = *pcurpos;
     struct TXTPCKvalue *listvalue = NULL, *prec = NULL;
@@ -486,18 +570,18 @@ struct TXTPCKvalue *calceph_txtpck_load_decodevalue(char *buffer, off_t lenfile,
     {
         /* GCOVR_EXCL_START */
         fatalerror("Can't find  the character '(' , ' or a digit after the keyword '%.*s'\n",
-                   (int)(endkeyword - begkeyword), buffer + begkeyword);
+                   (int) (endkeyword - begkeyword), buffer + begkeyword);
         return NULL;
         /* GCOVR_EXCL_STOP */
     }
 
-   /* check the parenthesis or ' or digit or sign +- */
+    /* check the parenthesis or ' or digit or sign +- */
     if (buffer[curpos] != '(' && buffer[curpos] != '\'' && !isdigit_char(buffer[curpos])
         && buffer[curpos] != '+' && buffer[curpos] != '-')
     {
         /* GCOVR_EXCL_START */
         fatalerror("Can't find  the character '(' , ' or a digit after the keyword '%.*s'\n",
-                   (int)(endkeyword - begkeyword), buffer + begkeyword);
+                   (int) (endkeyword - begkeyword), buffer + begkeyword);
         return NULL;
         /* GCOVR_EXCL_STOP */
     }
@@ -648,7 +732,7 @@ struct TXTPCKvalue *calceph_txtpck_load_decodevalue(char *buffer, off_t lenfile,
     else
     {
         fatalerror("unknown value type  after the keyword '%.*s' in the file '%s'\n",
-                   (int)(endkeyword - begkeyword), buffer + begkeyword, filename);
+                   (int) (endkeyword - begkeyword), buffer + begkeyword, filename);
         return NULL;
     }
 
@@ -721,7 +805,7 @@ int calceph_txtpck_getconstant_vd(const struct TXTPCKfile *eph, const char *name
 
             for (listvalue = listconstant->value; listvalue != NULL; listvalue = listvalue->next)
             {
-                if (listvalue->buffer[listvalue->locfirst] != '\'')
+                if (listvalue->buffer[listvalue->locfirst] != '\'' && listvalue->buffer[listvalue->locfirst] != '@')
                 {
                     if (found < nvalue)
                     {
@@ -1190,11 +1274,12 @@ int calceph_txtpck_merge_incrementalassignment(struct SPICEkernel *list, struct 
 {
     struct TXTPCKconstant *prec = NULL, *cur = NULL, *nextcur = NULL, *nextprec = NULL;
 
-    if (newkernel->filetype != TXT_PCK)
+    if (newkernel->filetype != TXT_PCK && newkernel->filetype != TXT_IK && newkernel->filetype != TXT_LSK &&
+        newkernel->filetype != TXT_SCLK)
     {
         /* GCOVR_EXCL_START */
         fatalerror("Internal error in calceph_txtpck_merge_incrementalassignment : type of the kernel "
-                   "should be TXT_PCK");
+                   "should be TXT_PCK, TXT_IK, TXT_LSK or TXT_SCLK");
         return 0;
         /* GCOVR_EXCL_STOP */
     }
@@ -1210,7 +1295,9 @@ int calceph_txtpck_merge_incrementalassignment(struct SPICEkernel *list, struct 
 
             for (ker = list; ker != NULL && cur != NULL; ker = ker->next)
             {
-                if (ker != newkernel && ker->filetype == TXT_PCK)
+                if (ker != newkernel &&
+                    (ker->filetype == TXT_PCK || ker->filetype == TXT_IK || ker->filetype == TXT_LSK ||
+                     ker->filetype == TXT_SCLK))
                 {
                     struct TXTPCKconstant *existingconstant
                         = calceph_txtpck_getptrconstant(&(ker->filedata.txtpck), cur->name);

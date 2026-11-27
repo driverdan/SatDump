@@ -4,9 +4,9 @@
   \brief supplementary tools.
 
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2008-2024, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 */
 /*-----------------------------------------------------------------*/
@@ -98,10 +98,12 @@ void calceph_fatalerror(const char *format, ...);
 
 #define fatalerror calceph_fatalerror
 
-int swapint(int x);
-double swapdbl(double x);
-void swapintarray(int *x, int count);
-void swapdblarray(double *x, size_t count);
+int calceph_swapint(int x);
+double calceph_swapdbl(double x);
+void calceph_swapintarray(int *x, int count);
+void calceph_swapdblarray(double *x, size_t count);
+
+void calceph_strtoupper(char *strvalue);
 
 #if !defined(HAVE_RINT)
 double rint(double x);
@@ -116,7 +118,7 @@ int vasprintf(char **ret, const char *format, va_list args);
 #if defined(HAVE_SNPRINTF)
 #define calceph_snprintf snprintf
 #else
-int calceph_snprintf(char * str, size_t size, const char * format, ...);
+int calceph_snprintf(char *str, size_t size, const char *format, ...);
 #endif
 
 /* platform without fseeko or ftello functions : android api <=24 */

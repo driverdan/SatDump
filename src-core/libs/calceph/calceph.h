@@ -5,9 +5,9 @@
         access and interpolate INPOP and JPL Ephemeris data.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris.
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2008-2025, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 */
 /*-----------------------------------------------------------------*/
@@ -65,11 +65,11 @@ terms.
 /* definition of the CALCEPH library version */
 /*----------------------------------------------------------------------------------------------*/
 /*! version : major number of CALCEPH library */
-#define CALCEPH_VERSION_MAJOR 4
+#define CALCEPH_VERSION_MAJOR 5
 /*! version : minor number of CALCEPH library */
 #define CALCEPH_VERSION_MINOR 0
 /*! version : patch number of CALCEPH library */
-#define CALCEPH_VERSION_PATCH 5
+#define CALCEPH_VERSION_PATCH 1
 
 /*----------------------------------------------------------------------------------------------*/
 /* windows specific support */
@@ -111,7 +111,7 @@ terms.
 #if defined(__cplusplus)
 extern "C"
 {
-#endif /*defined (__cplusplus) */
+#endif                          /*defined (__cplusplus) */
 
 /*----------------------------------------------------------------------------------------------*/
 /* definition of some constants */
@@ -144,8 +144,11 @@ extern "C"
  that the value of a constant could contain. */
 #define CALCEPH_MAX_CONSTANTVALUE 1024
 
-/*! define the offset value for asteroid for calceph_?compute */
+/*! define the offset value for asteroid 2E6+... for calceph_?compute */
 #define CALCEPH_ASTEROID 2000000
+
+/*! define the offset value for asteroid 2E8+... for calceph_?compute */
+#define CALCEPH_ASTEROID_8 200000000
 
 /* unit for the output */
 /*! outputs are in Astronomical Unit */
@@ -168,52 +171,58 @@ extern "C"
 /*! outputs are the nutation angles */
 #define CALCEPH_OUTPUT_NUTATIONANGLES 128
 
-
 /* list of the known segment type for spice kernels and inpop/jpl original file format  */
 /* segment of the original DE/INPOP file format */
-#define CALCEPH_SEGTYPE_ORIG_0 0 /*!< segment type for the original DE/INPOP file format */
+#define CALCEPH_SEGTYPE_ORIG_0 0    /*!< segment type for the original DE/INPOP file format */
 /* segment of the spice kernels */
 #define CALCEPH_SEGTYPE_SPK_1                                                                           \
-  1 /*!< Modified Difference Arrays. The time argument for these ephemerides is TDB */
+  1                             /*!< Modified Difference Arrays. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_2                                                                           \
-  2 /*!< Chebyshev polynomials for position. fixed length time intervals.The time argument for these    \
-       ephemerides is TDB */
+  2                             /*!< Chebyshev polynomials for position. fixed length time intervals.The time argument for these    \
+                                   ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_3                                                                           \
-  3 /*!< Chebyshev polynomials for position and velocity. fixed length time intervals. The time         \
-       argument for these ephemerides is TDB */
+  3                             /*!< Chebyshev polynomials for position and velocity. fixed length time intervals. The time         \
+                                   argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_5                                                                           \
-  5 /*!< Discrete states (two body propagation).  The time argument for these ephemerides is TDB */
+  5                             /*!< Discrete states (two body propagation).  The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_8                                                                           \
-  8 /*!< Lagrange Interpolation - Equal Time Steps. The time argument for these ephemerides is TDB */
+  8                             /*!< Lagrange Interpolation - Equal Time Steps. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_9                                                                           \
-  9 /*!< Lagrange Interpolation - Unequal Time Steps. The time argument for these ephemerides is TDB */
+  9                             /*!< Lagrange Interpolation - Unequal Time Steps. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_12                                                                          \
-  12 /*!< Hermite Interpolation - Equal Time Steps. The time argument for these ephemerides is TDB */
+  12                            /*!< Hermite Interpolation - Equal Time Steps. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_13                                                                          \
-  13 /*!< Hermite Interpolation - Unequal Time Steps. The time argument for these ephemerides is TDB */
+  13                            /*!< Hermite Interpolation - Unequal Time Steps. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_14                                                                          \
-  14 /*!< Chebyshev Polynomials - Unequal Time Steps. The time argument for these ephemerides is TDB */
+  14                            /*!< Chebyshev Polynomials - Unequal Time Steps. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_17                                                                          \
-  17 /*!< Equinoctial Elements. The time argument for these ephemerides is TDB */
+  17                            /*!< Equinoctial Elements. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_18                                                                          \
-  18 /*!< ESOC/DDID Hermite/Lagrange Interpolation.  The time argument for these ephemerides is TDB */
+  18                            /*!< ESOC/DDID Hermite/Lagrange Interpolation.  The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_19                                                                          \
-  19 /*!< ESOC/DDID Piecewise Interpolation. The time argument for these ephemerides is TDB */
+  19                            /*!< ESOC/DDID Piecewise Interpolation. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_20                                                                          \
-  20 /*!< Chebyshev polynomials for velocity. fixed length time intervals. The time argument for these  \
-        ephemerides is TDB */
+  20                            /*!< Chebyshev polynomials for velocity. fixed length time intervals. The time argument for these  \
+                                   ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_21                                                                          \
-  21 /*!< Extended Modified Difference Arrays. The time argument for these ephemerides is TDB */
+  21                            /*!< Extended Modified Difference Arrays. The time argument for these ephemerides is TDB */
 #define CALCEPH_SEGTYPE_SPK_102                                                                         \
-  102 /*!< Chebyshev polynomials for position. fixed length time intervals.  The time argument for      \
-         these ephemerides is TCB */
+  102                           /*!< Chebyshev polynomials for position. fixed length time intervals.  The time argument for      \
+                                   these ephemerides is TCB */
 #define CALCEPH_SEGTYPE_SPK_103                                                                         \
-  103 /*!< Chebyshev polynomials for position and velocity. fixed length time intervals. The time       \
-         argument for these ephemerides is TCB */
+  103                           /*!< Chebyshev polynomials for position and velocity. fixed length time intervals. The time       \
+                                   argument for these ephemerides is TCB */
 #define CALCEPH_SEGTYPE_SPK_120                                                                         \
-  120 /*!< Chebyshev polynomials for velocity. fixed length time intervals.  The time argument for      \
-         these ephemerides is TCB */
+  120                           /*!< Chebyshev polynomials for velocity. fixed length time intervals.  The time argument for      \
+                                   these ephemerides is TCB */
 
+/* Timescales */
+#define CALCEPH_TDB 1
+#define CALCEPH_TCB 2
+#define CALCEPH_UTC 3
+#define CALCEPH_TAI 4
+#define CALCEPH_TT 5
+#define CALCEPH_TIMESCALE_FROM_STR 6    /*!< Timescale is detected from a string */
 
 /*! NAIF identification numbers for the Sun and planetary barycenters (table 2
  * of reference 1) */
@@ -543,212 +552,582 @@ extern "C"
 #define NAIFID_SIDING_SPRING 1003228
 
   /*-----------------------------------------------------------------*/
-  /* error handler */
+    /* error handler */
   /*-----------------------------------------------------------------*/
-  /*! set the error handler */
-  __CALCEPH_DECLSPEC void calceph_seterrorhandler(int typehandler, void (*userfunc)(const char*));
-
-  /*-----------------------------------------------------------------*/
-  /* single access API per thread/process */
-  /*-----------------------------------------------------------------*/
-  /*! open an ephemeris data file */
-  __CALCEPH_DECLSPEC int calceph_sopen(const char* filename);
-
-  /*! return the version of the ephemeris data file as a null-terminated string */
-  __CALCEPH_DECLSPEC int calceph_sgetfileversion(char szversion[CALCEPH_MAX_CONSTANTVALUE]);
-
-  /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
-   for a given target and center */
-  __CALCEPH_DECLSPEC int calceph_scompute(double JD0, double time, int target, int center, double PV[6]);
-
-  /*! get the first value from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_sgetconstant(const char* name, double* value);
-
-  /*! return the number of constants available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_sgetconstantcount(void);
-
-  /*! return the name and the associated value of the constant available at some
-   * index in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_sgetconstantindex(int index, char name[CALCEPH_MAX_CONSTANTNAME],
-                                                   double* value);
-
-  /*! return the time scale in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_sgettimescale(void);
-
-  /*! return the first and last time available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_sgettimespan(double* firsttime, double* lasttime, int* continuous);
-
-  /*! close an ephemeris data file */
-  __CALCEPH_DECLSPEC void calceph_sclose(void);
+    /*! set the error handler */
+    __CALCEPH_DECLSPEC void calceph_seterrorhandler(int typehandler, void (*userfunc)(const char *));
 
   /*-----------------------------------------------------------------*/
-  /* multiple access API per thread/process */
+    /* single access API per thread/process */
   /*-----------------------------------------------------------------*/
-  /*! ephemeris descriptor */
-  typedef struct calcephbin t_calcephbin;
+    /*! open an ephemeris data file */
+    __CALCEPH_DECLSPEC int calceph_sopen(const char *filename);
 
-  /*! fixed length string value of a constant */
-  typedef char t_calcephcharvalue[CALCEPH_MAX_CONSTANTVALUE];
+    /*! return the version of the ephemeris data file as a null-terminated string */
+    __CALCEPH_DECLSPEC int calceph_sgetfileversion(char szversion[CALCEPH_MAX_CONSTANTVALUE]);
 
-  /*! open an ephemeris data file */
-  __CALCEPH_DECLSPEC t_calcephbin* calceph_open(const char* filename);
+    /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
+       for a given target and center */
+    __CALCEPH_DECLSPEC int calceph_scompute(double JD0, double time, int target, int center, double PV[6]);
 
-  /*! open a list of ephemeris data file */
-  __CALCEPH_DECLSPEC t_calcephbin* calceph_open_array(int n, const char* const filename[]);
+    /*! get the first value from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_sgetconstant(const char *name, double *value);
+
+    /*! return the number of constants available in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_sgetconstantcount(void);
+
+    /*! return the name and the associated value of the constant available at some
+     * index in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_sgetconstantindex(int index, char name[CALCEPH_MAX_CONSTANTNAME], double *value);
+
+    /*! return the time scale in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_sgettimescale(void);
+
+    /*! return the first and last time available in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_sgettimespan(double *firsttime, double *lasttime, int *continuous);
+
+    /*! close an ephemeris data file */
+    __CALCEPH_DECLSPEC void calceph_sclose(void);
+
+  /*-----------------------------------------------------------------*/
+    /* multiple access API per thread/process */
+  /*-----------------------------------------------------------------*/
+    /*! ephemeris descriptor for reading */
+    typedef struct calcephbin t_calcephbin;
+
+    /*! ephemeris descriptor  for writing */
+    typedef struct writephbin t_writephbin;
+
+    /*! fixed length string value of a constant */
+    typedef char t_calcephcharvalue[CALCEPH_MAX_CONSTANTVALUE];
+
+    /*! open an ephemeris data file */
+    __CALCEPH_DECLSPEC t_calcephbin *calceph_open(const char *filename);
+
+    /*! open a list of ephemeris data file */
+    __CALCEPH_DECLSPEC t_calcephbin *calceph_open_array(int n, const char *const filename[]);
 
 #if 0
-  /*! duplicate the handle of the ephemeris data file */
-  __CALCEPH_DECLSPEC t_calcephbin* calceph_fdopen(t_calcephbin* eph);
+    /*! duplicate the handle of the ephemeris data file */
+    __CALCEPH_DECLSPEC t_calcephbin *calceph_fdopen(t_calcephbin * eph);
 #endif
 
-  /*! return the version of the ephemeris data file as a null-terminated string */
-  __CALCEPH_DECLSPEC int calceph_getfileversion(t_calcephbin* eph,
-                                                char szversion[CALCEPH_MAX_CONSTANTVALUE]);
+    /*! return the version of the ephemeris data file as a null-terminated string */
+    __CALCEPH_DECLSPEC int calceph_getfileversion(t_calcephbin * eph, char szversion[CALCEPH_MAX_CONSTANTVALUE]);
 
-  /*! prefetch all data to memory */
-  __CALCEPH_DECLSPEC int calceph_prefetch(t_calcephbin* eph);
+    /*! prefetch all data to memory */
+    __CALCEPH_DECLSPEC int calceph_prefetch(t_calcephbin * eph);
 
-  /*! return non-zero value if eph could be accessed by multiple threads */
-  __CALCEPH_DECLSPEC int calceph_isthreadsafe(t_calcephbin* eph);
+    /*! return non-zero value if eph could be accessed by multiple threads */
+    __CALCEPH_DECLSPEC int calceph_isthreadsafe(t_calcephbin * eph);
 
-  /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
-   for a given target and center at a single time. The output is in UA, UA/day,
-   radians */
-  __CALCEPH_DECLSPEC int calceph_compute(t_calcephbin* eph, double JD0, double time, int target,
-                                         int center, double PV[6]);
+    /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
+       for a given target and center at a single time. The output is in UA, UA/day,
+       radians */
+    __CALCEPH_DECLSPEC int calceph_compute(t_calcephbin * eph, double JD0, double time, int target,
+                                           int center, double PV[6]);
 
-  /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
-   for a given target and center at a single time. The output is expressed
-   according to unit */
-  __CALCEPH_DECLSPEC int calceph_compute_unit(t_calcephbin* eph, double JD0, double time, int target,
-                                              int center, int unit, double PV[6]);
+    /*! compute the position <x,y,z> and velocity <xdot,ydot,zdot>
+       for a given target and center at a single time. The output is expressed
+       according to unit */
+    __CALCEPH_DECLSPEC int calceph_compute_unit(t_calcephbin * eph, double JD0, double time, int target,
+                                                int center, int unit, double PV[6]);
 
-  /*! compute the orientation <euler angles> and their derivatives for a given
-   target  at a single time. The output is expressed according to unit */
-  __CALCEPH_DECLSPEC int calceph_orient_unit(t_calcephbin* eph, double JD0, double time, int target,
-                                             int unit, double PV[6]);
+    /*! compute the orientation <euler angles> and their derivatives for a given
+       target  at a single time. The output is expressed according to unit */
+    __CALCEPH_DECLSPEC int calceph_orient_unit(t_calcephbin * eph, double JD0, double time, int target,
+                                               int unit, double PV[6]);
 
-  /*! compute the rotational angular momentum G/(mR^2) and their derivatives for a
-   given target  at a single time. The output is expressed according to unit */
-  __CALCEPH_DECLSPEC int calceph_rotangmom_unit(t_calcephbin* eph, double JD0, double time, int target,
-                                                int unit, double PV[6]);
+    /*! compute the rotational angular momentum G/(mR^2) and their derivatives for a
+       given target  at a single time. The output is expressed according to unit */
+    __CALCEPH_DECLSPEC int calceph_rotangmom_unit(t_calcephbin * eph, double JD0, double time, int target,
+                                                  int unit, double PV[6]);
 
-  /*! According to the value of order, compute the position <x,y,z>
-   and their first, second and third derivatives (velocity, acceleration, jerk)
-   for a given target and center at a single time. The output is expressed
-   according to unit */
-  __CALCEPH_DECLSPEC int calceph_compute_order(t_calcephbin* eph, double JD0, double time, int target,
-                                               int center, int unit, int order, double* PVAJ);
+    /*! According to the value of order, compute the position <x,y,z>
+       and their first, second and third derivatives (velocity, acceleration, jerk)
+       for a given target and center at a single time. The output is expressed
+       according to unit */
+    __CALCEPH_DECLSPEC int calceph_compute_order(t_calcephbin * eph, double JD0, double time, int target,
+                                                 int center, int unit, int order, double *PVAJ);
 
-  /*! According to the value of order,  compute the orientation <euler angles> and
-   their first, second and third derivatives for a given target  at a single time.
-   The output is expressed according to unit */
-  __CALCEPH_DECLSPEC int calceph_orient_order(t_calcephbin* eph, double JD0, double time, int target,
-                                              int unit, int order, double* PVAJ);
+    /*! According to the value of order,  compute the orientation <euler angles> and
+       their first, second and third derivatives for a given target  at a single time.
+       The output is expressed according to unit */
+    __CALCEPH_DECLSPEC int calceph_orient_order(t_calcephbin * eph, double JD0, double time, int target,
+                                                int unit, int order, double *PVAJ);
 
-  /*! compute the rotational angular momentum G/(mR^2) and their first, second and
-   third derivatives for
-   a given target at a single time. The output is expressed according to unit */
-  __CALCEPH_DECLSPEC int calceph_rotangmom_order(t_calcephbin* eph, double JD0, double time, int target,
-                                                 int unit, int order, double* PVAJ);
+    /*! compute the rotational angular momentum G/(mR^2) and their first, second and
+       third derivatives for
+       a given target at a single time. The output is expressed according to unit */
+    __CALCEPH_DECLSPEC int calceph_rotangmom_order(t_calcephbin * eph, double JD0, double time, int target,
+                                                   int unit, int order, double *PVAJ);
 
-  /*! get the first value from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getconstant(t_calcephbin* eph, const char* name, double* value);
+    /*! get the first value from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getconstant(t_calcephbin * eph, const char *name, double *value);
 
-  /*! get the first value from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getconstantsd(t_calcephbin* eph, const char* name, double* value);
+    /*! get the first value from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getconstantsd(t_calcephbin * eph, const char *name, double *value);
 
-  /*! get the nvalue values from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getconstantvd(t_calcephbin* eph, const char* name, double* arrayvalue,
-                                               int nvalue);
+    /*! get the nvalue values from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getconstantvd(t_calcephbin * eph, const char *name, double *arrayvalue, int nvalue);
 
-  /*! get the first value from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getconstantss(t_calcephbin* eph, const char* name,
-                                               t_calcephcharvalue value);
+    /*! get the first value from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getconstantss(t_calcephbin * eph, const char *name, t_calcephcharvalue value);
 
-  /*! get the nvalue values from the specified name constant in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getconstantvs(t_calcephbin* eph, const char* name,
-                                               t_calcephcharvalue* arrayvalue, int nvalue);
+    /*! get the nvalue values from the specified name constant in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getconstantvs(t_calcephbin * eph, const char *name,
+                                                 t_calcephcharvalue * arrayvalue, int nvalue);
 
-  /*! return the number of constants available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getconstantcount(t_calcephbin* eph);
+    /*! return the number of constants available in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getconstantcount(t_calcephbin * eph);
 
-  /*! return the name and the associated first value of the constant available at
-   * some index in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getconstantindex(t_calcephbin* eph, int index,
-                                                  char name[CALCEPH_MAX_CONSTANTNAME], double* value);
+    /*! return the name and the associated first value of the constant available at
+     * some index in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getconstantindex(t_calcephbin * eph, int index,
+                                                    char name[CALCEPH_MAX_CONSTANTNAME], double *value);
 
-  /*! return the id of the body using the given name in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getidbyname(t_calcephbin* eph, const char* name, int unit, int* id);
+    /*! return the id of the body using the given name in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getidbyname(t_calcephbin * eph, const char *name, int unit, int *id);
 
-  /*! return the first name of the body using its id in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getnamebyidss(t_calcephbin* eph, int id, int unit,
-                                               t_calcephcharvalue value);
+    /*! return the first name of the body using its id in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getnamebyidss(t_calcephbin * eph, int id, int unit, t_calcephcharvalue value);
 
-  /*! return the number of position’s records available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getpositionrecordcount(t_calcephbin* eph);
+    /*! return the time scale in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_gettimescale(t_calcephbin * eph);
 
+    /*! return the first and last time available in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_gettimespan(t_calcephbin * eph, double *firsttime, double *lasttime,
+                                               int *continuous);
 
-  /*! return the time scale in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_gettimescale(t_calcephbin* eph);
+    /*! return the number of position’s records available in the ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getpositionrecordcount(t_calcephbin * eph);
 
-  /*! return the first and last time available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_gettimespan(t_calcephbin* eph, double* firsttime, double* lasttime,
-                                             int* continuous);
+    /*! return the target and origin bodies, the first and last time, and the
+       reference frame available at the specified position’s records' index of the
+       ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getpositionrecordindex(t_calcephbin * eph, int index, int *target,
+                                                          int *center, double *firsttime, double *lasttime, int *frame);
 
-  /*! return the number of position’s records available in the ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getpositionrecordcount(t_calcephbin* eph);
+    /*! return the target and origin bodies, the first and last time, the reference frame
+       and the segment type available at the specified position’s records' index of the
+       ephemeris file */
+    __CALCEPH_DECLSPEC int calceph_getpositionrecordindex2(t_calcephbin * eph, int index, int *target,
+                                                           int *center, double *firsttime,
+                                                           double *lasttime, int *frame, int *segtype);
 
-  /*! return the target and origin bodies, the first and last time, and the
-   reference frame available at the specified position’s records' index of the
-   ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getpositionrecordindex(t_calcephbin* eph, int index, int* target,
-                                                        int* center, double* firsttime, double* lasttime,
-                                                        int* frame);
+    /*! return the number of orientation’s records available in the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getorientrecordcount(t_calcephbin * eph);
 
-  /*! return the target and origin bodies, the first and last time, the reference frame
-   and the segment type available at the specified position’s records' index of the
-   ephemeris file */
-  __CALCEPH_DECLSPEC int calceph_getpositionrecordindex2(t_calcephbin* eph, int index, int* target,
-                                                         int* center, double* firsttime,
-                                                         double* lasttime, int* frame, int* segtype);
+    /*! return the target body, the first and last time, and the reference frame
+       available at the specified orientation’s records' index of the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getorientrecordindex(t_calcephbin * eph, int index, int *target,
+                                                        double *firsttime, double *lasttime, int *frame);
 
-  /*! return the number of orientation’s records available in the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getorientrecordcount(t_calcephbin* eph);
+    /*! return the target body, the first and last time, the reference frame and the segment type
+       available at the specified orientation’s records' index of the ephemeris file
+     */
+    __CALCEPH_DECLSPEC int calceph_getorientrecordindex2(t_calcephbin * eph, int index, int *target,
+                                                         double *firsttime, double *lasttime, int *frame, int *segtype);
 
-  /*! return the target body, the first and last time, and the reference frame
-   available at the specified orientation’s records' index of the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getorientrecordindex(t_calcephbin* eph, int index, int* target,
-                                                      double* firsttime, double* lasttime, int* frame);
+    /*! close an ephemeris data file and destroy the ephemeris descriptor */
+    __CALCEPH_DECLSPEC void calceph_close(t_calcephbin * eph);
 
-  /*! return the target body, the first and last time, the reference frame and the segment type
-   available at the specified orientation’s records' index of the ephemeris file
-   */
-  __CALCEPH_DECLSPEC int calceph_getorientrecordindex2(t_calcephbin* eph, int index, int* target,
-                                                       double* firsttime, double* lasttime, int* frame,
-                                                       int* segtype);
+    /*! return the maximal order of the derivatives for a segment type */
+    __CALCEPH_DECLSPEC int calceph_getmaxsupportedorder(int idseg);
 
-  /*! close an ephemeris data file and destroy the ephemeris descriptor */
-  __CALCEPH_DECLSPEC void calceph_close(t_calcephbin* eph);
+    /*! return the version of the library as a null-terminated string */
+    __CALCEPH_DECLSPEC void calceph_getversion_str(char szversion[CALCEPH_MAX_CONSTANTNAME]);
 
-  /*! return the maximal order of the derivatives for a segment type */
-  __CALCEPH_DECLSPEC int calceph_getmaxsupportedorder(int idseg);
+  /*-----------------------------------------------------------------*/
+    /* instrument functions */
+  /*-----------------------------------------------------------------*/
 
-  /*! return the version of the library as a null-terminated string */
-  __CALCEPH_DECLSPEC void calceph_getversion_str(char szversion[CALCEPH_MAX_CONSTANTNAME]);
+    /*! Return the field-of-view (FOV) parameters for a specified instrument */
+    __CALCEPH_DECLSPEC int calceph_getfov(t_calcephbin * eph, int instrumentid, int *shape,
+                                          t_calcephcharvalue frame, double vector[3], double *arraybounds, int nbounds);
+
+  /*-----------------------------------------------------------------*/
+    /* time conversion */
+  /*-----------------------------------------------------------------*/
+
+    /*! convert the Julian day to the calendar date according to timescale */
+    __CALCEPH_DECLSPEC int calceph_time_jd_to_cal(t_calcephbin * eph, int timescale, double jd0,
+                                                  double jdfrac, int *yy, int *month, int *day, int *hh,
+                                                  int *min, double *sec);
+
+    /*! convert the calendar date to the Julian day according to timescale */
+    __CALCEPH_DECLSPEC int calceph_time_cal_to_jd(t_calcephbin * eph, int timescale, int yy, int month,
+                                                  int day, int hh, int min, double sec, double *jd0, double *jdfrac);
+
+    /*! parse the date, assumed in the timescale,  to the Julian day in the same timescale */
+    __CALCEPH_DECLSPEC int calceph_time_str_to_jd(t_calcephbin * eph, int timescale, const char *str,
+                                                  double *jd0, double *jdfrac);
+
+    /*! set the model used to convert the date between the timescales TT and TDB */
+    __CALCEPH_DECLSPEC int calceph_time_set_relationship_tt_tdb(t_calcephbin * eph, int model);
+
+    /*! convert the Julian day, expressed in the timescale TDB, the Julian day, expressed in the timescale
+     * TT */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tdb_to_jd_tt(t_calcephbin * eph, double jd0_tdb,
+                                                        double jdfrac_tdb, double *jd0_tt, double *jdfrac_tt);
+
+    /*! convert the Julian day, expressed in the timescale TT, the Julian day, expressed in the timescale
+     * TDB */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tt_to_jd_tdb(t_calcephbin * eph, double jd0_tt, double jdfrac_tt,
+                                                        double *jd0_tdb, double *jdfrac_tdb);
+
+    /*! convert the Julian day, expressed in the timescale TDB, the Julian day, expressed in the timescale
+     * TCB */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tdb_to_jd_tcb(t_calcephbin * eph, double jd0_tdb,
+                                                         double jdfrac_tdb, double *jd0_tcb, double *jdfrac_tcb);
+
+    /*! convert the Julian day, expressed in the timescale TCB, the Julian day, expressed in the timescale
+     * TDB */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tcb_to_jd_tdb(t_calcephbin * eph, double jd0_tcb,
+                                                         double jdfrac_tcb, double *jd0_tdb, double *jdfrac_tdb);
+
+    /*! parse the date to the Julian day expressed in the timescale TDB */
+    __CALCEPH_DECLSPEC int calceph_time_str_any_to_jd_tdb(t_calcephbin * eph, const char *str,
+                                                          double *jd0_tdb, double *jdfrac_tdb);
+
+    /*! parse the UTC date to the Julian day expressed in the timescale TDB */
+    __CALCEPH_DECLSPEC int calceph_time_str_utc_to_jd_tdb(t_calcephbin * eph, const char *str,
+                                                          double *jd0_tdb, double *jdfrac_tdb);
+
+    /*! convert the calendar date, expressed in the timescale UTC, to the Julian day expressed in
+     * timescale TDB */
+    __CALCEPH_DECLSPEC int calceph_time_cal_utc_to_jd_tdb(t_calcephbin * eph, int yy, int month, int day,
+                                                          int hh, int min, double sec, double *jd0_tdb,
+                                                          double *jdfrac_tdb);
+
+    /*! convert the Julian day expressed in timescale TDB to the calendar date expressed in the timescale
+     * UTC */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tdb_to_cal_utc(t_calcephbin * eph, double jd0_tdb,
+                                                          double jdfrac_tdb, int *yy, int *month, int *day,
+                                                          int *hh, int *min, double *sec);
+
+    /*! convert the space clock time string to the Julian day expressed in TDB */
+    __CALCEPH_DECLSPEC int calceph_time_str_spacecraft_clock_to_jd_tdb(t_calcephbin * eph, int target,
+                                                                       const char *str, double *jd0_tdb,
+                                                                       double *jdfrac_tdb);
+
+    /*! convert the Julian day expressed in TDB to space clock time string */
+    __CALCEPH_DECLSPEC int calceph_time_jd_tdb_to_str_spacecraft_clock(t_calcephbin * eph, int target,
+                                                                       double jd0_tdb, double jdfrac_tdb,
+                                                                       t_calcephcharvalue str);
+
+    /* ------------------------------------------------------------------ */
+    /* ----------------------- WRITING FUNCTIONS ------------------------ */
+    /* ------------------------------------------------------------------- */
+
+    /* create a new binary spk file */
+    __CALCEPH_DECLSPEC t_writephbin *writeph_spk_create(const char *filename, const char *ifname, int flags);
+
+    /* create a new binary pck file */
+    __CALCEPH_DECLSPEC t_writephbin *writeph_pck_create(const char *filename, const char *ifname, int flags);
+
+    /* open a binary spk file for writing (append) */
+    __CALCEPH_DECLSPEC t_writephbin *writeph_spk_open(const char *filename);
+
+    /* open a binary pck file for writing (append) */
+    __CALCEPH_DECLSPEC t_writephbin *writeph_pck_open(const char *filename);
+
+    /* close a binary spk/pck file created/opened for writing */
+    __CALCEPH_DECLSPEC int writeph_close(t_writephbin * eph);
+
+    /* save the state of the ephemeris file to a dump file */
+    __CALCEPH_DECLSPEC int writeph_dump(t_writephbin * eph, const char *filename);
+
+    /* restore the state of an ephemeris file from a dump file */
+    __CALCEPH_DECLSPEC int writeph_restore(t_writephbin * eph, const char *filename);
+
+    /* write a comment to an ephemeris file */
+    __CALCEPH_DECLSPEC int writeph_comment(t_writephbin * eph, const char *comment);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 2 SPK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 2 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk2_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                  double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                  double end_frac_tdb, double intlen_jd_tdb, const double *polynomials,
+                                                  int record_count, int deg, const char *segid);
+
+    /* reserve space for several type 2 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk2_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                    int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                    double end_jd0_tdb, double end_frac_tdb,
+                                                    const double *intlens_jd_tdb, const int *record_counts, int deg,
+                                                    const char *segids[]);
+
+    /* write data into a reserved segment of type 2 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk2_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 3 SPK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 3 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk3_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                  double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                  double end_frac_tdb, double intlen_jd_tdb, const double *polynomials,
+                                                  int record_count, int deg, const char *segid);
+
+    /* reserve space for several type 3 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk3_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                    int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                    double end_jd0_tdb, double end_frac_tdb,
+                                                    const double *intlens_jd_tdb, const int *record_counts, int deg,
+                                                    const char *segids[]);
+
+    /* write data into a reserved segment of type 3 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk3_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 8 SPK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 8 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk8_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                  double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                  double end_frac_tdb, double intlen_jd_tdb, const double *states,
+                                                  int record_count, int deg, const char *segid);
+
+    /* reserve space for several type 8 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk8_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                    int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                    double end_jd0_tdb, double end_frac_tdb,
+                                                    const double *intlens_jd_tdb, const int *record_counts, int deg,
+                                                    const char *segids[]);
+
+    /* write data into a reserved segment of type 8 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk8_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *states);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 9 SPK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 9 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk9_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                  double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                  double end_frac_tdb, const double *states, const double *epochs,
+                                                  int record_counts, int deg, const char *segid);
+
+    /* reserve space for several type 9 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk9_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                    int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                    double end_jd0_tdb, double end_frac_tdb, const int *record_counts,
+                                                    int deg, const char *segids[]);
+
+    /* write data into a reserved segment of type 9 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk9_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *states,
+                                                  const double *epochs);
+
+    /* ------------------------------------------------------------ */
+    /* ----------------------- Type 12 SPK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 12 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk12_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                   double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                   double end_frac_tdb, double intlen_jd_tdb, const double *states,
+                                                   int record_count, int deg, const char *segid);
+
+    /* reserve space for several type 12 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk12_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                     int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                     double end_jd0_tdb, double end_frac_tdb,
+                                                     const double *intlens_jd_tdb, const int *record_counts, int deg,
+                                                     const char *segids[]);
+
+    /* write data into a reserved segment of type 12 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk12_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                   int record_begin_index, int record_count, const double *states);
+
+    /* ------------------------------------------------------------- */
+    /* ------------------------ Type 13 SPK ------------------------ */
+    /* ------------------------------------------------------------- */
+
+    /* write a type 13 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk13_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                   double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                   double end_frac_tdb, const double *states, const double *epochs,
+                                                   int record_counts, int deg, const char *segid);
+
+    /* reserve space for several type 13 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk13_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                     int center, int frame, double start_jd0_tdb, double start_frac_tdb,
+                                                     double end_jd0_tdb, double end_frac_tdb, const int *record_counts,
+                                                     int deg, const char *segids[]);
+
+    /* write data into a reserved segment of type 13 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk13_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                   int record_begin_index, int record_count, const double *states,
+                                                   const double *epochs);
+
+    /* ------------------------------------------------------------- */
+    /* ------------------------ Type 14 SPK ------------------------ */
+    /* ------------------------------------------------------------- */
+
+    /* begin a type 14 segment */
+    __CALCEPH_DECLSPEC int writeph_spk14_begin(t_writephbin * eph, int target, int center, int frame,
+                                               double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                               double end_frac_tdb, int deg, const char *segid);
+
+    /* add data into a type 14 segment */
+    __CALCEPH_DECLSPEC int writeph_spk14_add(t_writephbin * eph, int record_count, const double *data,
+                                             const double *epochs);
+
+    /* end a type 14 segment */
+    __CALCEPH_DECLSPEC int writeph_spk14_end(t_writephbin * eph);
+
+    /* ------------------------------------------------------------ */
+    /* ----------------------- Type 102 SPK ----------------------- */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 102 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk102_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                    double start_jd0_tcb, double start_frac_tcb, double end_jd0_tcb,
+                                                    double end_frac_tcb, double intlen_jd_tcb,
+                                                    const double *polynomials, int record_count, int deg,
+                                                    const char *segid);
+
+    /* reserve space for several type 102 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk102_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                      int center, int frame, double start_jd0_tcb,
+                                                      double start_frac_tcb, double end_jd0_tcb, double end_frac_tcb,
+                                                      const double *intlens_jd_tcb, const int *record_counts, int deg,
+                                                      const char *segids[]);
+
+    /* write data into a reserved segment of type 102 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk102_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                    int record_begin_index, int record_count,
+                                                    const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ----------------------- Type 103 SPK ----------------------- */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 103 segment to a spk file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_spk103_seq_write(t_writephbin * eph, int target, int center, int frame,
+                                                    double start_jd0_tcb, double start_frac_tcb, double end_jd0_tcb,
+                                                    double end_frac_tcb, double intlen_jd_tcb,
+                                                    const double *polynomials, int record_count, int deg,
+                                                    const char *segid);
+
+    /* reserve space for several type 103 segments to a spk file */
+    __CALCEPH_DECLSPEC int writeph_spk103_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                      int center, int frame, double start_jd0_tcb,
+                                                      double start_frac_tcb, double end_jd0_tcb, double end_frac_tcb,
+                                                      const double *intlens_jd_tcb, const int *record_counts, int deg,
+                                                      const char *segids[]);
+
+    /* write data into a reserved segment of type 103 to a spk file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_spk103_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                    int record_begin_index, int record_count,
+                                                    const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 2 PCK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 2 segment to a pck file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_pck2_seq_write(t_writephbin * eph, int target, int frame, double start_jd0_tdb,
+                                                  double start_frac_tdb, double end_jd0_tdb, double end_frac_tdb,
+                                                  double intlen_jd_tdb, const double *polynomials, int record_count,
+                                                  int deg, const char *segid);
+
+    /* reserve space for several type 2 segments to a pck file */
+    __CALCEPH_DECLSPEC int writeph_pck2_par_reserve(t_writephbin * eph, int target_count, const int *targets, int frame,
+                                                    double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                    double end_frac_tdb, const double *intlens_jd_tdb,
+                                                    const int *record_counts, int deg, const char *segids[]);
+
+    /* write data into a reserved segment of type 2 to a pck file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_pck2_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ------------------------ Type 3 PCK ------------------------ */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 3 segment to a pck file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_pck3_seq_write(t_writephbin * eph, int target, int frame, double start_jd0_tdb,
+                                                  double start_frac_tdb, double end_jd0_tdb, double end_frac_tdb,
+                                                  double intlen_jd_tdb, const double *polynomials, int record_count,
+                                                  int deg, const char *segid);
+
+    /* reserve space for several type 3 segments to a pck file */
+    __CALCEPH_DECLSPEC int writeph_pck3_par_reserve(t_writephbin * eph, int target_count, const int *targets, int frame,
+                                                    double start_jd0_tdb, double start_frac_tdb, double end_jd0_tdb,
+                                                    double end_frac_tdb, const double *intlens_jd_tdb,
+                                                    const int *record_counts, int deg, const char *segids[]);
+
+    /* write data into a reserved segment of type 3 to a pck file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_pck3_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                  int record_begin_index, int record_count, const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ----------------------- Type 102 PCK ----------------------- */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 102 segment to a pck file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_pck102_seq_write(t_writephbin * eph, int target, int frame, double start_jd0_tcb,
+                                                    double start_frac_tcb, double end_jd0_tcb, double end_frac_tcb,
+                                                    double intlen_jd_tcb, const double *polynomials, int record_count,
+                                                    int deg, const char *segid);
+
+    /* reserve space for several type 102 segments to a pck file */
+    __CALCEPH_DECLSPEC int writeph_pck102_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                      int frame, double start_jd0_tcb, double start_frac_tcb,
+                                                      double end_jd0_tcb, double end_frac_tcb,
+                                                      const double *intlens_jd_tcb, const int *record_counts, int deg,
+                                                      const char *segids[]);
+
+    /* write data into a reserved segment of type 102 to a pck file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_pck102_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                    int record_begin_index, int record_count,
+                                                    const double *polynomials);
+
+    /* ------------------------------------------------------------ */
+    /* ----------------------- Type 103 PCK ----------------------- */
+    /* ------------------------------------------------------------ */
+
+    /* write a type 103 segment to a pck file in sequential mode */
+    __CALCEPH_DECLSPEC int writeph_pck103_seq_write(t_writephbin * eph, int target, int frame, double start_jd0_tcb,
+                                                    double start_frac_tcb, double end_jd0_tcb, double end_frac_tcb,
+                                                    double intlen_jd_tcb, const double *polynomials, int record_count,
+                                                    int deg, const char *segid);
+
+    /* reserve space for several type 103 segments to a pck file */
+    __CALCEPH_DECLSPEC int writeph_pck103_par_reserve(t_writephbin * eph, int target_count, const int *targets,
+                                                      int frame, double start_jd0_tcb, double start_frac_tcb,
+                                                      double end_jd0_tcb, double end_frac_tcb,
+                                                      const double *intlens_jd_tcb, const int *record_counts, int deg,
+                                                      const char *segids[]);
+
+    /* write data into a reserved segment of type 103 to a pck file in parallel mode */
+    __CALCEPH_DECLSPEC int writeph_pck103_par_write(t_writephbin * eph, int reservation, int target_index,
+                                                    int record_begin_index, int record_count,
+                                                    const double *polynomials);
 
 /*----------------------------------------------------------------------------------------------*/
 /*----------------------------------------------------------------------------------------------*/
 #if defined(__cplusplus)
 }
-#endif /*defined (__cplusplus) */
+#endif                          /*defined (__cplusplus) */
 
 #endif /*__CALCEPH_H__*/

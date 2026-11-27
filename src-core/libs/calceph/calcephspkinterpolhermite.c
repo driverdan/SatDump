@@ -3,9 +3,9 @@
   \file calcephspkinterpolhermite.c 
   \brief perform the herminte interpolation
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2016-2023, CNRS
+   Copyright, 2016-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -167,7 +167,7 @@ void calceph_spk_interpol_Hermite(int S, const double *drecord, const double *de
 {
     int i, j, k, q, r, s;
 
-#if __STDC_VERSION__>199901L
+#if __STDC_VERSION__>=199901L
 #define NSTACK_INTERPOL (3*S+2)
 #else
 #define NSTACK_INTERPOL 1000
@@ -255,7 +255,7 @@ void calceph_spk_interpol_Hermite(int S, const double *drecord, const double *de
             Planet->Acceleration[i] = A_Sum;
         }
 
-        /* evaluate the second derivative of the polynomial at time tp  : jerks */
+        /* evaluate the third derivative of the polynomial at time tp  : jerks */
         if (Planet->order >= 3)
         {
             double J_Sum = 0.E0;

@@ -5,9 +5,9 @@
          read all constants from a text Frame KERNEL (FK)  Ephemeris data.
 
   \author  M. Gastineau
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris.
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2011-2024, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -142,7 +142,7 @@ static void calceph_txtfk_debug(const struct TXTFKfile *header)
 
    @param file (inout) file descriptor. Closed on exit if success.
    @param filename (in) A character string giving the name of an ephemeris data file.
- @param locale (in) C locale to handle the decimal point inside the conversion string to double
+   @param locale (in) C locale to handle the decimal point inside the conversion string to double
    @param res (out) descriptor of the ephemeris.
 */
 /*--------------------------------------------------------------------------*/

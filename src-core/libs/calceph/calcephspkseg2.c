@@ -9,9 +9,9 @@
          for the segments of type 2/3/20.
 
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2011-2023, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -362,7 +362,7 @@ static void calceph_spk_interpol_PV_segment_20_an(const double *Coeff_Array, tre
                                                   treal Timerecordbeg, stateType * Planet, int N)
 {
 
-#if __STDC_VERSION__>199901L
+#if __STDC_VERSION__>=199901L
 #define NSTACK_INTERPOL (N+1)
 #else
 #define NSTACK_INTERPOL 15000

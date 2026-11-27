@@ -8,7 +8,7 @@
            Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de
   Paris.
 
-   Copyright, 2011-2025, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -67,9 +67,6 @@ terms.
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#if HAVE_PTHREAD
-#include <pthread.h>
-#endif
 #if HAVE_LOCALE_H
 #include <locale.h>
 #endif
@@ -78,6 +75,7 @@ terms.
 #endif
 
 #include "calcephstatetype.h"
+#include "calcephthread.h"
 
 /*-----------------------------------------------------------------*/
 /* private API */
@@ -125,6 +123,9 @@ enum SPICEfiletype
     DAF_SPK = 1,                /*!< binary SPK file */
     DAF_PCK,                    /*!< binary PCK file */
     TXT_PCK,                    /*!< text PCK file */
+    TXT_IK,                     /*!< text IK file */
+    TXT_LSK,                    /*!< text LSK file */
+    TXT_SCLK,                   /*!< text SCLK file */
     TXT_FK                      /*!< text FK file */
 };
 
@@ -337,10 +338,10 @@ struct SPKSegmentHeader_18
 /*-----------------------------------------------------------------*/
 struct SPKSegmentHeader_19
 {
-    double *boundary_times_directory;          /*!< min(N,100) : fast directory of times  if number_intervals>100
-                                   or  explicit directory if N<=100 */
-    int count_boundary_times_directory;        /*!< number of valid elements in  boundary_times_directory */
-    double *boundary_times;          /*!< n+1 directory of times */
+    double *boundary_times_directory;   /*!< min(N,100) : fast directory of times  if number_intervals>100
+                                           or  explicit directory if N<=100 */
+    int count_boundary_times_directory; /*!< number of valid elements in  boundary_times_directory */
+    double *boundary_times;     /*!< n+1 directory of times */
     double *mini_segments;      /*!< number_intervals+1 mini-segments pointer */
     int number_intervals;       /*!< number of intervals in segment */
     int boundary_choice_flag;   /*!<  boundary choice flag   */
@@ -520,6 +521,8 @@ struct SPICEkernel
     {
         struct SPKfile spk;     /*!< SPK file, valid only if filetype = DAF_SPK */
         struct TXTPCKfile txtpck;   /*!< text PCK file, valid only if filetype = TXT_PCK */
+        /*!< also valid with IK, LSK or SCLK files, (filetype = TXT_IK, TXT_LSK
+         * or TXT_SCLK */
         struct TXTFKfile txtfk; /*!< text FK file, valid only if filetype = TXT_FK */
     } filedata;                 /*!< content of the ephemeris */
     struct SPICEkernel *next;   /*!< next spice ephemeris file */
@@ -577,11 +580,7 @@ struct SPICEtablelinkbody
     int *shortestpathmaxlink;   /*!< array of "count_body" integers: each integer is the current maximal link
                                    of the body for the shortest path algorithm  (allocated memory for
                                    "reserved_memory" integers) */
-#if HAVE_PTHREAD
-    pthread_mutex_t mutex;      /*!< Pthreads mutex to protect the creation of link between two bodies */
-#elif HAVE_WIN32API
-    HANDLE mutex;               /*!< Windows mutex to protect the creation of link between two bodies */
-#endif
+    calceph_mtx_t mutex;        /*!< threads mutex to protect the creation of link between two bodies */
 };
 
 /*-----------------------------------------------------------------*/
@@ -594,7 +593,6 @@ struct calcephbin_spice
     /* predefined constant */
     double AU;                  /*!< Astronomical Unit */
     double EMRAT;               /*!< Earth-Moon mass ratio */
-    struct calceph_locale clocale;  /*!< C locale for the conversion : should be freed on close statement  */
 };
 
 /*-----------------------------------------------------------------*/
@@ -705,6 +703,15 @@ void calceph_binpck_close(struct SPKfile *eph);
 /*! open for reading a text PCK file */
 int calceph_txtpck_open(FILE * file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res);
 
+/*! open for reading a text IK file */
+int calceph_txtik_open(FILE * file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res);
+
+/*! open for reading a text IK file */
+int calceph_txtlsk_open(FILE * file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res);
+
+/*! open for reading a text IK file */
+int calceph_txtsclk_open(FILE * file, const char *filename, struct calceph_locale clocale, struct SPICEkernel *res);
+
 /*! close for reading a text PCK file */
 void calceph_txtpck_close(struct TXTPCKfile *eph);
 
@@ -715,7 +722,7 @@ int calceph_txtfk_open(FILE * file, const char *filename, struct calceph_locale 
 void calceph_txtfk_close(struct TXTFKfile *eph);
 
 /*! open for reading a text MK file */
-int calceph_txtmk_open(FILE * file, const char *filename, struct calcephbin_spice *res);
+int calceph_txtmk_open(FILE * file, const char *filename, struct calceph_locale clocale, struct calcephbin_spice *res);
 
 /*! close for reading any SPICE file */
 void calceph_spice_close(struct calcephbin_spice *eph);

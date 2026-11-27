@@ -8,7 +8,7 @@
   \author  M. Gastineau
            Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris.
 
-   Copyright, 2011-2025,  CNRS
+   Copyright, 2011-2026,  CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:
@@ -81,6 +81,7 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
+#include <ctype.h>
 
 #include "calcephdebug.h"
 #include "real.h"
@@ -143,28 +144,6 @@ struct SPICEkernel *calceph_spice_addfile(struct calcephbin_spice *eph)
         eph->AU = 0.E0;
         eph->EMRAT = 0.E0;
         calceph_spice_tablelinkbody_init(&eph->tablelink);
-        eph->clocale.useclocale = 0;
-#if USE_STRTOD_L
-#if HAVE__CREATE_LOCALE
-        eph->clocale.dataclocale = _create_locale(LC_NUMERIC, "C");
-#else
-        eph->clocale.dataclocale = newlocale(LC_NUMERIC_MASK, "C", (locale_t) 0);
-#endif
-        eph->clocale.useclocale = (eph->clocale.dataclocale == (locale_t) 0) ? 0 : 1;
-#endif
-        /* if the locale does not produce a correct decimal point, generates an error */
-        if (eph->clocale.useclocale == 0)
-        {
-            char buffer[10];
-
-            calceph_snprintf(buffer, 10, "%0.1f", 0.5);
-            if (buffer[1] != '.')
-            {
-                fatalerror
-                    ("Current locale does not create the decimal point '.' and calceph can't create a C locale\n");
-                return NULL;
-            }
-        }
     }
     /* go to the tail of the list of file */
     prec = eph->list;
@@ -213,6 +192,9 @@ static void calceph_spicekernel_close(struct SPICEkernel *eph)
             break;
 
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             calceph_txtpck_close(&eph->filedata.txtpck);
             break;
 
@@ -242,10 +224,6 @@ void calceph_spice_close(struct calcephbin_spice *eph)
 {
     struct SPICEkernel *list = eph->list;
 
-#if USE_STRTOD_L
-    if (eph->clocale.useclocale == 1)
-        freelocale(eph->clocale.dataclocale);
-#endif
     while (list != NULL)
     {
         struct SPICEkernel *clist = list;
@@ -276,6 +254,9 @@ static int calceph_spicekernel_prefetch(struct SPICEkernel *eph)
             break;
 
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             break;
 
         case DAF_PCK:
@@ -339,6 +320,9 @@ static int calceph_spicekernel_isthreadsafe(const struct SPICEkernel *eph)
             break;
 
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             break;
 
         case DAF_PCK:
@@ -537,6 +521,9 @@ static int calceph_spicekernel_getconstant_vd(const struct SPICEkernel *eph, con
     switch (eph->filetype)
     {
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             found = calceph_txtpck_getconstant_vd(&eph->filedata.txtpck, name, arrayvalue, nvalue);
             break;
 
@@ -592,6 +579,9 @@ const struct TXTPCKconstant *calceph_spicekernel_getptrconstant(struct SPICEkern
     switch (eph->filetype)
     {
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             found = calceph_txtpck_getptrconstant(&eph->filedata.txtpck, name);
             break;
 
@@ -641,7 +631,7 @@ static const struct TXTPCKconstant *calceph_spice_getptrconstant(const struct ca
 */
 /*--------------------------------------------------------------------------*/
 int calceph_spice_getconstant_vs(struct calcephbin_spice *eph, const char *name,
-                                 t_calcephcharvalue * arrayvalue, int nvalue)
+                                 t_calcephcharvalue *arrayvalue, int nvalue)
 {
     int found = 0;
 
@@ -653,7 +643,14 @@ int calceph_spice_getconstant_vs(struct calcephbin_spice *eph, const char *name,
 
         for (listvalue = ptr->value; listvalue != NULL; listvalue = listvalue->next)
         {
-            if (listvalue->buffer[listvalue->locfirst] == '\'')
+            int isdig = isdigit_char(listvalue->buffer[listvalue->locfirst]) ||
+                listvalue->buffer[listvalue->locfirst] == '-' || listvalue->buffer[listvalue->locfirst] == '+';
+
+            int isdate = listvalue->buffer[listvalue->locfirst] == '@';
+
+            int issimplequote = listvalue->buffer[listvalue->locfirst] == '\'';
+
+            if (isdig || isdate || issimplequote)
             {
                 if (found < nvalue)
                 {
@@ -661,15 +658,30 @@ int calceph_spice_getconstant_vs(struct calcephbin_spice *eph, const char *name,
 
                     int j = listvalue->loclast;
 
-                    while (j > listvalue->locfirst && listvalue->buffer[j] != '\'')
-                        j--;
+                    if (issimplequote != 0)
+                    {
+                        while (j > listvalue->locfirst && listvalue->buffer[j] != '\'')
+                            j--;
+                    }
+                    else
+                    {
+                        while (j > listvalue->locfirst && listvalue->buffer[j] != '\t' &&
+                               listvalue->buffer[j] != ' ' && listvalue->buffer[j] != ',' &&
+                               listvalue->buffer[j] != '\r' && listvalue->buffer[j] != '\n')
+                            j--;
+                    }
                     if (j > listvalue->locfirst)
                     {
                         int curpos = 0;
 
-                        for (k = listvalue->locfirst + 1; k < j && curpos < CALCEPH_MAX_CONSTANTVALUE; k++)
+                        k = listvalue->locfirst;
+
+                        if (issimplequote != 0)
+                            k++;
+
+                        for (; k < j && curpos < CALCEPH_MAX_CONSTANTVALUE; k++)
                         {
-                            if (listvalue->buffer[k] == '\'')
+                            if (issimplequote != 0 && listvalue->buffer[k] == '\'')
                                 k++;
                             arrayvalue[found][curpos++] = listvalue->buffer[k];
                         }
@@ -686,7 +698,6 @@ int calceph_spice_getconstant_vs(struct calcephbin_spice *eph, const char *name,
             }
         }
     }
-
     return found;
 }
 
@@ -703,6 +714,9 @@ static int calceph_spicekernel_getconstantcount(struct SPICEkernel *eph)
     switch (eph->filetype)
     {
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             res = calceph_txtpck_getconstantcount(&eph->filedata.txtpck);
             break;
 
@@ -757,6 +771,9 @@ static int calceph_spicekernel_getconstantindex(struct SPICEkernel *eph, int *in
     switch (eph->filetype)
     {
         case TXT_PCK:
+        case TXT_IK:
+        case TXT_LSK:
+        case TXT_SCLK:
             res = calceph_txtpck_getconstantindex(&eph->filedata.txtpck, index, name, value);
             break;
 
@@ -816,7 +833,7 @@ int calceph_spice_getconstantindex(struct calcephbin_spice *eph, int index,
           Output : expressed in OutputUnit units.
 */
 /*--------------------------------------------------------------------------*/
-static int calceph_spice_unit_convert_distanceortime(struct calcephbin_spice *pephbin, stateType * Planet,
+static int calceph_spice_unit_convert_distanceortime(struct calcephbin_spice *pephbin, stateType *Planet,
                                                      int Target, int InputUnit, int OutputUnit)
 {
     int res = 1;
@@ -962,7 +979,7 @@ static int calceph_spice_compute_unit_spiceid(struct calcephbin_spice *eph, doub
           Output : expressed in OutputUnit units.
 */
 /*--------------------------------------------------------------------------*/
-int calceph_spice_unit_convert_orient(stateType * Planet, int InputUnit, int OutputUnit)
+int calceph_spice_unit_convert_orient(stateType *Planet, int InputUnit, int OutputUnit)
 {
     int res = 1;
 

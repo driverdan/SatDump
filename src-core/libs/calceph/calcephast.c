@@ -5,9 +5,9 @@
          for inpop ephemerides only.
 
   \author  M. Gastineau 
-           Astronomie et Systemes Dynamiques, IMCCE, CNRS, Observatoire de Paris. 
+           Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2011-2024, CNRS
+   Copyright, 2011-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 
   History:                                                                
@@ -105,7 +105,7 @@ static void calceph_debug_asteroid(const t_ast_calcephbin * infoast);
   @param p_pasteph (out) asteroids ephemeris.   
 */
 /*--------------------------------------------------------------------------*/
-void calceph_empty_asteroid(t_ast_calcephbin * p_pasteph)
+void calceph_empty_asteroid(t_ast_calcephbin *p_pasteph)
 {
     p_pasteph->inforec.locNextRecord = 0;
     p_pasteph->inforec.numAstRecord = 0;
@@ -127,7 +127,7 @@ void calceph_empty_asteroid(t_ast_calcephbin * p_pasteph)
   @param p_pasteph (inout) asteroids ephemeris.   
 */
 /*--------------------------------------------------------------------------*/
-void calceph_free_asteroid(t_ast_calcephbin * p_pasteph)
+void calceph_free_asteroid(t_ast_calcephbin *p_pasteph)
 {
     if (p_pasteph->coefftime_array.prefetch == 0)
     {
@@ -159,7 +159,7 @@ void calceph_free_asteroid(t_ast_calcephbin * p_pasteph)
             on exit, the location of the next record (could be 0 if no other record)
 */
 /*--------------------------------------------------------------------------*/
-int calceph_init_asteroid(t_ast_calcephbin * p_pasteph, FILE * file, int swapbyte, double timeData[3], int recordsize,
+int calceph_init_asteroid(t_ast_calcephbin *p_pasteph, FILE *file, int swapbyte, double timeData[3], int recordsize,
                           int ncomp, int *locnextrecord)
 {
     size_t recordsizebytes = sizeof(double) * recordsize;
@@ -197,18 +197,18 @@ int calceph_init_asteroid(t_ast_calcephbin * p_pasteph, FILE * file, int swapbyt
     /*swap */
     if (swapbyte)
     {
-        p_pasteph->inforec.locNextRecord = swapint(p_pasteph->inforec.locNextRecord);
-        p_pasteph->inforec.numAst = swapint(p_pasteph->inforec.numAst);
-        p_pasteph->inforec.numAstRecord = swapint(p_pasteph->inforec.numAstRecord);
-        p_pasteph->inforec.typeAstRecord = swapint(p_pasteph->inforec.typeAstRecord);
-        p_pasteph->inforec.locIDAstRecord = swapint(p_pasteph->inforec.locIDAstRecord);
-        p_pasteph->inforec.numIDAstRecord = swapint(p_pasteph->inforec.numIDAstRecord);
-        p_pasteph->inforec.locGMAstRecord = swapint(p_pasteph->inforec.locGMAstRecord);
-        p_pasteph->inforec.numGMAstRecord = swapint(p_pasteph->inforec.numGMAstRecord);
-        p_pasteph->inforec.locCoeffPtrAstRecord = swapint(p_pasteph->inforec.locCoeffPtrAstRecord);
-        p_pasteph->inforec.numCoeffPtrAstRecord = swapint(p_pasteph->inforec.numCoeffPtrAstRecord);
-        p_pasteph->inforec.locCoeffAstRecord = swapint(p_pasteph->inforec.locCoeffAstRecord);
-        p_pasteph->inforec.numCoeffAstRecord = swapint(p_pasteph->inforec.numCoeffAstRecord);
+        p_pasteph->inforec.locNextRecord = calceph_swapint(p_pasteph->inforec.locNextRecord);
+        p_pasteph->inforec.numAst = calceph_swapint(p_pasteph->inforec.numAst);
+        p_pasteph->inforec.numAstRecord = calceph_swapint(p_pasteph->inforec.numAstRecord);
+        p_pasteph->inforec.typeAstRecord = calceph_swapint(p_pasteph->inforec.typeAstRecord);
+        p_pasteph->inforec.locIDAstRecord = calceph_swapint(p_pasteph->inforec.locIDAstRecord);
+        p_pasteph->inforec.numIDAstRecord = calceph_swapint(p_pasteph->inforec.numIDAstRecord);
+        p_pasteph->inforec.locGMAstRecord = calceph_swapint(p_pasteph->inforec.locGMAstRecord);
+        p_pasteph->inforec.numGMAstRecord = calceph_swapint(p_pasteph->inforec.numGMAstRecord);
+        p_pasteph->inforec.locCoeffPtrAstRecord = calceph_swapint(p_pasteph->inforec.locCoeffPtrAstRecord);
+        p_pasteph->inforec.numCoeffPtrAstRecord = calceph_swapint(p_pasteph->inforec.numCoeffPtrAstRecord);
+        p_pasteph->inforec.locCoeffAstRecord = calceph_swapint(p_pasteph->inforec.locCoeffAstRecord);
+        p_pasteph->inforec.numCoeffAstRecord = calceph_swapint(p_pasteph->inforec.numCoeffAstRecord);
     }
 
    /*--------------------------------------------------------------------------*/
@@ -343,9 +343,9 @@ int calceph_init_asteroid(t_ast_calcephbin * p_pasteph, FILE * file, int swapbyt
         /*swap */
         if (swapbyte)
         {
-            swapintarray(p_pasteph->id_array, p_pasteph->inforec.numAst);
-            swapdblarray(p_pasteph->GM_array, p_pasteph->inforec.numAst);
-            swapintarray((int *) (p_pasteph->coeffptr_array), p_pasteph->inforec.numAst * 3);
+            calceph_swapintarray(p_pasteph->id_array, p_pasteph->inforec.numAst);
+            calceph_swapdblarray(p_pasteph->GM_array, p_pasteph->inforec.numAst);
+            calceph_swapintarray((int *) (p_pasteph->coeffptr_array), p_pasteph->inforec.numAst * 3);
         }
 
 #if DEBUG
@@ -397,7 +397,7 @@ int calceph_init_asteroid(t_ast_calcephbin * p_pasteph, FILE * file, int swapbyt
   @param infoast (in) asteroids ephemeris. 
 */
 /*--------------------------------------------------------------------------*/
-static void calceph_debug_asteroid(const t_ast_calcephbin * infoast)
+static void calceph_debug_asteroid(const t_ast_calcephbin *infoast)
 {
     int j;
 
@@ -446,8 +446,8 @@ static void calceph_debug_asteroid(const t_ast_calcephbin * infoast)
   @param ephunit (out) units of the output state
 */
 /*--------------------------------------------------------------------------*/
-int calceph_interpol_PV_asteroid(t_ast_calcephbin * p_pbinfile, treal TimeJD0, treal Timediff,
-                                 int Target, int *ephunit, int isinAU, stateType * Planet)
+int calceph_interpol_PV_asteroid(t_ast_calcephbin *p_pbinfile, treal TimeJD0, treal Timediff,
+                                 int Target, int *ephunit, int isinAU, stateType *Planet)
 {
     treal Time = TimeJD0 + Timediff;
     int i, id;

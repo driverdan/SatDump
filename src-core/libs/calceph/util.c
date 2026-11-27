@@ -9,7 +9,7 @@
   \author  M. Gastineau 
            Astronomie et Systemes Dynamiques, LTE, CNRS, Observatoire de Paris. 
 
-   Copyright, 2008-2025, CNRS
+   Copyright, 2008-2026, CNRS
    email of the author : Mickael.Gastineau@obspm.fr
 */
 /*-----------------------------------------------------------------*/
@@ -74,6 +74,7 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
 #include <string.h>
 #include <errno.h>
 #include <math.h>
+#include <ctype.h>
 #if defined(HAVE_MATHIMF_H)
 #include <mathimf.h>
 #elif defined(HAVE_MATH_H)
@@ -104,7 +105,7 @@ knowledge of the CeCILL-C,CeCILL-B or CeCILL license and that you accept its ter
   @param x (in) integer
 */
 /*--------------------------------------------------------------------------*/
-int swapint(int x)
+int calceph_swapint(int x)
 {
     int j;
     int res;
@@ -123,7 +124,7 @@ int swapint(int x)
   @param x (in) real
 */
 /*--------------------------------------------------------------------------*/
-double swapdbl(double x)
+double calceph_swapdbl(double x)
 {
     double res;
     int j;
@@ -143,13 +144,13 @@ double swapdbl(double x)
   @param count (in) number of elements in the array
 */
 /*--------------------------------------------------------------------------*/
-void swapdblarray(double *x, size_t count)
+void calceph_swapdblarray(double *x, size_t count)
 {
     size_t j;
 
     for (j = 0; j < count; j++)
     {
-        x[j] = swapdbl(x[j]);
+        x[j] = calceph_swapdbl(x[j]);
     }
 }
 
@@ -159,13 +160,13 @@ void swapdblarray(double *x, size_t count)
   @param count (in) number of elements in the array
 */
 /*--------------------------------------------------------------------------*/
-void swapintarray(int *x, int count)
+void calceph_swapintarray(int *x, int count)
 {
     int j;
 
     for (j = 0; j < count; j++)
     {
-        x[j] = swapint(x[j]);
+        x[j] = calceph_swapint(x[j]);
     }
 }
 
@@ -243,13 +244,14 @@ int vasprintf(char **retp, const char *format, va_list args)
 /* snprintf                                                        */
 /*------------------------------------------------------------------*/
 #if !defined(HAVE_SNPRINTF)
-int calceph_snprintf(char * str, size_t PARAMETER_UNUSED(size), const char * format, ...)
+int calceph_snprintf(char *str, size_t PARAMETER_UNUSED(size), const char *format, ...)
 {
 #if HAVE_PRAGMA_UNUSED
 #pragma unused(size)
 #endif
     int ret = 0;
     va_list args;
+
     va_start(args, format);
     ret = vsprintf(str, format, args);
     va_end(args);
@@ -269,10 +271,10 @@ const char *calceph_strerror_errno(buffer_error_t buffer)
 #if HAVE_STRERROR_R
 #if defined(__CYGWIN__)
 #if defined(_GNU_SOURCE)
-    typedef const char * strerror_r_t;
+    typedef const char *strerror_r_t;
 #else
     typedef int strerror_r_t;
-#endif   
+#endif
 #elif defined(_GNU_SOURCE) && defined(__ANDROID_API__) && (__ANDROID_API__ >= 23)
     /* available on android NDK since API level 23 if _GNU_SOURCE is defined */
     typedef const char *strerror_r_t;
@@ -295,4 +297,24 @@ const char *calceph_strerror_errno(buffer_error_t buffer)
     buffer[BUFFERSIZE_STRERROR - 1] = '\0';
 #endif
     return buffer;
+}
+
+/*--------------------------------------------------------------------------*/
+/*! Convert a string to uppercase in place.
+ *
+ *  Iterates through the string and converts each lowercase ASCII letter
+ *  ('a'–'z') to its uppercase equivalent.
+ *
+ *  @param strvalue  (in/out)    String to modify.
+ */
+/*--------------------------------------------------------------------------*/
+void calceph_strtoupper(char *strvalue)
+{
+    char *c = strvalue;
+
+    while (*c != '\0')
+    {
+        *c = toupper(*c);
+        c++;
+    }
 }
