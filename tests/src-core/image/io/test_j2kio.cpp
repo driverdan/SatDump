@@ -134,3 +134,21 @@ TEST_CASE("image::decompress_j2k_openjp2 returns an empty image on invalid data"
     CHECK(out.width() == 0);
     CHECK(out.size() == 0);
 }
+
+TEST_CASE("image::decompress_j2k_openjp2 returns an empty image on a truncated codestream", "[image][j2k_utils]")
+{
+    // Received codestreams can be cut short, the decoder must reject them cleanly
+    image_test::TempDir dir;
+    std::string path = dir.file("trunc.j2k");
+    Image in = image_test::makePattern(16, 256, 256, 1);
+    img::save_j2k(in, path);
+    std::vector<uint8_t> data = image_test::readBytes(path);
+    REQUIRE(data.size() > 64);
+
+    auto keep = GENERATE(2, 4, 8);
+    INFO("kept 1/" << keep << " of " << data.size() << " bytes");
+    std::vector<uint8_t> cut(data.begin(), data.begin() + data.size() / keep);
+    Image out = img::decompress_j2k_openjp2(cut.data(), cut.size());
+    CHECK(out.width() == 0);
+    CHECK(out.size() == 0);
+}
