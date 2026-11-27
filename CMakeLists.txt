@@ -321,36 +321,58 @@ if((NOT ANDROID) AND ENABLE_INSTALL)
     # Before #479, a fresh configure installed the libraries and plugins to <prefix>/lib, even when the
     # libdir is a multiarch one (lib/x86_64-linux-gnu...). Installing over such an install leaves the old
     # libsatdump_core.so behind, and the dynamic loader may load it instead of the new one. Warn about it,
-    # or remove it with ENABLE_OLD_INSTALL_CLEANUP. Staged installs (DESTDIR, which CPack DEB also uses)
-    # are left alone
-    if(UNIX AND NOT APPLE)
+    # or remove it with ENABLE_OLD_INSTALL_CLEANUP. Only the multiarch libdir case is checked, as that is
+    # the only one where the old location differs. Staged installs (DESTDIR, which CPack DEB also uses)
+    # are left alone. The two dirs are compared after resolving symlinks, so <prefix>/lib can never be the
+    # live libdir, and this does not depend on running before or after the library install rules
+    if(UNIX AND NOT APPLE AND CMAKE_LIBRARY_ARCHITECTURE AND CMAKE_INSTALL_LIBDIR STREQUAL "lib/${CMAKE_LIBRARY_ARCHITECTURE}")
         install(CODE "set(SATDUMP_LIBDIR \"${CMAKE_INSTALL_LIBDIR}\")\nset(SATDUMP_OLD_INSTALL_CLEANUP ${ENABLE_OLD_INSTALL_CLEANUP})")
         install(CODE [[
-            get_filename_component(SATDUMP_OLD_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib" ABSOLUTE)
-            get_filename_component(SATDUMP_NEW_LIBDIR "${SATDUMP_LIBDIR}" ABSOLUTE BASE_DIR "${CMAKE_INSTALL_PREFIX}")
-            if("$ENV{DESTDIR}" STREQUAL "" AND NOT SATDUMP_OLD_LIBDIR STREQUAL SATDUMP_NEW_LIBDIR)
-                set(SATDUMP_OLD_FILES)
+            set(SATDUMP_OLD_LIBDIR "${CMAKE_INSTALL_PREFIX}/lib")
+            set(SATDUMP_NEW_LIBDIR "${CMAKE_INSTALL_PREFIX}/${SATDUMP_LIBDIR}")
+            set(SATDUMP_CHECK_OLD OFF)
+            if("$ENV{DESTDIR}" STREQUAL "" AND IS_DIRECTORY "${SATDUMP_OLD_LIBDIR}")
+                set(SATDUMP_CHECK_OLD ON)
+                # A libdir that does not exist yet cannot be <prefix>/lib
+                if(EXISTS "${SATDUMP_NEW_LIBDIR}")
+                    get_filename_component(SATDUMP_OLD_REAL "${SATDUMP_OLD_LIBDIR}" REALPATH)
+                    get_filename_component(SATDUMP_NEW_REAL "${SATDUMP_NEW_LIBDIR}" REALPATH)
+                    if(SATDUMP_OLD_REAL STREQUAL SATDUMP_NEW_REAL)
+                        set(SATDUMP_CHECK_OLD OFF)
+                    endif()
+                endif()
+            endif()
+
+            set(SATDUMP_OLD_FILES)
+            if(SATDUMP_CHECK_OLD)
                 foreach(SATDUMP_OLD_FILE libsatdump_core.so libsatdump_interface.so satdump)
                     if(EXISTS "${SATDUMP_OLD_LIBDIR}/${SATDUMP_OLD_FILE}" OR IS_SYMLINK "${SATDUMP_OLD_LIBDIR}/${SATDUMP_OLD_FILE}")
                         list(APPEND SATDUMP_OLD_FILES "${SATDUMP_OLD_LIBDIR}/${SATDUMP_OLD_FILE}")
                     endif()
                 endforeach()
+            endif()
 
-                if(SATDUMP_OLD_FILES AND SATDUMP_OLD_INSTALL_CLEANUP)
-                    foreach(SATDUMP_OLD_FILE ${SATDUMP_OLD_FILES})
-                        message(STATUS "Removing old install: ${SATDUMP_OLD_FILE}")
-                        file(REMOVE_RECURSE "${SATDUMP_OLD_FILE}")
-                    endforeach()
-                    message(STATUS "Run ldconfig to update the dynamic loader cache")
-                elseif(SATDUMP_OLD_FILES)
-                    list(JOIN SATDUMP_OLD_FILES "\" \"" SATDUMP_OLD_FILES_STR)
-                    string(REPLACE ";" "\n  " SATDUMP_OLD_FILES_LIST "${SATDUMP_OLD_FILES}")
-                    message(WARNING "An older SatDump install left these in ${SATDUMP_OLD_LIBDIR}, while the libraries "
-                        "now install to ${SATDUMP_NEW_LIBDIR} (#479):\n  ${SATDUMP_OLD_FILES_LIST}\n"
-                        "The dynamic loader may load the old libsatdump_core.so instead of the new one. Remove them with:\n"
-                        "  rm -rf \"${SATDUMP_OLD_FILES_STR}\"\n  ldconfig\n"
-                        "or configure with -DENABLE_OLD_INSTALL_CLEANUP=ON to remove them when installing.")
-                endif()
+            if(SATDUMP_OLD_FILES AND SATDUMP_OLD_INSTALL_CLEANUP)
+                foreach(SATDUMP_OLD_FILE ${SATDUMP_OLD_FILES})
+                    message(STATUS "Removing old install: ${SATDUMP_OLD_FILE}")
+                    file(REMOVE_RECURSE "${SATDUMP_OLD_FILE}")
+                endforeach()
+                message(STATUS "Run ldconfig (as root) to update the dynamic loader cache")
+            elseif(SATDUMP_OLD_FILES)
+                set(SATDUMP_OLD_FILES_LIST "")
+                set(SATDUMP_OLD_FILES_CMD "")
+                foreach(SATDUMP_OLD_FILE ${SATDUMP_OLD_FILES})
+                    string(REPLACE "'" "'\\''" SATDUMP_OLD_FILE_QUOTED "${SATDUMP_OLD_FILE}")
+                    string(APPEND SATDUMP_OLD_FILES_LIST "\n  ${SATDUMP_OLD_FILE}")
+                    string(APPEND SATDUMP_OLD_FILES_CMD " '${SATDUMP_OLD_FILE_QUOTED}'")
+                endforeach()
+                message(WARNING "An older SatDump install left these in ${SATDUMP_OLD_LIBDIR}, while the libraries "
+                    "now install to ${SATDUMP_NEW_LIBDIR} (#479):${SATDUMP_OLD_FILES_LIST}\n"
+                    "The dynamic loader may load the old libsatdump_core.so instead of the new one.\n"
+                    "If a package installed them, remove or upgrade that package instead (e.g. apt remove satdump). "
+                    "Otherwise remove them with:\n"
+                    "  sudo rm -rf${SATDUMP_OLD_FILES_CMD}\n  sudo ldconfig\n"
+                    "or configure with -DENABLE_OLD_INSTALL_CLEANUP=ON to remove them when installing.")
             endif()
         ]])
     endif()
