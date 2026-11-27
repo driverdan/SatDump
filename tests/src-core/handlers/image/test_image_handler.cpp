@@ -1,6 +1,9 @@
 #include "handlers/image/image_handler.h"
+#include "image/processing.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
+#include <filesystem>
+#include <fstream>
 
 using namespace pipeline_test;
 using satdump::handlers::ImageHandler;
@@ -170,4 +173,111 @@ TEST_CASE("ImageHandler::saveResult writes the current image", "[handlers][image
 
     ImageHandler empty(satdump::image::Image(), "empty.png");
     CHECK_FALSE(empty.saveResult(tmp.str()));
+}
+
+// Issue #474: filters are stored as [enabled, cfg] in the instrument config presets, but were read
+// as a bare cfg, so filters reading their cfg (equalize...) failed with json type_error.305.
+TEST_CASE("ImageHandler reads filters stored as [enabled, cfg]", "[handlers][image_handler]")
+{
+    auto img = smallImage();
+    nlohmann::json eq_cfg = {{"per_channel", true}};
+
+    auto expected = img;
+    satdump::image::equalize(expected, true);
+
+    ImageHandler h(img);
+    h.setConfig({{"filters", nlohmann::json::array({nlohmann::json::array({"equalize", nlohmann::json::array({true, eq_cfg})})})}});
+    auto cfg = h.getConfig();
+    REQUIRE(cfg["filters"].size() == 1);
+    CHECK(cfg["filters"][0][0] == "equalize");
+    CHECK(cfg["filters"][0][1] == nlohmann::json::array({true, eq_cfg}));
+
+    h.process();
+    REQUIRE(h.getImage().size() == expected.size());
+    for (size_t i = 0; i < expected.size(); i++)
+        CHECK(h.getImage().get(i) == expected.get(i));
+}
+
+TEST_CASE("ImageHandler skips filters stored as disabled", "[handlers][image_handler]")
+{
+    auto img = smallImage();
+    ImageHandler h(img);
+    h.setConfig({{"filters", nlohmann::json::array({nlohmann::json::array({"invert", nlohmann::json::array({false, nullptr})}),
+                                                    nlohmann::json::array({"equalize", nlohmann::json::array({false, {{"per_channel", false}}})})})}});
+
+    auto cfg = h.getConfig();
+    REQUIRE(cfg["filters"].size() == 2);
+    CHECK(cfg["filters"][0][1] == nlohmann::json::array({false, nullptr}));
+    CHECK(cfg["filters"][1][1][0] == false);
+
+    h.process();
+    for (size_t i = 0; i < img.size(); i++)
+        CHECK(h.getImage().get(i) == img.get(i));
+
+    // The configuration round-trips, keeping the filters disabled
+    ImageHandler b(img);
+    b.setConfig(cfg);
+    CHECK(b.getConfig()["filters"] == cfg["filters"]);
+}
+
+TEST_CASE("ImageHandler still reads filters stored as a bare cfg", "[handlers][image_handler]")
+{
+    auto img = smallImage();
+    auto expected = img;
+    satdump::image::equalize(expected, false);
+
+    ImageHandler h(img);
+    h.setConfig({{"filters", nlohmann::json::array({nlohmann::json::array({"equalize", {{"per_channel", false}}})})}});
+    CHECK(h.getConfig()["filters"][0][1] == nlohmann::json::array({true, {{"per_channel", false}}}));
+
+    h.process();
+    for (size_t i = 0; i < expected.size(); i++)
+        CHECK(h.getImage().get(i) == expected.get(i));
+}
+
+TEST_CASE("Instrument config preset filters are accepted by their filter", "[handlers][image_handler]")
+{
+    auto filters = satdump::handlers::getImageFilters();
+    int checked = 0;
+
+    for (auto &e : std::filesystem::recursive_directory_iterator(std::string(SATDUMP_TEST_SOURCE_DIR) + "/resources/instrument_cfgs"))
+    {
+        if (e.path().extension() != ".json")
+            continue;
+
+        std::ifstream f(e.path());
+        nlohmann::json instr = nlohmann::json::parse(f, nullptr, false, true);
+        if (!instr.is_object() || !instr.contains("presets"))
+            continue;
+
+        for (auto &preset : instr["presets"])
+        {
+            if (!preset.contains("image") || !preset["image"].contains("filters"))
+                continue;
+
+            INFO(e.path().filename().string() << " : " << preset["name"].dump());
+            ImageHandler h(smallImage());
+            h.setConfig(preset["image"]);
+            auto cfg = h.getConfig();
+            REQUIRE(cfg["filters"].size() == preset["image"]["filters"].size());
+
+            for (auto &fl : cfg["filters"])
+            {
+                std::string name = fl[0];
+                INFO(name);
+                REQUIRE(filters.count(name));
+                if (!filters[name].has_menu)
+                    continue;
+
+                // The filter must get its own cfg object, not the [enabled, cfg] pair
+                nlohmann::json fcfg = fl[1][1];
+                CHECK(fcfg.is_object());
+                satdump::image::Image img(8, 8, 8, 3);
+                CHECK_NOTHROW(filters[name].perform(img, fcfg, nullptr));
+                checked++;
+            }
+        }
+    }
+
+    CHECK(checked > 0);
 }
