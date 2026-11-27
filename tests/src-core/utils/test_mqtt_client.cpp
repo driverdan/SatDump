@@ -158,6 +158,14 @@ TEST_CASE("MQTTClient throws on an unresolvable service", "[utils][mqtt]")
     CHECK_THROWS_AS(satdump::MQTTClient("127.0.0.1", "satdump-no-such-service", 1024), satdump::satdump_exception_t);
 }
 
+// MQTT-C 1.1.7 bounds the error string lookup; before, an unknown error code read past the table
+TEST_CASE("mqtt_error_str handles unknown error codes", "[utils][mqtt]")
+{
+    CHECK(std::string(mqtt_error_str(MQTT_ERROR_CONNECTION_REFUSED)) == "MQTT_ERROR_CONNECTION_REFUSED");
+    CHECK(std::string(mqtt_error_str((enum MQTTErrors)(MQTT_ERROR_UNKNOWN + 1000))) == "MQTT_UNKNOWN_ERROR");
+    CHECK(std::string(mqtt_error_str(MQTT_OK)) == "MQTT_OK");
+}
+
 #ifndef _WIN32
 TEST_CASE("MQTTClient connects, publishes, subscribes and receives over loopback", "[utils][mqtt]")
 {
@@ -198,6 +206,33 @@ TEST_CASE("MQTTClient connects, publishes, subscribes and receives over loopback
             CHECK(rx_topic == "sd/in");
             CHECK(rx_data == "abc");
         }
+    }
+}
+
+// MQTT-C 1.1.7 rejects a PUBLISH whose topic length does not fit in its remaining length. Before,
+// the topic ran past the packet and the payload size underflowed, and the callback got both.
+TEST_CASE("MQTTClient drops a PUBLISH whose topic is longer than the packet", "[utils][mqtt]")
+{
+    FakeBroker broker;
+
+    std::mutex rx_mtx;
+    std::condition_variable rx_cv;
+    int calls = 0;
+
+    {
+        satdump::MQTTClient client("127.0.0.1", std::to_string(broker.port), 4096,
+                                   [&](std::string, uint8_t *, int)
+                                   {
+                                       std::lock_guard<std::mutex> l(rx_mtx);
+                                       calls++;
+                                       rx_cv.notify_all();
+                                   });
+        REQUIRE(broker.waitFor(std::string("\x00\x04MQTT", 6)));
+
+        // Remaining length 7, but a topic length of 0x0100
+        broker.sendToClient(bin({0x30, 7, 0x01, 0x00}) + "abcde");
+        std::unique_lock<std::mutex> l(rx_mtx);
+        CHECK_FALSE(rx_cv.wait_for(l, std::chrono::milliseconds(500), [&] { return calls > 0; }));
     }
 }
 
