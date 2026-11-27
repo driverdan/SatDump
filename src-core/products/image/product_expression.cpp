@@ -527,7 +527,8 @@ namespace satdump
                     i->x = &x;
                     i->y = &y;
                     i->p = product->get_proj_cfg(rtkt->ch_idx);
-                    i->p.init(0, 1);
+                    if (!i->p.init(0, 1))
+                        throw satdump_exception("EquP needs a valid projection!");
                 }
 
                 // Main loop

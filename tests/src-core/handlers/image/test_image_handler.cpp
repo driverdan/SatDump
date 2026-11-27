@@ -1,4 +1,5 @@
 #include "handlers/image/image_handler.h"
+#include "image/meta.h"
 #include "image/processing.h"
 #include "pipeline/pipeline_test_helpers.h"
 #include <catch2/catch_test_macros.hpp>
@@ -280,4 +281,20 @@ TEST_CASE("Instrument config preset filters are accepted by their filter", "[han
     }
 
     CHECK(checked > 0);
+}
+
+TEST_CASE("ImageHandler::setImage ignores invalid projection metadata", "[handlers][image_handler]")
+{
+    ImageHandler h;
+
+    // No width/height, which makes Projection::init throw
+    satdump::image::Image img = smallImage();
+    satdump::image::set_metadata_proj_cfg(img, nlohmann::json());
+    REQUIRE_NOTHROW(h.setImage(img));
+    CHECK(h.getImage().width() == 4);
+
+    satdump::image::Image img2 = smallImage();
+    satdump::image::set_metadata_proj_cfg(img2, {{"type", "equirec"}, {"offset_x", -180.0}, {"offset_y", 90.0}, {"scalar_x", 1.0}, {"scalar_y", -1.0}});
+    REQUIRE_NOTHROW(h.setImage(img2));
+    CHECK(h.getImage().height() == 3);
 }

@@ -160,6 +160,29 @@ TEST_CASE("UnitConverter sun angle needs a projection with a timestamp", "[produ
     CHECK(notime.convert(180, 90, 1) == CALIBRATION_INVALID_VALUE);
 }
 
+TEST_CASE("UnitConverter set_proj with an invalid projection leaves it unusable", "[products][calibration]")
+{
+    // No width/height, which makes Projection::init throw
+    nlohmann::json nosize = globeCfgAt(EQUINOX_NOON);
+    nosize.erase("width");
+    nosize.erase("height");
+
+    for (auto &cfg : {nlohmann::json(), nlohmann::json::object(), nosize})
+    {
+        UnitConverter c;
+        REQUIRE_NOTHROW(c.set_proj(cfg));
+        CHECK_FALSE(c.proj_valid);
+        c.set_conversion("", CALIBRATION_ID_SUN_ANGLE);
+        CHECK(c.convert(180, 90, 1) == CALIBRATION_INVALID_VALUE);
+    }
+
+    // A valid projection set afterwards is used again
+    UnitConverter c;
+    c.set_proj(nosize);
+    c.set_proj(globeCfgAt(EQUINOX_NOON));
+    CHECK(c.proj_valid);
+}
+
 TEST_CASE("UnitConverter sun angle is the solar elevation at the pixel", "[products][calibration]")
 {
     UnitConverter c;

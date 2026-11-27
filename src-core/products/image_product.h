@@ -122,7 +122,8 @@ namespace satdump
             nlohmann::json get_proj_cfg(int channel)
             {
                 // TODO CHANNEL SPECIFICS
-                auto cfg = contents["projection_cfg"];
+                // Only read projection_cfg if present, operator[] would add a null one to the product
+                nlohmann::json cfg = has_proj_cfg() ? contents["projection_cfg"] : nlohmann::json();
                 if (channel != -1)
                 {
                     cfg["transform"] = get_channel_image(channel).ch_transform;
