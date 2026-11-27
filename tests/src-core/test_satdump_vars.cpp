@@ -31,4 +31,21 @@ TEST_CASE("satdump_vars RESPATH and LIBPATH default to the configured install pa
     CHECK(satdump::RESPATH == satdump::RESOURCES_PATH);
     CHECK(satdump::LIBPATH == satdump::LIBRARIES_PATH);
 }
+
+// LIBRARIES_PATH is <prefix>/<libdir>/satdump/ and RESOURCES_PATH is <prefix>/share/satdump/,
+// with the same prefix. The default /usr prefix used to be set after include(GNUInstallDirs), so
+// on a fresh configure LIBRARIES_PATH was /usr/local/lib/satdump/ next to /usr/share/satdump/,
+// and the installed plugins under /usr were not found (#479).
+TEST_CASE("satdump_vars LIBRARIES_PATH uses the same install prefix as RESOURCES_PATH", "[satdump_vars]")
+{
+    const std::string res_suffix = "/share/satdump/";
+    const std::string &res = satdump::RESOURCES_PATH;
+    REQUIRE(res.size() > res_suffix.size());
+    REQUIRE(res.compare(res.size() - res_suffix.size(), res_suffix.size(), res_suffix) == 0);
+    std::string prefix = res.substr(0, res.size() - res_suffix.size() + 1); // Keeps the trailing /
+
+    INFO("RESOURCES_PATH = " << satdump::RESOURCES_PATH << ", LIBRARIES_PATH = " << satdump::LIBRARIES_PATH);
+    // The libdir right after the prefix is lib, lib64, lib/<multiarch>...
+    CHECK(satdump::LIBRARIES_PATH.rfind(prefix + "lib", 0) == 0);
+}
 #endif
