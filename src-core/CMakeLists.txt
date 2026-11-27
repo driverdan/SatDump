@@ -123,6 +123,11 @@ find_package(PkgConfig)
 
 add_library(satdump_core SHARED ${SatDump_core_CPPS})
 target_include_directories(satdump_core PUBLIC .)
+
+# Build SuperNOVAS without cURL, so it never downloads EOP or leap second data
+# by itself. SatDump passes its own EOP values in.
+file(GLOB SatDump_supernovas_C libs/supernovas/*.c)
+set_property(SOURCE ${SatDump_supernovas_C} APPEND PROPERTY COMPILE_DEFINITIONS WITHOUT_CURL)
 #target_precompile_headers(satdump_core PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/nlohmann/json.hpp>")
 
 # We have to... For MSVC

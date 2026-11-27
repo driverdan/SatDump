@@ -1,13 +1,46 @@
 /**
  * @file
  *
+ * Functions to calculate or access the Celestial Intermediate Origin (CIO) location. The CIO is
+ * the origin of the Celestial Intermediate Reference System (CIRS), which is the IAU 2000 dynamic
+ * equatorial system of date. CIRS and the old equivalent True of Date (TOD) systems share the
+ * same dynamical equator, but differ in where the origin lies on the equator: CIO vs the true
+ * equinox of date.
+ *
+ * The IAU2000 standard for position calculations typically involves converting between GCRS and
+ * CIRS systems, and the IERS Conventions 2010, Chapter 5 describes two equivalent methods to do
+ * so.
+ *
+ * - __Method 1__ is the more direct method and involves calculating the position of the Celestial
+ *   Intermediate Pole (CIP) of date in GCRS, using a harmonic series containing some 2825
+ *   lunisolar and planetary terms (IERS Conventions 2010, Tables
+ *   [5.2a](https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2a.txt) and
+ *   [5.2b](https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2b.txt)).
+ *
+ * - __Method 2__ is more roundabout, transforming GCRS to J2000 first, then using the IAU 2006
+ *   (P03) precession-nutation model to calculate True-of-Date coordinates, which are then
+ *   transformed to CIRS by a simple rotation with the CIO's position relative to the true-equinox
+ *   of date. The IAU2006 nutation series uses 2414 lunisolar and planetary terms (IERS Conventions
+ *   2010, Tables
+ *   [5.3a](https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.3a.txt) and
+ *   [5.3b](https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.3b.txt)).
+ *
+ * The two methods are equivalent both in terms of accuracy, down to the &mu;as level, and in
+ * terms of computational cost. Neither is 'superior' to the other in any measurable way. In
+ * SuperNOVAS we choose to follow Method 2, since its implementation is more readily given with
+ * the existing framework of related functions.
+ *
+ * REFERENCES:
+ *
+ *  1. IERS Conventions 2010, Chapter 5, especially Section 5.9
+ *  2. Capitaine, N. et al. (2003), Astronomy And Astrophysics 412, pp. 567-586.
+ *
  * @date Created  on Mar 6, 2025
  * @author G. Kaplan and Attila Kovacs
  *
- *  Functions to handle the CIO location and basis.
+ * @sa equator.c
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <errno.h>
@@ -16,17 +49,14 @@
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
 #include "novas.h"
-
-#define CIO_INTERP_POINTS   6     ///< Number of points to load from CIO interpolation table at once.
-
-/// [bytes] Sizeof binary CIO locator file header
-#define CIO_BIN_HEADER_SIZE   (3*sizeof(double) + sizeof(long))
-
 /// \endcond
 
+/// \cond PRIVATE
+#define CIO_INTERP_POINTS   6     ///< Number of points to load from CIO interpolation table at once.
 
-///< Opened CIO locator data file, or NULL.
-static FILE *cio_file;
+#define CIO_ARRAY_STEP      1.2   ///< [day] Interval between CIO vs GCRS locator lookup entries.
+/// \endcond
+
 
 /**
  * Computes the true right ascension of the celestial intermediate origin (CIO) vs the equinox of
@@ -34,14 +64,13 @@ static FILE *cio_file;
  * value ofira_equinox() for the true equator of date.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. (2005), US Naval Observatory Circular 179.
  *
  * @param jd_tt       [day] Terrestrial Time (TT) based Julian date
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param[out] ra_cio [h] Right ascension of the CIO, with respect to the true equinox of date, in
- *                    hours (+ or -), or NAN when returning with an error code.
+ * @param[out] ra_cio [h] Right ascension of the CIO, with respect to the true equinox of date (+
+ *                    or -), or NAN when returning with an error code.
  * @return            0 if successful, -1 if the output pointer argument is NULL,
  *                    1 if 'accuracy' is invalid, 10--20: 10 + error code from cio_location(), or
  *                    else 20 + error from cio_basis()
@@ -67,19 +96,16 @@ short cio_ra(double jd_tt, enum novas_accuracy accuracy, double *restrict ra_cio
 }
 
 /**
- * @deprecated    SuperNOVAS no longer uses a NOVAS-type CIO locator file. However, if users want
- *                to access such files  directly, this function remains accessible to provide API
- *                compatibility with previous versions.
+ * @deprecated    SuperNOVAS no longer uses a NOVAS-type CIO locator file, or accesses one in any
+ *                way. This function is now a dummy.
  *
- * Sets the CIO interpolaton data file to use to interpolate CIO locations vs the GCRS. You can
- * specify either the original `CIO_RA.TXT` file included in the distribution (preferred since
- * v1.1), or else a platform-specific binary data file compiled from it via the
- * <code>cio_file</code> utility (the old way).
+ * It used to set the CIO interpolaton data file to use to interpolate CIO locations vs the GCRS.
+ * As of version 1.5, this call does exactly nothing. It simply returns 0.
  *
- * @param filename    Path (preferably absolute path) `CIO_RA.TXT` or else to the binary
- *                    `cio_ra.bin` data, or NULL to disable using a CIO locator file altogether.
- * @return            0 if successful, or else -1 if the specified file does not exists or we have
- *                    no permission to read it.
+ * @param filename    (_unused_) Used to be the path (preferably absolute path) `CIO_RA.TXT`
+ *                    or else to the binary `cio_ra.bin` data, or NULL to disable using a CIO
+ *                    locator file altogether.
+ * @return            0
  *
  * @sa cio_location()
  *
@@ -87,56 +113,32 @@ short cio_ra(double jd_tt, enum novas_accuracy accuracy, double *restrict ra_cio
  * @author Attila Kovacs
  */
 int set_cio_locator_file(const char *restrict filename) {
-  FILE *old = cio_file;
-
-  // Open new file first to ensure it has a distinct pointer from the old one...
-  cio_file = filename ? fopen(filename, "r") : NULL;
-
-  // Close the old file.
-  if(old)
-    fclose(old);
-
-  if(!filename)
-    return 0;
-
-  return cio_file ? 0 : novas_error(-1, errno, "set_cio_locator_file", "%s: %s", filename, strerror(errno));
+  (void) filename; // unused
+  return 0;
 }
 
 /**
- * @deprecated This function is no longer used internally in the library. Given that the CIO
- *             is defined on the dynamical equator of date, it is not normally meaningful to
- *             provide an R.A. coordinate for it in GCRS, in general. Instead, you might use
- *             cio_ra() to get the same value w.r.t. the equinox of date (on the same CIRS/TOD
- *             dynamical equator, or else `ira_equinox()` to return the negated value.
+ * @deprecated This function is no longer used internally in the library. Given that the CIO is
+ *             defined on the dynamical equator of date, it is not normally meaningful to provide
+ *             an R.A. coordinate for it in GCRS. Instead, you might use `cio_ra()` to get the
+ *             CIO location w.r.t. the equinox of date (on the same dynamical equator), or
+ *             equivalently `ira_equinox()` to return the negated value of the same.
  *
  * Returns the location of the celestial intermediate origin (CIO) for a given Julian date, as a
- * right ascension with respect to either the GCRS (geocentric ICRS) origin or the true equinox of
- * date. The CIO is always located on the true equator (= intermediate equator) of date.
- *
- * The user may specify an interpolation file to use via set_cio_locator_file() prior to calling
- * this function. In that case the call will return CIO location relative to GCRS. In the absence
- * of the table, it will calculate the CIO location relative to the true equinox. In either case,
- * the type of the location is returned alongside the corresponding CIO location value.
+ * right ascension with respect to the true equinox of date. The CIO is always located on the true
+ * equator (= intermediate equator) of date.
  *
  * NOTES:
- * <ol>
- * <li>
- *   Unlike the NOVAS C version of this function, this version will always return a CIO
- *   location as long as the pointer arguments are not NULL. The returned values will be
- *   interpolated from the locator file if possible, otherwise it falls back to calculating an
- *   equinox-based location per default.
- * </li>
- * <li>
- *  This function caches the results of the last calculation in case it may be re-used at no extra
- *  computational cost for the next call.
- * </li>
- * <li>
- *  Note, that when a CIO location file is used, the bundled CIO locator data was prepared with
- *  the original IAU2000A nutation model, not with the newer R06 (a.k.a. IAU2006) model, resulting
- *  in an error up to the few tens of micro-arcseconds level for dates between 1900 and 2100, and
- *  larger errors further away from the current epoch.
- * </li>
- * </ol>
+ *
+ *  1. Unlike the NOVAS C version of this function, this version will always return a CIO
+ *     location as long as the pointer arguments are not NULL.
+ *
+ *  2. This function caches the results of the last calculation in case it may be re-used at no extra
+ *     computational cost for the next call.
+ *
+ *  3. As of version 1.5, this function always returns the CIO location w.r.t. the true equinox of
+ *     date, on the true equator of date, i.e. the R.A. of the CIO on the true equator of date, meaured
+ *     from the true equinox of date.
  *
  * @param jd_tdb           [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param accuracy         NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
@@ -156,18 +158,14 @@ int set_cio_locator_file(const char *restrict filename) {
 short cio_location(double jd_tdb, enum novas_accuracy accuracy, double *restrict ra_cio, short *restrict loc_type) {
   static const char *fn = "cio_location";
 
-  static THREAD_LOCAL enum novas_accuracy acc_last = -1;
-  static THREAD_LOCAL short ref_sys_last = -1;
+  static THREAD_LOCAL enum novas_accuracy acc_last = (enum novas_accuracy) -1;
   static THREAD_LOCAL double t_last = NAN, ra_last = NAN;
-  static THREAD_LOCAL ra_of_cio cio[CIO_INTERP_POINTS];
-
-  const enum novas_debug_mode saved_debug_state = novas_get_debug_mode();
 
   // Default return values...
   if(ra_cio)
     *ra_cio = NAN;
   if(loc_type)
-    *loc_type = -1;
+    *loc_type = CIO_VS_EQUINOX;
 
   if(!ra_cio || !loc_type)
     return novas_error(-1, EINVAL, fn, "NULL output pointer: ra_cio=%p, loc_type=%p", ra_cio, loc_type);
@@ -176,52 +174,16 @@ short cio_location(double jd_tdb, enum novas_accuracy accuracy, double *restrict
     return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", accuracy);
 
   // Check if previously computed RA value can be used.
-  if(novas_time_equals(jd_tdb, t_last) && (accuracy == acc_last)) {
-    *ra_cio = ra_last;
-    *loc_type = ref_sys_last;
-    return 0;
-  }
-
-  // We can let slide errors from cio_array since they don't bother us.
-  if(saved_debug_state == NOVAS_DEBUG_ON)
-    novas_debug(NOVAS_DEBUG_OFF);
-
-  if(cio_array(jd_tdb, CIO_INTERP_POINTS, cio) == 0) {
-    int j;
-
-    // Restore the user-selected debug mode.
-    novas_debug(saved_debug_state);
-
-    // Perform Lagrangian interpolation for the RA at 'tdb_jd'.
-    *ra_cio = 0.0;
-
-    for(j = 0; j < CIO_INTERP_POINTS; j++) {
-      double p = 1.0;
-      int i;
-      for(i = 0; i < CIO_INTERP_POINTS; i++)
-        if(i != j)
-          p *= (jd_tdb - cio[i].jd_tdb) / (cio[j].jd_tdb - cio[i].jd_tdb);
-      *ra_cio += p * cio[j].ra_cio;
-    }
-
-    // change units from arcsec to hour-angle (express as arcsec [*], then cast as hour-angle [/])
-    *ra_cio *= ARCSEC / HOURANGLE;
-    *loc_type = CIO_VS_GCRS;
-  }
-  else {
-    // Restore the user-selected debug mode.
-    novas_debug(saved_debug_state);
-
+  if(!novas_time_equals(jd_tdb, t_last) || accuracy != acc_last) {
     // Calculate the equation of origins.
     *ra_cio = -ira_equinox(jd_tdb, NOVAS_TRUE_EQUINOX, accuracy);
-    *loc_type = CIO_VS_EQUINOX;
+
+    t_last = jd_tdb;
+    acc_last = accuracy;
+    ra_last = *ra_cio;
   }
 
-  t_last = jd_tdb;
-  acc_last = accuracy;
-  ra_last = *ra_cio;
-  ref_sys_last = *loc_type;
-
+  *ra_cio = ra_last;
   return 0;
 }
 
@@ -229,7 +191,7 @@ short cio_location(double jd_tdb, enum novas_accuracy accuracy, double *restrict
  * @deprecated This function is no longer used internally in the library, and users are
  *             recommended against using it themselves, since SuperNOVAS provides better ways to
  *             convert between GCRS and CIRS using frames or via gcrs_to_cirs() / cirs_to_gcrs()
- *             functions.
+ *             or novas_transform() functions.
  *
  * Computes the CIRS basis vectors, with respect to the GCRS (geocentric ICRS), of the
  * celestial intermediate system defined by the celestial intermediate pole (CIP) (in the z
@@ -239,15 +201,13 @@ short cio_location(double jd_tdb, enum novas_accuracy accuracy, double *restrict
  * reference.
  *
  * NOTES:
- * <ol>
- * <li>This function caches the results of the last calculation in case it may be re-used at
- * no extra computational cost for the next call.</li>
- * </ol>
+ *
+ *  1. This function caches the results of the last calculation in case it may be re-used at
+ *     no extra computational cost for the next call.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. (2005), US Naval Observatory Circular 179.
  *
  * @param jd_tdb      [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param ra_cio      [h] Right ascension of the CIO at epoch (hours).
@@ -268,7 +228,7 @@ short cio_location(double jd_tdb, enum novas_accuracy accuracy, double *restrict
 short cio_basis(double jd_tdb, double ra_cio, enum novas_cio_location_type loc_type, enum novas_accuracy accuracy,
         double *restrict x, double *restrict y, double *restrict z) {
   static const char *fn = "cio_basis";
-  static THREAD_LOCAL enum novas_accuracy acc_last = -1;
+  static THREAD_LOCAL enum novas_accuracy acc_last = (enum novas_accuracy) -1;
   static THREAD_LOCAL double t_last = NAN;
   static THREAD_LOCAL double xx[3], yy[3], zz[3];
 
@@ -279,7 +239,7 @@ short cio_basis(double jd_tdb, double ra_cio, enum novas_cio_location_type loc_t
     return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", accuracy);
 
   // Compute unit vector z toward celestial pole.
-  if(!zz[2] || !novas_time_equals(jd_tdb, t_last) || (accuracy != acc_last)) {
+  if(!novas_time_equals(jd_tdb, t_last) || (accuracy != acc_last)) {
     const double z0[3] = { 0.0, 0.0, 1.0 };
     tod_to_gcrs(jd_tdb, accuracy, z0, zz);
     t_last = jd_tdb;
@@ -344,32 +304,47 @@ short cio_basis(double jd_tdb, double ra_cio, enum novas_cio_location_type loc_t
   return 0;
 }
 
+/// \cond PRIVATE
+
+double novas_cio_gcrs_ra(double jd_tdb) {
+  double RA, pos[3] = {0.0};
+
+  // CIO's R.A. in TOD.
+  RA = -ira_equinox(jd_tdb, NOVAS_TRUE_EQUINOX, NOVAS_FULL_ACCURACY);
+  radec2vector(RA, 0.0, 1.0, pos);
+
+  // TOD -> GCRS
+  tod_to_gcrs(jd_tdb, NOVAS_FULL_ACCURACY, pos, pos);
+
+  // Get the GCRS R.A. of the CIO
+  vector2radec(pos, &RA, NULL);
+
+  return RA;
+}
+
+/// \endcond
+
 /**
  * @deprecated    This function is no longer used within SuperNOVAS. It is still provided,
  *                however, in order to retain 100% API compatibility with NOVAS C.
  *
  * Given an input TDB Julian date and the number of data points desired, this function returns
  * a set of Julian dates and corresponding values of the GCRS right ascension of the celestial
- * intermediate origin (CIO).  The range of dates is centered (at least approximately) on the
- * requested date.  The function obtains the data from an external data file.
- *
- * This function assumes that a CIO locator file (`CIO_RA.TXT` or `cio_ra.bin`) exists in the
- * default location (configured at build time), or else was specified via `set_cio_locator_file()`
- * prior to calling this function.
+ * intermediate origin (CIO).  The range of dates is centered on the requested date.
  *
  * NOTES:
- * <ol>
- * <li>
- *   This function has been completely re-written by A. Kovacs to provide much more efficient
- *   caching and I/O.
- * </li>
- * <li>
- *  The CIO locator file that is bundled was prepared with the original IAU2000A nutation model,
- *  not with the newer R06 (a.k.a. IAU2006) nutation model, resulting in an error up to the few
- *  tens of micro-arcseconds level for dates between 1900 and 2100, and larger errors further away
- *  from the current epoch.
- * </li>
- * </ol>
+ *
+ *  1. This function has been completely re-written by A. Kovacs to provide much more efficient
+ *     caching and I/O.
+ *
+ *  2. The CIO locator file that is bundled was prepared with the original IAU2000A nutation model,
+ *     not with the newer R06 (a.k.a. IAU2006) nutation model, resulting in an error up to the few
+ *     tens of micro-arcseconds level for dates between 1900 and 2100, and larger errors further away
+ *     from the current epoch.
+ *
+ *  3. Prior to version 1.5, this function relied on a CIO locator file (`CIO_RA.TXT` or
+ *     `cio_ra.bin`). The current version no longer does, and instead generates the requested data on
+ *     the fly.
  *
  * @param jd_tdb    [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param n_pts     Number of Julian dates and right ascension values requested (not less than 2
@@ -387,122 +362,22 @@ short cio_basis(double jd_tdb, double ra_cio, enum novas_cio_location_type loc_t
 short cio_array(double jd_tdb, long n_pts, ra_of_cio *restrict cio) {
   static const char *fn = "cio_array";
 
-  // Packed struct in case long is not the same width a double
-  struct cio_file_header {
-    double jd_start;
-    double jd_end;
-    double jd_interval;
-    long n_recs;
-  };
-
-  static const FILE *last_file;
-  static struct cio_file_header lookup;
-  static ra_of_cio cache[NOVAS_CIO_CACHE_SIZE];
-  static long index_cache, cache_count;
-  static int is_ascii;
-  static int header_size, lrec;
-
-  long index_rec;
+  int i;
 
   if(cio == NULL)
     return novas_error(-1, EINVAL, fn, "NULL output array");
 
-  if(n_pts < 2 || n_pts > NOVAS_CIO_CACHE_SIZE)
-    return novas_error(3, ERANGE, fn, "n_pts=%ld is out of bounds [2:%d]", n_pts, NOVAS_CIO_CACHE_SIZE);
+  if(n_pts < 2)
+    return novas_error(3, ERANGE, fn, "n_pts=%ld is out of bounds [2:*]", n_pts);
 
-  if(cio_file == NULL)
-    set_cio_locator_file(DEFAULT_CIO_LOCATOR_FILE);  // Try default locator file.
+  // Center to starting date
+  jd_tdb -= 0.5 * n_pts * CIO_ARRAY_STEP;
 
-  if(cio_file == NULL)
-    return novas_error(1, ENOENT, fn, "No default CIO locator file");
-
-  // Check if it's a new file
-  if(last_file != cio_file) {
-    char line[80] = {0};
-    int version, tokens;
-
-    last_file = NULL;
-    cache_count = 0;
-
-    if(fgets(line, sizeof(line) - 1, cio_file) == NULL)
-      return novas_error(1, errno, fn, "empty CIO locator data: %s", strerror(errno));
-
-    tokens = sscanf(line, "CIO RA P%d @ %lfd", &version, &lookup.jd_interval);
-
-    if(tokens == 2) {
-      is_ascii = 1;
-      header_size = strlen(line);
-
-      if(fgets(line, sizeof(line) - 1, cio_file) == NULL)
-        return novas_error(1, errno, fn, "missing ASCII CIO locator data: %s", strerror(errno));
-
-      lrec = strlen(line);
-
-      if(sscanf(line, "%lf", &lookup.jd_start) < 1)
-        return novas_error(-1, errno, fn, "incomplete or corrupted ASCII CIO locator record: %s", strerror(errno));
-
-      fseek(cio_file, 0, SEEK_END);
-
-      lookup.n_recs = (ftell(cio_file) - header_size) / lrec;
-      lookup.jd_end = lookup.jd_start + lookup.n_recs * lookup.jd_interval;
-    }
-    else if(tokens) {
-      return novas_error(-1, errno, fn, "incomplete or corrupted ASCII CIO locator data header: %s", strerror(errno));
-    }
-    else {
-      is_ascii = 0;
-      header_size = CIO_BIN_HEADER_SIZE;
-      lrec = sizeof(ra_of_cio);
-
-      fseek(cio_file, 0, SEEK_SET);
-
-      // Read the file header
-      if(fread(&lookup, header_size, 1, cio_file) != 1)
-        return novas_error(-1, errno, fn, "incomplete or corrupted binary CIO locator data header: %s", strerror(errno));
-    }
-
-    last_file = cio_file;
+  for(i = 0; i < n_pts; i++) {
+    ra_of_cio *p = &cio[i];
+    p->jd_tdb = jd_tdb + i * CIO_ARRAY_STEP;
+    p->ra_cio = remainder(novas_cio_gcrs_ra(p->jd_tdb), 24.0) * NOVAS_HOURANGLE / NOVAS_ARCSEC;
   }
 
-  // Check the input data against limits.
-  if((jd_tdb < lookup.jd_start) || (jd_tdb > lookup.jd_end))
-    return novas_error(2, EOF, fn, "requested time (JD=%.1f) outside of CIO locator data range (%.1f:%.1f)", jd_tdb, lookup.jd_start,
-            lookup.jd_end);
-
-  // Calculate the record index from which data is requested.
-  index_rec = (long) ((jd_tdb - lookup.jd_start) / lookup.jd_interval) - (n_pts >> 1);
-  if(index_rec < 0)
-    return novas_error(6, EOF, fn, "not enough CIO location data points available at the requested time (JD=%.1f)", jd_tdb);
-
-  // Check if the range of data needed is outside the cached range.
-  if((index_rec < index_cache) || (index_rec + n_pts > index_cache + cache_count)) {
-    // Load cache centered on requested range.
-    const long N = lookup.n_recs - index_rec > NOVAS_CIO_CACHE_SIZE ? NOVAS_CIO_CACHE_SIZE : lookup.n_recs - index_rec;
-
-    cache_count = 0;
-    index_cache = index_rec - (NOVAS_CIO_CACHE_SIZE >> 1);
-    if(index_cache < 0)
-      index_cache = 0;
-
-    // Read in cache from the requested position
-    fseek(cio_file, header_size + index_cache * lrec, SEEK_SET);
-
-    if(is_ascii) {
-      for(cache_count = 0; cache_count < N; cache_count++)
-        if(fscanf(cio_file, "%lf %lf\n", &cache[cache_count].jd_tdb, &cache[cache_count].ra_cio) != 2)
-          return novas_error(-1, errno, fn, "corrupted ASCII CIO locator data: %s", strerror(errno));
-    }
-    else {
-      if(fread(cache, sizeof(ra_of_cio), N, cio_file) != (size_t) N)
-        return novas_error(-1, errno, fn, "corrupted binary CIO locator data: %s", strerror(errno));
-      cache_count = N;
-    }
-  }
-
-  if((index_rec - index_cache) + n_pts > cache_count)
-    return novas_error(6, EOF, fn, "not enough CIO location data points available at the requested time (JD=%.1f)", jd_tdb);
-
-  // Copy the requested number of points in to the destination;
-  memcpy(cio, &cache[index_rec - index_cache], n_pts * sizeof(ra_of_cio));
   return 0;
 }

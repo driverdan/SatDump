@@ -1,16 +1,14 @@
 /**
  * @file
  *
- * @date Created  on Mar 5, 2025
- * @author Attila Kovacs and G. Kaplan
- *
  *  Various convenience variants of the NOVAS C `place()` function. Using `place()` or one of its
  *  variants is disfavored in SuperNOVAS. Instead, the new frame-based approach is recommended,
  *  via `novas_sky_pos()` (for apparent positions, including aberration and gravitational
- *  deflection) or `novas_geom_posvel() (for geometric positions).
+ *  deflection) or `novas_geom_posvel()` (for geometric positions).
  *
- *  Some of the functions here are now deprecated, since the new frame-based approach, introduced
- *  in v1.2 offers more versatile and transparent ways of calculating the same quantities.
+ *  Some of the functions here have been deprecated also, since the new frame-based approach,
+ *  introduced in v1.2, offers more versatile and transparent ways of calculating the same
+ *  quantities.
  *
  *  Nevertheless, if you insist on using these older methods, here's a primer on the ways the
  *  `place()` variants differ from one-another:
@@ -19,7 +17,7 @@
  *  expressed. Often it is ICRS / GCRS, or True of Date (TOD), but occasionally something else.
  *
  *  __observer location__: If the observer is not one of the call parameters than a fictitious
- *  observer located at the geocenter is assumed (e.g. for `astro_star(), `astro_planet()` or
+ *  observer located at the geocenter is assumed (e.g. for `astro_star()`, `astro_planet()` or
  *  `place_icrs()`).
  *
  *  __position type__: The positions calculated can be geometric or apparent. Both include
@@ -30,8 +28,8 @@
  *  it calculates a geometric place, while for all other reference systems it returns an
  *  apparent place.
  *
- *  For example, the following place() variants may be used for a geocentric observer place and
- *  a sidereal (non-Solar-system) source, depending on the reference system and the type of position
+ *  For example, the following place() variants may be used for an Earth-related observer place
+ *  and a sidereal (non-Solar-system) source, depending on the reference system and the type of
  *  to be calculated:
  *
  *  | system \ type     | geocentric / geometric | geocentric / apparent | topocentric / apparent |
@@ -72,7 +70,10 @@
  *  4. If needed convert between position 3-vectors and RA/Dec coordinates using
  *  `vector2radec()` / `radec2vector()` as necessary.
  *
- *  @sa target.c, observer.c, timescale.c, frames.c
+ * @date Created  on Mar 5, 2025
+ * @author Attila Kovacs and G. Kaplan
+ *
+ * @sa target.c, observer.c, timescale.c, frames.c, ephemeris.c
  */
 
 #include <string.h>
@@ -80,142 +81,16 @@
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
 
-/**
- * Retrieves the position and velocity of a solar system body from a fundamental ephemeris.
- *
- * It is recommended that the input structure 'cel_obj' be created using make_object()
- *
- * @param jd_tdb    [day] Barycentric Dynamic Time (TDB) based Julian date
- * @param body      Pointer to structure containing the designation of the body of interest
- * @param origin    NOVAS_BARYCENTER (0) or NOVAS_HELIOCENTER (1)
- * @param accuracy  NOCAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param[out] pos  [AU] Pointer to structure containing the designation of the body of interest
- * @param[out] vel  [AU/day] Velocity vector of the body at 'jd_tdb'; equatorial rectangular
- *                  coordinates in AU/day referred to the ICRS.
- * @return          0 if successful, -1 if the 'jd_tdb' or input object argument is NULL, or
- *                  else 1 if 'origin' is invalid, 2 if <code>cel_obj->type</code> is invalid,
- *                  10 + the error code from solarsystem(), or 20 + the error code from
- *                  readeph().
- *
- * @sa set_planet_provider(), set_planet_provider_hp(), set_ephem_provider()
- * @sa make_planet(), make_ephem_object()
- */
-short ephemeris(const double *restrict jd_tdb, const object *restrict body, enum novas_origin origin,
-        enum novas_accuracy accuracy, double *restrict pos, double *restrict vel) {
-  static const char *fn = "ephemeris";
-
-  double posvel[6] = {0};
-  int error = 0;
-
-  if(!jd_tdb || !body)
-    return novas_error(-1, EINVAL, fn, "NULL input pointer: jd_tdb=%p, body=%p", jd_tdb, body);
-
-  if(!pos || !vel)
-    return novas_error(-1, EINVAL, fn, "NULL output pointer: pos=%p, vel=%p", pos, vel);
-
-  // Check the value of 'origin'.
-  if(origin < 0 || origin >= NOVAS_ORIGIN_TYPES)
-    return novas_error(1, EINVAL, fn, "invalid origin type: %d", origin);
-
-  // Invoke the appropriate ephemeris access software depending upon the
-  // type of object
-  switch(body->type) {
-
-    case NOVAS_PLANET:
-      // Get the position and velocity of a major planet, Pluto, Sun, or Moon.
-      // When high accuracy is specified, use function 'solarsystem_hp' rather
-      // than 'solarsystem'.
-
-      if(accuracy == NOVAS_FULL_ACCURACY)
-        error = planet_call_hp(jd_tdb, body->number, origin, pos, vel);
-      else
-        error = planet_call(jd_tdb[0] + jd_tdb[1], body->number, origin, pos, vel);
-
-      prop_error("ephemeris:planet", error, 10);
-      break;
-
-    case NOVAS_EPHEM_OBJECT: {
-      enum novas_origin eph_origin = NOVAS_HELIOCENTER;
-      novas_ephem_provider ephem_call = get_ephem_provider();
-
-      if(ephem_call) {
-        // If there is a newstyle epehemeris access routine set, we will prefer it.
-        error = ephem_call(body->name, body->number, jd_tdb[0], jd_tdb[1], &eph_origin, posvel, &posvel[3]);
-      }
-      else {
-#  ifdef DEFAULT_READEPH
-        // Use whatever readeph() was compiled or the equivalent user-defined call
-        double *res = readeph(body->number, body->name, jd_tdb[0] + jd_tdb[1], &error);
-        if(res == NULL) {
-          error = 3;
-          errno = ENOSYS;
-        }
-        else {
-          memcpy(posvel, res, sizeof(posvel));
-          free(res);
-        }
-#  else
-        return novas_error(-1, errno, "ephemeris:ephem_object", "No ephemeris provider was defined. Call set_ephem_provider() prior.");
-#  endif
-      }
-
-      prop_error("ephemeris:ephem_object", error, 20);
-
-      // Check and adjust the origins as necessary.
-      if(origin != eph_origin) {
-        double pos0[3] = {0}, vel0[3] = {0};
-        enum novas_planet refnum = (origin == NOVAS_BARYCENTER) ? NOVAS_SSB : NOVAS_SUN;
-        int i;
-
-        prop_error("ephemeris:origin", planet_call(jd_tdb[0] + jd_tdb[1], refnum, eph_origin, pos0, vel0), 10);
-
-        for(i = 3; --i >= 0;) {
-          posvel[i] -= pos[i];
-          posvel[i + 3] = novas_add_vel(posvel[i + 3], vel[i]);
-        }
-      }
-
-      // Break up 'posvel' into separate position and velocity vectors.
-      memcpy(pos, posvel, XYZ_VECTOR_SIZE);
-      memcpy(vel, &posvel[3], XYZ_VECTOR_SIZE);
-
-      break;
-    }
-
-    case NOVAS_ORBITAL_OBJECT: {
-      object center;
-      double pos0[3] = {0}, vel0[3] = {0};
-      int i;
-
-      prop_error(fn, make_planet(body->orbit.system.center, &center), 0);
-      prop_error(fn, ephemeris(jd_tdb, &center, origin, accuracy, pos0, vel0), 0);
-      prop_error(fn, novas_orbit_posvel(jd_tdb[0] + jd_tdb[1], &body->orbit, accuracy, pos, vel), 0);
-
-      for(i = 3; --i >= 0; ) {
-        pos[i] += pos0[i];
-        vel[i] += vel0[i];
-      }
-
-      break;
-    }
-
-    default:
-      return novas_error(2, EINVAL, fn, "invalid Solar-system body type: %d", body->type);
-  }
-
-  return 0;
-}
+#include "novas.h"
 
 /**
  * Computes the apparent direction of a celestial object at a specified time and in a specified
  * coordinate system and for a given observer location.
  *
- * While <code>coord_sys</code> defines the coordinate referfence system, it is
- * <code>location->where</code> sets the origin of the reference place relative to which positions
- * and velocities are reported.
+ * While `coord_sys` defines the coordinate referfence system, it is `location->where` sets the
+ * origin of the reference place relative to which positions and velocities are reported.
  *
  * For all but ICRS coordinate outputs, the calculated positions and velocities include aberration
  * corrections for the moving frame of the observer as well as gravitational deflection due to the
@@ -223,28 +98,26 @@ short ephemeris(const double *restrict jd_tdb, const object *restrict body, enum
  * are available via a novas_planet_provider function.
  *
  * In case of a dynamical equatorial system (such as CIRS or TOD) and an Earth-based observer, the
- * polar wobble parameters set via a prior call to cel_pole() together with he ut1_to_tt argument
+ * polar wobble parameters set via a prior call to cel_pole() together with the ut1_to_tt argument
  * decide whether the resulting 'topocentric' output frame is Pseudo Earth Fixed (PEF; if
  * cel_pole() was not set and DUT1 is 0) or ITRS (actual rotating Earth; if cel_pole() was set
  * and ut1_to_tt includes the DUT1 component).
  *
  * NOTES:
- * <ol>
- * <li>This version fixes a NOVAS C 3.1 issue that velocities and solar-system distances were not
- * antedated for light-travel time.</li>
- * <li>In a departure from the original NOVAS C, the radial velocity for major planets (and Sun and
- * Moon) includes gravitational redshift corrections for light originating at the surface, assuming
- * it's observed from near Earth or else from a large distance away.</li>
- * <li>As of SuperNOVAS v1.3, the returned radial velocity component is a proper observer-based
- * spectroscopic measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
- * pseudo LSR-based measures being returned for catalog sources.</li>
- * </ol>
+ *
+ *  1. This version fixes a NOVAS C 3.1 issue that velocities and solar-system distances were not
+ *     antedated for light-travel time.
+ *  2. In a departure from the original NOVAS C, the radial velocity for major planets (and Sun and
+ *     Moon) includes gravitational redshift corrections for light originating at the surface, assuming
+ *     it's observed from near Earth or else from a large distance away.
+ *  3. As of SuperNOVAS v1.3, the returned radial velocity component is a proper observer-based
+ *     spectroscopic measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
+ *     pseudo LSR-based measures being returned for catalog sources.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Klioner, S. (2003), Astronomical Journal 125, 1580-1597.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Klioner, S. (2003), Astronomical Journal 125, 1580-1597.
  *
  * @param jd_tt         [day] Terrestrial Time (TT) based Julian date.
  * @param source        Pointer to a celestrial object data structure. Catalog objects musy have
@@ -253,7 +126,8 @@ short ephemeris(const double *restrict jd_tdb, const object *restrict body, enum
  * @param location      The observer location, relative to which the output positions and velocities
  *                      are to be calculated
  * @param ut1_to_tt     [s] TT - UT1 time difference. Used only when 'location->where' is
- *                      NOVAS_OBSERVER_ON_EARTH (1) or NOVAS_OBSERVER_IN_EARTH_ORBIT (2).
+ *                      NOVAS_OBSERVER_ON_EARTH (1) or NOVAS_OBSERVER_IN_EARTH_ORBIT (2), or
+ *                      NOVAS_AIRBORNE_OBSERVER (3).
  * @param coord_sys     The coordinate system that defines the orientation of the celestial pole.
  *                      If it is NOVAS_ICRS (3), a geometric position and radial velocity is returned. For
  *                      all other systems, the returned position is the apparent position including
@@ -279,13 +153,12 @@ short place(double jd_tt, const object *restrict source, const observer *restric
         enum novas_accuracy accuracy, sky_pos *restrict output) {
   static const char *fn = "place";
 
-  static THREAD_LOCAL enum novas_accuracy acc_last = -1;
+  static THREAD_LOCAL enum novas_accuracy acc_last = (enum novas_accuracy) -1;
   static THREAD_LOCAL double tlast = NAN;
   static THREAD_LOCAL double peb[3], veb[3], psb[3];
 
   observer obs;
   novas_planet_bundle planets = {0};
-  int pl_mask = (accuracy == NOVAS_FULL_ACCURACY) ? grav_bodies_full_accuracy : grav_bodies_reduced_accuracy;
   double x, jd_tdb, pob[3], vob[3], pos[3] = {0.0}, vel[3], vpos[3], t_light, d_sb;
   int i;
 
@@ -293,7 +166,7 @@ short place(double jd_tt, const object *restrict source, const observer *restric
     return novas_error(-1, EINVAL, fn, "NULL input 'source' pointer");
 
   // Check for invalid value of 'coord_sys' or 'accuracy'.
-  if(coord_sys < 0 || coord_sys >= NOVAS_ITRS)
+  if((unsigned) coord_sys >= NOVAS_ITRS)
     return novas_error(1, EINVAL, fn, "invalid reference system: %d", coord_sys);
 
   if(accuracy != NOVAS_FULL_ACCURACY && accuracy != NOVAS_REDUCED_ACCURACY)
@@ -370,6 +243,7 @@ short place(double jd_tt, const object *restrict source, const observer *restric
   }
 
   if(coord_sys != NOVAS_ICRS) {
+    int pl_mask = (accuracy == NOVAS_FULL_ACCURACY) ? grav_bodies_full_accuracy : grav_bodies_reduced_accuracy;
     prop_error(fn, obs_planets(jd_tdb, accuracy, pob, pl_mask, &planets), 70);
   }
 
@@ -418,37 +292,13 @@ short place(double jd_tt, const object *restrict source, const observer *restric
   // ---------------------------------------------------------------------
   // Transform, if necessary, to output coordinate system.
   // ---------------------------------------------------------------------
-  switch(coord_sys) {
-    case NOVAS_J2000: {
-      // Transform to equator and equinox of date.
-      gcrs_to_j2000(pos, pos);
-      break;
-    }
-
-    case NOVAS_MOD: {
-      // Transform to equator and equinox of date.
-      gcrs_to_mod(jd_tdb, pos, pos);
-      break;
-    }
-
-    case NOVAS_TOD: {
-      // Transform to equator and equinox of date.
-      gcrs_to_tod(jd_tdb, accuracy, pos, pos);
-      break;
-    }
-
-    case NOVAS_CIRS:
-    case NOVAS_TIRS: {
-      // Transform to equator and CIO of date.
-      prop_error(fn, gcrs_to_cirs(jd_tdb, accuracy, pos, pos), 80);
-      if(coord_sys == NOVAS_TIRS)
-        spin(era(jd_tt, -ut1_to_tt / DAY), pos, pos);
-      break;
-    }
-
-    default:
-      // Nothing else to do.
-      ;
+  if(coord_sys == NOVAS_TIRS) {
+    // Transform to equator and CIO of date.
+    prop_error(fn, gcrs_to_cirs(jd_tdb, accuracy, pos, pos), 80);
+    spin(era(jd_tt, -ut1_to_tt / DAY), pos, pos);
+  }
+  else {
+    novas_icrs_to_sys(pos, jd_tdb, accuracy, coord_sys, pos);
   }
 
   // ---------------------------------------------------------------------
@@ -475,10 +325,9 @@ short place(double jd_tt, const object *restrict source, const observer *restric
  * are available via a novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param star      Pointer to catalog entry structure containing catalog data for the object in
@@ -488,7 +337,7 @@ short place(double jd_tt, const object *restrict source, const observer *restric
  * @param system    The type of coordinate reference system in which coordinates are to be
  *                  returned.
  * @param accuracy  NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param[out] pos  The position and radial velocity of of the catalog source in the specified
+ * @param[out] pos  The position and radial velocity of the catalog source in the specified
  *                  coordinate system and relative to the specified observer location (if
  *                  applicable)
  * @return          0 if successful, or -1 if one of the required arguments is NULL, or else 1 if
@@ -527,10 +376,9 @@ int place_star(double jd_tt, const cat_entry *restrict star, const observer *res
  * are available via a novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param star      Pointer to catalog entry structure containing catalog data for the object
@@ -545,7 +393,7 @@ int place_star(double jd_tt, const cat_entry *restrict star, const observer *res
  * @param[out] dec  [deg] Topocentric declination in degrees, referred to true equator and equinox
  *                  of date 'jd_tt' or NAN when returning with an error code. (It may be NULL if
  *                  not required)
- * @param[out] rv   [AU/day] radial velocity relative ot observer, or NAN when returning with an
+ * @param[out] rv   [km/s] radial velocity relative ot observer, or NAN when returning with an
  *                  error code. (It may be NULL if not required)
  * @return          0 if successful, -1 if a required pointer argument is NULL, or else 20 + the
  *                  error from place_star().
@@ -595,10 +443,9 @@ int radec_star(double jd_tt, const cat_entry *restrict star, const observer *res
  * are available via a novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar
@@ -616,7 +463,7 @@ int radec_star(double jd_tt, const cat_entry *restrict star, const observer *res
  *                  code. (It may be NULL if not required)
  * @param[out] dis  [AU] True distance from Earth to the body at 'jd_tt' in AU, or NAN when
  *                  returning with an error code. (It may be NULL if not needed).
- * @param[out] rv   [AU/day] radial velocity relative ot observer, or NAN when returning with
+ * @param[out] rv   [km/s] radial velocity relative ot observer, or NAN when returning with
  *                  an error code. (It may be NULL if not required)
  * @return          0 if successful, or -1 if the object argument is NULL or if
  *                  the value of 'where' in structure 'location' is invalid, or 10 + the
@@ -686,10 +533,9 @@ int radec_planet(double jd_tt, const object *restrict ss_body, const observer *r
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param star      Pointer to catalog entry structure containing catalog data for the object in
@@ -733,10 +579,9 @@ short app_star(double jd_tt, const cat_entry *restrict star, enum novas_accuracy
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param star      Pointer to catalog entry structure containing catalog data for the object in
@@ -773,10 +618,9 @@ short virtual_star(double jd_tt, const cat_entry *restrict star, enum novas_accu
  * specifies the star.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param star      Pointer to catalog entry structure containing catalog data for the object in
@@ -816,10 +660,9 @@ short astro_star(double jd_tt, const cat_entry *restrict star, enum novas_accura
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar system body.
@@ -859,10 +702,9 @@ short app_planet(double jd_tt, const object *restrict ss_body, enum novas_accura
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar system body.
@@ -897,10 +739,9 @@ short virtual_planet(double jd_tt, const object *restrict ss_body, enum novas_ac
  * different set of return values used.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar system body.
@@ -926,12 +767,12 @@ short astro_planet(double jd_tt, const object *restrict ss_body, enum novas_accu
 }
 
 /**
- * @deprecated Using the frame-based novas_sky_pos() with NOVAS_TOD as the reference system is now
- *             preferred for topocentric calculations.
- *
  * __reference_system__: TOD <br>
  * __observer location__: topocentric (on Earth) <br>
  * __position_type__: apparent <br>
+ *
+ * @deprecated Using the frame-based novas_sky_pos() with NOVAS_TOD as the reference system is now
+ *             preferred for topocentric calculations.
  *
  * Computes the topocentric (True of Date; TOD) apparent place of a star at date 'jd_tt', given
  * its ICRS catalog place, proper motion, parallax, and radial velocity.
@@ -945,10 +786,9 @@ short astro_planet(double jd_tt, const object *restrict ss_body, enum novas_accu
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param ut1_to_tt [s] Difference TT-UT1 at 'jd_tt', in seconds of time.
@@ -976,12 +816,12 @@ short topo_star(double jd_tt, double ut1_to_tt, const cat_entry *restrict star, 
 }
 
 /**
- * @deprecated Using the frame-based novas_sky_pos() with NOVAS_ICRS or NOVARS_GCRS as the
- *             reference system is now preferred for the equivalent calculations.
- *
  * __reference_system__: ICRS / GCRS <br>
  * __observer location__: topocentric (on Earth) <br>
  * __position_type__: apparent <br>
+ *
+ * @deprecated Using the frame-based novas_sky_pos() with NOVAS_ICRS or NOVARS_GCRS as the
+ *             reference system is now preferred for the equivalent calculations.
  *
  * Computes the local apparent place of a star at date 'jd_tt', in the GCRS, given its catalog
  * mean place, proper motion, parallax, and radial velocity.
@@ -995,10 +835,9 @@ short topo_star(double jd_tt, double ut1_to_tt, const cat_entry *restrict star, 
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992), Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param ut1_to_tt [s] Difference TT-UT1 at 'jd_tt', in seconds of time.
@@ -1008,7 +847,7 @@ short topo_star(double jd_tt, double ut1_to_tt, const cat_entry *restrict star, 
  * @param accuracy  NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
  * @param[out] ra   [h] Local apparent right ascension, referred to the GCRS (it may be NULL if
  *                  not required).
- * @param[out] dec  [deg] Local apparent right ascension, referred to the GCRS (it may be NULL if
+ * @param[out] dec  [deg] Local apparent declination, referred to the GCRS (it may be NULL if
  *                  not required).
  * @return          0 if successful, or -1 if any of the required pointer arguments is NULL, or
  *                  else 20 + the error from place().
@@ -1026,12 +865,12 @@ short local_star(double jd_tt, double ut1_to_tt, const cat_entry *restrict star,
 }
 
 /**
- * @deprecated Using the frame-based novas_sky_pos() with NOVAS_TOD as the reference system is now
- *             preferred for topocentric calculations.
- *
  * __reference_system__: TOD <br>
  * __observer location__: topocentric (on Earth) <br>
  * __position_type__: apparent <br>
+ *
+ * @deprecated Using the frame-based novas_sky_pos() with NOVAS_TOD as the reference system is now
+ *             preferred for topocentric calculations.
  *
  * Computes the topocentric apparent place of a solar system body at the specified time. This is
  * the same as calling place() for the body for the same observer location and NOVAS_TOD as the
@@ -1043,10 +882,9 @@ short local_star(double jd_tt, double ut1_to_tt, const cat_entry *restrict star,
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terretrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar system body.
@@ -1076,12 +914,12 @@ short topo_planet(double jd_tt, const object *restrict ss_body, double ut1_to_tt
 }
 
 /**
- * @deprecated Using the frame-based novas_sky_pos() with NOVAS_ICRS or NOVARS_GCRS as the
- *             reference system is now preferred for the equivalent calculations.
- *
  * __reference_system__: ICRS/GCRS <br>
  * __observer location__: topocentric (on Earth) <br>
  * __position_type__: apparent <br>
+ *
+ * @deprecated Using the frame-based novas_sky_pos() with NOVAS_ICRS or NOVARS_GCRS as the
+ *             reference system is now preferred for the equivalent calculations.
  *
  * Computes the local apparent place of a solar system body, in the GCRS. This is the same as
  * calling place() for the body for the same observer location and NOVAS_GCRS as the reference
@@ -1093,10 +931,9 @@ short topo_planet(double jd_tt, const object *restrict ss_body, double ut1_to_tt
  * novas_planet_provider function.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date.
  * @param ss_body   Pointer to structure containing the body designation for the solar
@@ -1106,7 +943,7 @@ short topo_planet(double jd_tt, const object *restrict ss_body, double ut1_to_tt
  * @param accuracy  NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
  * @param[out] ra   [h] Local apparent right ascension, referred to the GCRS (it may be NULL if
  *                  not required).
- * @param[out] dec  [deg] Local apparent right ascension, referred to the GCRS (it may be NULL
+ * @param[out] dec  [deg] Local apparent declination, referred to the GCRS (it may be NULL
  *                  if not required).
  * @param[out] dis  [AU] Apparent distance from Earth to the body at 'jd_tt' (it may be NULL if
  *                  not required).
@@ -1127,7 +964,7 @@ short local_planet(double jd_tt, const object *restrict ss_body, double ut1_to_t
 }
 
 /**
- * __reference system: TOD &rarr; ICRS<br>
+ * __reference system__: TOD &rarr; ICRS <br>
  * __observer location__: geocenter &rarr; SSB <br>
  * __position_type__: apparent &rarr; geometric <br>
  *
@@ -1142,10 +979,9 @@ short local_planet(double jd_tt, const object *restrict ss_body, double ut1_to_t
  * the apparent RA/Dec may be specified in any reference system.
  *
  * REFERENCES:
- * <ol>
- *     <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- *     <li>Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Explanatory Supplement to the Astronomical Almanac (1992),Chapter 3.
  *
  * @param jd_tt         [day] Terrestrial Time (TT) based Julian date.
  * @param[in] tra       [h] Geocentric apparent (TOD) right ascension, referred to true equator
@@ -1395,3 +1231,4 @@ int place_j2000(double jd_tt, const object *restrict source, enum novas_accuracy
   prop_error("place_j2000", place(jd_tt, source, NULL, 0.0, NOVAS_J2000, accuracy, pos), 0);
   return 0;
 }
+

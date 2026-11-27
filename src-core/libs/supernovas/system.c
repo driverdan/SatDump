@@ -1,11 +1,21 @@
 /**
  * @file
  *
- * @date Created  on Mar 5, 2025
- * @author G. Kaplan and Attila Kovacs
- *
  *  Various transformations between different coordinate systems used in astronomy, such as
  *  equatorial, ecliptic, Galactic, or local horizontal coordinate systems.
+ *
+ *  This module also provides functions otherwise relating to the observer locations.
+ *
+ *  For Earth-based geodetic locations, the module provides a set of functions to convert between
+ *  various (local) coordinate systems. For example, calculating parallactic angles (a.k.a.
+ *  vertical position angle or VPA), for converting between horizontal and equatorial offsets,
+ *  and various functions for converting equatorial vectors to a line-of-sight, or _u_, _v_, _w_
+ *  coordinate bases, and vice-versa.
+ *
+ * @date Created  on Mar 5, 2025
+ * @author Attila Kovacs and G. Kaplan
+ *
+ * @sa frames.c, transform.c
  */
 
 #include <string.h>
@@ -13,15 +23,15 @@
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
 
+#include "novas.h"
 
 /**
- * Convert ecliptic longitude and latitude to right ascension and declination.  To convert
- * GCRS ecliptic coordinates (mean ecliptic and equinox of J2000.0), set 'coord_sys' to
- * NOVAS_GCRS_EQUATOR(2); in this case the value of 'jd_tt' can be set to anything, since
- * J2000.0 is assumed. Otherwise, all input coordinates are dynamical at'jd_tt'.
+ * Convert ecliptic longitude and latitude to right ascension and declination.  To convert GCRS
+ * ecliptic coordinates (mean ecliptic and equinox of J2000.0), set 'coord_sys' to
+ * NOVAS_GCRS_EQUATOR(2); in this case the value of 'jd_tt' can be set to anything, since J2000.0
+ * is assumed. Otherwise, all input coordinates are dynamical at'jd_tt'.
  *
  * @param jd_tt       [day] Terrestrial Time (TT) based Julian date. (Unused if 'coord_sys'
  *                    is NOVAS_GCRS_EQUATOR[2])
@@ -29,9 +39,9 @@
  *                    NOVAS_GCRS_EQUATOR(2), the input GCRS coordinates are converted to
  *                    J2000 ecliptic coordinates.
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param elon        [deg] Ecliptic longitude in degrees, referred to specified ecliptic and
+ * @param elon        [deg] Ecliptic longitude in degrees, referred to the specified ecliptic and
  *                    equinox of date.
- * @param elat        [deg] Ecliptic latitude in degrees, referred to specified ecliptic and
+ * @param elat        [deg] Ecliptic latitude in degrees, referred to the specified ecliptic and
  *                    equinox of date.
  * @param[out] ra     [h] Right ascension in hours, referred to specified equator and equinox
  *                    of date.
@@ -80,9 +90,9 @@ int ecl2equ(double jd_tt, enum novas_equator_type coord_sys, enum novas_accuracy
  * Converts galactic longitude and latitude to ICRS right ascension and declination.
  *
  * REFERENCES:
- * <ol>
- * <li>Hipparcos and Tycho Catalogues, Vol. 1, Section 1.5.3.</li>
- * </ol>
+ *
+ *  1. J.-C. Liu, Z. Zhu, and H. Zhang, A&amp;A, 526, A16 (2011), Eq. 18
+ *  2. Hipparcos and Tycho Catalogues, Vol. 1, Section 1.5.3.
  *
  * @param glon        [deg] Galactic longitude in degrees.
  * @param glat        [deg] Galactic latitude in degrees.
@@ -101,12 +111,12 @@ int ecl2equ(double jd_tt, enum novas_equator_type coord_sys, enum novas_accuracy
 int gal2equ(double glon, double glat, double *restrict ra, double *restrict dec) {
   double pos1[3], pos2[3], xyproj, coslat;
 
-  // Rotation matrix A_g from Hipparcos documentation eq. 1.5.11.
+  // Rotation matrix A_g from Liu+2011 Eq. 18
   // AK: Transposed compared to NOVAS C 3.1 for dot product handling.
   static const double ag[3][3] = { //
-          { -0.0548755604, +0.4941094279, -0.8676661490 }, //
-          { -0.8734370902, -0.4448296300, -0.1980763734 }, //
-          { -0.4838350155, +0.7469822445, +0.4559837762 } };
+          { -0.054875657707, +0.494109437203, -0.867666137554 }, //
+          { -0.873437051953, -0.444829721222, -0.198076337284 }, //
+          { -0.483835073621, +0.746982183981, +0.455983813693 } };
 
   if(!ra || !dec)
     return novas_error(-1, EINVAL, "gal2equ", "NULL output pointer: ra=%p, dec=%p", ra, dec);
@@ -140,7 +150,7 @@ int gal2equ(double glon, double glat, double *restrict ra, double *restrict dec)
  * Converts a position vector in the Earth-fixed ITRS frame to astrometric (unrefracted) azimuth
  * and zenith angles at the specified observer location.
  *
- * @param location   Observer location on Earth
+ * @param location   Geodetic (ITRF / GRS80) observer location on Earth.
  * @param itrs       3-vector position in Earth-fixed ITRS frame
  * @param[out] az    [deg] astrometric (unrefracted) azimuth angle at observer location [0:360].
  *                   It may be NULL if not required.
@@ -219,7 +229,7 @@ int itrs_to_hor(const on_surface *restrict location, const double *restrict itrs
  * Converts astrometric (unrefracted) azimuth and zenith angles at the specified observer location
  * to a unit position vector in the Earth-fixed ITRS frame.
  *
- * @param location   Observer location on Earth
+ * @param location   Geodetic (ITRF / GRS80) observer location on Earth
  * @param az         [deg] astrometric (unrefracted) azimuth angle at observer location [0:360].
  *                   It may be NULL if not required.
  * @param za         [deg] astrometric (unrefracted) zenith angle at observer location [0:180]. It
@@ -283,9 +293,9 @@ int hor_to_itrs(const on_surface *restrict location, double az, double za, doubl
  * Converts ICRS right ascension and declination to galactic longitude and latitude.
  *
  * REFERENCES:
- * <ol>
- * <li>Hipparcos and Tycho Catalogues, Vol. 1, Section 1.5.3.</li>
- * </ol>
+ *
+ *  1. J.-C. Liu, Z. Zhu, and H. Zhang, A&amp;A, 526, A16 (2011), Eq. 18
+ *  2. Hipparcos and Tycho Catalogues, Vol. 1, Section 1.5.3.
  *
  * @param ra          [h] ICRS right ascension in hours.
  * @param dec         [deg] ICRS declination in degrees.
@@ -300,12 +310,12 @@ int hor_to_itrs(const on_surface *restrict location, double az, double za, doubl
 int equ2gal(double ra, double dec, double *restrict glon, double *restrict glat) {
   double pos1[3], pos2[3], xyproj, cosd;
 
-  // Rotation matrix A_g from Hipparcos documentation eq. 1.5.11.
+  // Rotation matrix A_g from Liu+2011 (Eq. 18)
   // AK: Transposed compared to NOVAS C 3.1 for dot product handling.
   static const double ag[3][3] = { //
-          { -0.0548755604, -0.8734370902, -0.4838350155 }, //
-          { +0.4941094279, -0.4448296300, +0.7469822445 }, //
-          { -0.8676661490, -0.1980763734, +0.4559837762 } };
+          { -0.054875657707, -0.873437051953, -0.483835073621 }, //
+          { +0.494109437203, -0.444829721222, +0.746982183981 }, //
+          { -0.867666137554, -0.198076337284, +0.455983813693 } };
 
   if(!glon || !glat)
     return novas_error(-1, EINVAL, "equ2gal", "NULL output pointer: glon=%p, glat=%p", glon, glat);
@@ -348,9 +358,9 @@ int equ2gal(double ra, double dec, double *restrict glon, double *restrict glat)
  *                    NOVAS_GCRS_EQUATOR(2), the input GCRS coordinates are converted to
  *                    J2000 ecliptic coordinates.
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param ra          [h] Right ascension in hours, referred to specified equator and equinox
+ * @param ra          [h] Right ascension in hours, referred to the specified equator and equinox
  *                    of date.
- * @param dec         [deg] Declination in degrees, referred to specified equator and equinox
+ * @param dec         [deg] Declination in degrees, referred to the specified equator and equinox
  *                    of date.
  * @param[out] elon   [deg] Ecliptic longitude in degrees, referred to specified ecliptic and
  *                    equinox of date.
@@ -403,8 +413,8 @@ short equ2ecl(double jd_tt, enum novas_equator_type coord_sys, enum novas_accura
  *                    is NOVAS_GCRS_EQUATOR[2])
  * @param coord_sys   The astrometric reference system type of the coordinates.
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param in          Position vector, referred to specified equator and equinox of date.
- * @param[out] out    Position vector, referred to specified ecliptic and equinox of date.
+ * @param in          Position vector, referred to the specified equator and equinox of date.
+ * @param[out] out    Position vector, referred to the specified ecliptic and equinox of date.
  *                    It can be the same vector as the input. If 'coord_sys' is
  *                    NOVAS_GCRS_EQUATOR(2), the input GCRS coordinates are converted to
  *                    J2000 ecliptic coordinates.
@@ -442,7 +452,7 @@ short equ2ecl_vec(double jd_tt, enum novas_equator_type coord_sys, enum novas_ac
     }
 
     case NOVAS_GCRS_EQUATOR: /* Input: GCRS */{
-      static THREAD_LOCAL enum novas_accuracy acc_2000 = -1;
+      static THREAD_LOCAL enum novas_accuracy acc_2000 = (enum novas_accuracy) -1;
       static THREAD_LOCAL double ob2000;
 
       frame_tie(in, ICRS_TO_J2000, pos0);
@@ -482,8 +492,8 @@ short equ2ecl_vec(double jd_tt, enum novas_equator_type coord_sys, enum novas_ac
  *                    is NOVAS_GCRS_EQUATOR[2])
  * @param coord_sys   The astrometric reference system type of the coordinates
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param in          Position vector, referred to specified ecliptic and equinox of date.
- * @param[out] out    Position vector, referred to specified equator and equinox of date. It
+ * @param in          Position vector, referred to the specified ecliptic and equinox of date.
+ * @param[out] out    Position vector, referred to the specified equator and equinox of date. It
  *                    can be the same vector as the input.
  * @return            0 if successful, -1 if either vector argument is NULL or the accuracy
  *                    is invalid, or else 1 if the value of 'coord_sys' is invalid.
@@ -558,28 +568,25 @@ short ecl2equ_vec(double jd_tt, enum novas_equator_type coord_sys, enum novas_ac
  *              and possibly following it with an atmospheric refraction correction if
  *              appropriate.
  *
- * Transforms topocentric (TOD) right ascension and declination to zenith distance and
- * azimuth. This method should not be used to convert CIRS apparent coordinates (IAU
- * 2000 standard) -- for those you should use cirs_to_itrs() followed by itrs_to_hor()
- * instead.
+ * Transforms topocentric (TOD) apparent right ascension and declination to zenith distance and
+ * azimuth. This method should not be used to convert CIRS apparent coordinates (IAU 2000
+ * standard) -- for those you should use cirs_to_itrs() followed by itrs_to_hor() instead.
  *
  * It uses a method that properly accounts for polar motion, which is significant at the
  * sub-arcsecond level. This function can also adjust coordinates for atmospheric
  * refraction.
  *
  * NOTES:
- * <ul>
- *  <li>'xp' and 'yp' can be set to zero if sub-arcsecond accuracy is not needed.</li>
- *  <li> The directions 'zd'= 0 (zenith) and 'az'= 0 (north) are here considered fixed in
- *  the terrestrial system. Specifically, the zenith is along the geodetic normal, and north
- *  is toward the ITRS pole.</li>
- *  <li>If 'ref_option' is NOVAS_STANDARD_ATMOSPHERE (1), then 'rar'='ra' and 'decr'='dec'.
- * </ul>
+ *
+ *  1. 'xp' and 'yp' can be set to zero if sub-arcsecond accuracy is not needed.
+ *  2. The directions 'zd'= 0 (zenith) and 'az'= 0 (north) are here considered fixed in
+ *     the terrestrial system. Specifically, the zenith is along the geodetic normal, and north
+ *     is toward the ITRS pole.
+ *  3. If 'ref_option' is NOVAS_STANDARD_ATMOSPHERE (1), then 'rar'='ra' and 'decr'='dec'.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. (2008). USNO/AA Technical Note of 28 Apr 2008, "Refraction as a Vector."</li>
- * </ol>
+ *
+ *  1. Kaplan, G. (2008). USNO/AA Technical Note of 28 Apr 2008, "Refraction as a Vector."
  *
  * @param jd_ut1      [day] UT1 based Julian date
  * @param ut1_to_tt   [s] TT - UT1 Time difference in seconds
@@ -593,7 +600,7 @@ short ecl2equ_vec(double jd_tt, enum novas_equator_type coord_sys, enum novas_ac
  *                    pole with respect to ITRS reference pole, e.g. from IERS Bulletin A. If you
  *                    have defined pole offsets to be incorporated into the TOD input coordinates
  *                    (pre-IAU2000 method) via `cel_pole()`, then you should set this to 0.
- * @param location    The observer location
+ * @param location    Geodetic (ITRF / GRS80) observer location on Earth
  * @param ra          [h] Topocentric apparent (TOD) right ascension of object of interest,
  *                    referred to true equator and equinox of date.
  * @param dec         [deg] Topocentric apparent (TOD) declination of object of interest, referred
@@ -729,5 +736,369 @@ int equ2hor(double jd_ut1, double ut1_to_tt, enum novas_accuracy accuracy, doubl
     }
   }
   return 0;
+}
+
+/**
+ * Converts a 3D line-of-sight vector (&delta;&phi;, &delta;&theta;, &delta;r) to a rectangular
+ * equatorial (&delta;x, &delta;y, &delta;z) vector.
+ *
+ * @param los         [arb.u.] Line-of-sight 3-vector (&delta;&phi;, &delta;&theta;, &delta;r).
+ * @param lon         [deg] Line-of-sight longitude.
+ * @param lat         [deg] Line-of-sight latitude.
+ * @param[out] xyz    [arb.u.] Output rectangular equatorial 3-vector (&delta;x, &delta;y, &delta;z),
+ *                    in the same units as the input. It may be the same vector as the input.
+ * @return            0 if successful, or else -1 if either vector argument is NULL (errno will be
+ *                    set to EINVAL).
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_xyz_to_los(), novas_uvw_to_xyz()
+ */
+int novas_los_to_xyz(const double *los, double lon, double lat, double *xyz) {
+  static const char *fn = "novas_los_to_xyz";
+
+  double slon, clon, slat, clat;
+  double dlon, dlat, dr, clatdr_m_slatdlat;
+
+  if(!xyz)
+    return novas_error(-1, EINVAL, fn, "output xyz vector is NULL");
+
+  if(xyz != los)
+    memset(xyz, 0, XYZ_VECTOR_SIZE);
+
+  if(!los)
+    return novas_error(-1, EINVAL, fn, "input los vector is NULL");
+
+  lon *= DEGREE;
+  lat *= DEGREE;
+
+  slon = sin(lon);
+  clon = cos(lon);
+  slat = sin(lat);
+  clat = cos(lat);
+
+  dlon = los[0];
+  dlat = los[1];
+  dr = los[2];
+
+  clatdr_m_slatdlat = clat * dr - slat * dlat;
+
+  // Transform motion vector to equatorial system.
+  xyz[0] = clon * clatdr_m_slatdlat - slon * dlon;
+  xyz[1] = clon * dlon + slon * clatdr_m_slatdlat;
+  xyz[2] = clat * dlat + slat * dr;
+
+  return 0;
+}
+
+/**
+ * Converts a 3D rectangular equatorial (&delta;x, &delta;y, &delta;z) vector to a polar
+ * (&delta;&phi;, &delta;&theta;, &delta;r) vector along a line-of-sight.
+ *
+ * @param xyz         [arb.u.] Rectangular equatorial 3-vector (&delta;x, &delta;y, &delta;z).
+ * @param lon         [deg] Line-of-sight longitude.
+ * @param lat         [deg] Line-of-sight latitude.
+ * @param[out] los    [arb.u.] Output line-of-sight 3-vector (&delta;&phi;, &delta;&theta;,
+ *                    &delta;r), in the same units as the input. It may be the same vector as the
+ *                    input.
+ * @return            0 if successful, or else -1 if either vector argument is NULL (errno will be
+ *                    set to EINVAL).
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_los_to_xyz(), novas_xyz_to_uvw()
+ */
+int novas_xyz_to_los(const double *xyz, double lon, double lat, double *los) {
+  static const char *fn = "novas_xyz_to_los";
+
+  double slon, clon, slat, clat;
+  double x, y, z, clonx_slony;
+
+  if(!los)
+    return novas_error(-1, EINVAL, fn, "output los vector is NULL");
+
+  if(los != xyz)
+    memset(los, 0, XYZ_VECTOR_SIZE);
+
+  if(!xyz)
+    return novas_error(-1, EINVAL, fn, "input xyz vector is NULL");
+
+  lon *= DEGREE;
+  lat *= DEGREE;
+
+  slon = sin(lon);
+  clon = cos(lon);
+  slat = sin(lat);
+  clat = cos(lat);
+
+  x = xyz[0];
+  y = xyz[1];
+  z = xyz[2];
+
+  clonx_slony = clon * x + slon * y;
+
+  // Transform motion vector to equatorial system.
+  los[0] = clon * y - slon * x;
+  los[1] = clat * z - slat * clonx_slony;
+  los[2] = clat * clonx_slony + slat * z;
+
+  return 0;
+}
+
+/**
+ * Converts rectangular telescope x,y,z (absolute or relative) coordinates (in PEF) to an
+ * equatorial u,v,w projection for a specified line of sight.
+ *
+ * x,y,z are Cartesian coordinates w.r.t the Greenwich meridian, in the PEF frame. The directions
+ * are x: long=0, lat=0; y: long=90, lat=0; z: lat=90. To calculate PEF from ITRS, use `wobble()`
+ * first, before calling this function. Or, for arcsecond-level precision you might use PEF and
+ * ITRS positions interchangeably.
+ *
+ * u,v,w are Cartesian coordinates, with (u,v) along the local East (R.A.) and North (declination)
+ * directions as seen from a direction on the sky (w). As such, they are effectively ITRS-based
+ * line-of-sight (LOS) coordinates.
+ *
+ * Alternatively, use `novas_site_uvw()` instead to convert a geodetic (ITRS) site location more
+ * directly to a u, v, w projection.
+ *
+ * @param xyz           [arb.u.] Absolute or relative x,y,z coordinates (double[3]) in the
+ *                      Pseudo Earth Frame (PEF).
+ * @param ha            [h] Hourangle (LST - RA) i.e., the difference between the Local (apparent)
+ *                      Sidereal Time and the apparent (true-of-date) Right Ascension of observed
+ *                      source, from the input location.
+ * @param dec           [deg] Apparent (true-of-date) declination of source at the input location
+ * @param[out] uvw      [arb.u.] Converted u,v,w coordinates (double[3]), in same units as
+ *                      the input xyz. It may be the same vector as the input.
+ *
+ * @return              0 if successful, or else -1 if either vector argument is NULL (errno will
+ *                      be set to EINVAL)
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_site_uvw(), novas_uvw_to_xyz(), wobble()
+ */
+int novas_xyz_to_uvw(const double *xyz, double ha, double dec, double *uvw) {
+  prop_error("novas_xyz_to_uvw", novas_xyz_to_los(xyz, -15.0 * ha, dec, uvw), 0);
+  return 0;
+}
+
+/**
+ * Converts equatorial u,v,w projected (absolute or relative) coordinates to rectangular telescope
+ * x,y,z coordinates (in PEF) to for a specified line of sight.
+ *
+ * u,v,w are Cartesian coordinates, with (u,v) along the local East (R.A.) and North (declination)
+ * directions as seen from a direction on the sky (w). As such, they are effectively line-of-sight
+ * (LOS) coordinates.
+ *
+ * x,y,z are Cartesian coordinates w.r.t the Greenwich meridian in the rotating Pseudo Earth Frame
+ * (PEF). The directions are x: long=0, lat=0; y: long=90, lat=0; z: lat=90. To convert thse to
+ * ITRS, use `wobble()` after calling this function. Or, for arcsecond-level precision you might
+ * use PEF and ITRS positions interchangeably.
+ *
+ * @param uvw           [arb.u.] Absolute or relative line of sight coordinates (double[3]).
+ * @param ha            [h] Hourangle (LST - RA) i.e., the difference between the Local (apparent)
+ *                      Sidereal Time and the apparent (true-of-date) Right Ascension of observed
+ *                      source.
+ * @param dec           [deg] Apparent (true-of-date) declination of source.
+ * @param[out] xyz      [arb.u.] Converted x,y,z coordinates (double[3]) in the same unit as uvw,
+ *                      in the Pseudo Earth Frame (PEF). It may be the same vector as the input.
+ *
+ * @return              0 if successful, or else -1 if either vector argument is NULL
+ *                      (errno will be set to EINVAL)
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_xyz_to_uvw(), wobble()
+ */
+int novas_uvw_to_xyz(const double *uvw, double ha, double dec, double *xyz) {
+  prop_error("novas_uvw_to_xyz", novas_los_to_xyz(uvw, -15.0 * ha, dec, xyz), 0);
+  return 0;
+}
+
+/**
+ * Converts an ITRS position vector to a local East-North-Up (ENU) vector at the
+ * specified site.
+ *
+ * @param itrf        _xyz_ position vector in ITRS.
+ * @param lon         [deg] ITRS longitude of site.
+ * @param lat         [deg] ITRS latitude of site.
+ * @param[out] enu    output East-North-Up (ENU) vector. It may be the same vector as the input.
+ * @return            0 if successful, or else -1 if either pointer argument is NULL (errno will be
+ *                    set to EINVAL).
+ *
+ * @since 1.6
+ * @author Attila Kovacs
+ *
+ * @sa novas_enu_to_itrs()
+ */
+int novas_itrs_to_enu(const double *itrf, double lon, double lat, double *enu) {
+  prop_error("novas_itrs_to_enu", novas_xyz_to_los(itrf, lon, lat, enu), 0);
+  return 0;
+}
+
+/**
+ * Converts an East-North-Up (ENU) vector at the specified site to an ITRS vector.
+ *
+ * @param enu         input East-North-Up (ENU) vector.
+ * @param lon         [deg] ITRS longitude of site.
+ * @param lat         [deg] ITRS latitude of site.
+ * @param[out] itrf   output ITRS vector. It may be the same vector as the input.
+ * @return            0 if successful, or else -1 if either pointer argument is NULL (errno will be
+ *                    set to EINVAL).
+ *
+ * @since 1.6
+ * @author Attila Kovacs
+ *
+ * @sa novas_itrs_to_enu()
+ */
+int novas_enu_to_itrs(const double *enu, double lon, double lat, double *itrf) {
+  prop_error("novas_itrs_to_enu", novas_los_to_xyz(enu, lon, lat, itrf), 0);
+  return 0;
+}
+
+
+/**
+ * Returns the Parallactic Angle (PA) calculated for a horizontal Az/El location of the
+ * sky. The PA is the angle between the local horizontal coordinate directions and the local
+ * true-of-date equatorial coordinate directions at the given location. The polar wobble is not
+ * included in the calculation.
+ *
+ * The Parallactic Angle is sometimes referrred to as the Vertical Position Angle (VPA). Both
+ * define the same quantity.
+ *
+ * @param az    [deg] Azimuth angle
+ * @param el    [deg] Elevation angle
+ * @param lat   [deg] Geodetic latitude of observer
+ * @return      [deg] Parallactic Angle (PA). I.e., the clockwise position angle of the
+ *              declination direction w.r.t. the elevation axis in the horizontal system. Same as
+ *              the clockwise position angle of the elevation direction w.r.t. the declination
+ *              axis in the equatorial system.
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_epa(), novas_h2e_offset()
+ */
+double novas_hpa(double az, double el, double lat) {
+  double s, c;
+
+  lat *= DEGREE;
+  az *= DEGREE;
+  el *= DEGREE;
+
+  s = sin(lat);
+  c = cos(lat);
+
+  return atan2(-c * sin(az), s * cos(el) - c * sin(el) * cos(az)) / DEGREE;
+}
+
+/**
+ * Returns the Parallactic Angle (PA) calculated for an RA/Dec location of the sky at
+ * a given sidereal time. The PA is the angle between the local horizontal coordinate directions
+ * and the local true-of-date equatorial coordinate directions, at the given location and time.
+ * The polar wobble is not included in the calculation.
+ *
+ * The Parallactic Angle is sometimes referrred to as the Vertical Position Angle (VPA). Both
+ * define the same quantity.
+ *
+ * @param ha      [h] Hour angle (LST - RA) i.e., the difference between the Local (apparent)
+ *                Sidereal Time and the apparent (true-of-date) Right Ascension of observed
+ *                source.
+ * @param dec     [deg] Apparent (true-of-date) declination of observed source
+ * @param lat     [deg] Geodetic latitude of observer
+ * @return        [deg] Parallactic Angle (PA). I.e., the clockwise position angle of the
+ *                elevation direction w.r.t. the declination axis in the equatorial system. Same
+ *                as the clockwise position angle of the declination direction w.r.t. the
+ *                elevation axis, in the horizontal system.
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_hpa(), novas_e2h_offset()
+ */
+double novas_epa(double ha, double dec, double lat) {
+  double coslat;
+
+  ha *= HOURANGLE;
+  lat *= DEGREE;
+  dec *= DEGREE;
+
+  coslat = cos(lat);
+  return atan2(coslat * sin(ha), sin(lat) * cos(dec) - coslat * sin(dec) * cos(ha)) / DEGREE;
+}
+
+/**
+ * Converts coordinate offsets, from the local horizontal system to local equatorial offsets.
+ * Converting between local flat projections and spherical coordinates usually requires a WCS
+ * projection.
+ *
+ * REFERENCES:
+ *
+ *  1. Calabretta, M.R., &amp; Greisen, E.W., (2002), Astronomy &amp; Astrophysics, 395, 1077-1122.
+ *
+ * @param daz         [arcsec] Projected offset position in the azimuth direction. The projected
+ *                    offset between two azimuth positions at the same reference elevation is
+ *                    &delta;Az = (Az2 - Az1) * cos(El<sub>0</sub>).
+ * @param del         [arcsec] projected offset position in the elevation direction
+ * @param pa          [deg] Parallactic Angle
+ * @param[out] dra    [arcsec] Output offset position in the local true-of-date R.A. direction. It
+ *                    can be a pointer to one of the input coordinates, or NULL if not required.
+ * @param[out] ddec   [arcsec] Output offset position in the local true-of-date declination
+ *                    direction. It can be a pointer to one of the input coordinates, or NULL if
+ *                    not required.
+ * @return            0
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_e2h_offset(), novas_hpa()
+ */
+int novas_h2e_offset(double daz, double del, double pa, double *restrict dra, double *restrict ddec) {
+  double dx = daz, dy = del, c, s;
+
+  pa *= DEGREE;
+  c = cos(pa);
+  s = sin(pa);
+
+  if(dra)
+    *dra =  s * dy - c * dx;
+  if(ddec)
+    *ddec = s * dx + c * dy;
+
+  return 0;
+}
+
+/**
+ * Converts coordinate offsets, from the local equatorial system to local horizontal offsets.
+ * Converting between local flat projections and spherical coordinates usually requires a WCS
+ * projection.
+ *
+ * REFERENCES:
+ *
+ *  1. Calabretta, M.R., &amp; Greisen, E.W., (2002), Astronomy &amp; Astrophysics, 395, 1077-1122.
+ *
+ * @param dra         [arcsec] Projected ffset position in the apparent true-of-date R.A.
+ *                    direction. E.g. The projected offset between two RA coordinates at a same
+ *                    reference declination, is &delta;RA = (RA2 - RA1) * cos(Dec<sub>0</sub>).
+ * @param ddec        [arcsec] Projected offset position in the apparent true-of-date declination
+ *                    direction.
+ * @param pa          [deg] Parallactic Angle
+ * @param[out] daz    [arcsec] Output offset position in the local azimuth direction. It can be a
+ *                    pointer to one of the input coordinates, or NULL if not required.
+ * @param[out] del    [arcsec] Output offset position in the local elevation direction. It can be a
+ *                    pointer to one of the input coordinates, or NULL if not required.
+ * @return            0
+ *
+ * @since 1.3
+ * @author Attila Kovacs
+ *
+ * @sa novas_h2e_offset(), novas_epa()
+ */
+int novas_e2h_offset(double dra, double ddec, double pa, double *restrict daz, double *restrict del) {
+  return novas_h2e_offset(dra, ddec, pa, daz, del);
 }
 

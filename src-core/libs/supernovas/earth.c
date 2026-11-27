@@ -1,10 +1,12 @@
 /**
  * @file
  *
+ * Various functions relating to Earth position and rotation.
+ *
  * @date Created  on Mar 6, 2025
  * @author G. Kaplan and Attila Kovacs
  *
- *  Various functions relating to Earth position and rotation.
+ * @sa frames.c, itrf.c
  */
 
 #include <string.h>
@@ -14,6 +16,14 @@
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
 #include "novas.h"
 
+#define ERAD                NOVAS_GRS80_RADIUS
+#define EF                  NOVAS_GRS80_FLATTENING
+#define ERAD_AU             ( ERAD / NOVAS_AU )
+#define ANGVEL              NOVAS_EARTH_ANGVEL
+/// \endcond
+
+
+/// \cond PRIVATE
 /**
  * Structure to contain terms for librational and tidal corrections to earth orientation.
  */
@@ -32,6 +42,13 @@ typedef struct {
 
 
 /**
+ * @deprecated This NOVAS C function does not account for polar wobble, so the geodetic ITRS /
+ *             GRS80 locations on Earth are not converted into a proper equatorial system, such as
+ *             a true-of-date (TOD) coordinate system. Use `novas_site_gcrs_posvel()` instead,
+ *             which you can follow by a coordinate transformation, such as `tod_to_gcrs()` if you
+ *             need geocentric observer coordinates in e.g. the true-of-date (TOD) equatorial
+ *             system.
+ *
  * Computes the position and velocity vectors of a terrestrial observer with respect to the
  * center of the Earth, based on the GRS80 reference ellipsoid, used for the International
  * Terrestrial Reference Frame (ITRF) and its realizations.
@@ -44,13 +61,13 @@ typedef struct {
  * to the precession and nutation of the Earth's axis is not accounted for here.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * </ol>
  *
- * @param location    Location of observer in Earth's rotating frame
- * @param lst         [h] Local apparent sidereal time at reference meridian in hours.
- * @param[out] pos    [AU]  Position vector of observer with respect to center of Earth,
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *
+ * @param location    ITRF / GRS80 geodetic location of observer in Earth's rotating frame.
+ * @param gast        [h] Greenwich apparent sidereal time (GAST). If set to 0, it returns
+ *                    positions and velocities w.r.t. the ITRS.
+ * @param[out] pos    [AU] Position vector of observer with respect to center of Earth,
  *                    equatorial rectangular coordinates, referred to true equator
  *                    and equinox of date, components in AU. If reference meridian is
  *                    Greenwich and 'lst' = 0, 'pos' is
@@ -64,10 +81,10 @@ typedef struct {
  * @return            0 if successful, or -1 if location is NULL or if the pos and vel output
  *                    arguments are identical pointers.
  *
- * @sa geo_posvel()
- * @sa make_gps_site(), make_itrf_site(), make_xyz_site()
+ * @sa novas_site_gcrs_posvel(), geo_posvel()
+ * @sa make_gps_site(), make_itrf_site(), make_xyz_site(), novas_gast(), novas_time_gst()
  */
-int terra(const on_surface *restrict location, double lst, double *restrict pos, double *restrict vel) {
+int terra(const on_surface *restrict location, double gast, double *restrict pos, double *restrict vel) {
   static const char *fn = "terra";
   double df, df2, phi, sinphi, cosphi, c, s, ach, ash, stlocl, sinst, cosst;
   double ht_km;
@@ -93,7 +110,7 @@ int terra(const on_surface *restrict location, double lst, double *restrict pos,
   ash = ERAD / NOVAS_KM * s + ht_km;
 
   // Compute local sidereal time factors at the observer's longitude.
-  stlocl = lst * HOURANGLE + location->longitude * DEGREE;
+  stlocl = gast * HOURANGLE + location->longitude * DEGREE;
   sinst = sin(stlocl);
   cosst = cos(stlocl);
 
@@ -127,11 +144,10 @@ int terra(const on_surface *restrict location, double lst, double *restrict pos,
  * Capitaine et al. (2003).
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).</li>
- * <li>IERS Conventions 2010, Chapter 5, Eq. 5.32, see at
- * https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * </ol>
+ *
+ *  1. Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).
+ *  2. IERS Conventions 2010, Chapter 5, Eq. 5.32, see at
+ *     https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
  *
  * @param jd_ut1      [day] UT1-based Julian Date.
  * @param ut1_to_tt   [s] UT1 - UTC time difference.
@@ -151,19 +167,22 @@ double novas_gmst(double jd_ut1, double ut1_to_tt) {
 /**
  * Returns the Greenwich Apparent Sidereal Time (GAST) for a given UT1 date.
  *
+ * NOTES:
+ *
+ *  1. This function caches the result of the last calculation.
+ *
+ * REFERENCES:
+ *
+ *  1. Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).
+ *  2. Kaplan, G. (2005), US Naval Observatory Circular 179.
+ *  3. IERS Conventions 2010, Chapter 5, Eq. 5.30 and Table 5.2e, see at
+ *     https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf and
+ *     https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt
+ *
  * @param jd_ut1      [day] UT1-based Julian Date.
  * @param ut1_to_tt   [s] UT1 - UTC time difference.
  * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
  * @return            [h] The Greenwich Apparent Sidereal Time (GAST) in the 0-24 range.
- *
- * REFERENCES:
- * <ol>
- * <li>Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).</li>
- * <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- * <li>IERS Conventions 2010, Chapter 5, Eq. 5.30 and Table 5.2e, see at
- * https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf and
- * https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt</li>
- * </ol>
  *
  * @since 1.5
  * @author Attila Kovacs
@@ -171,13 +190,24 @@ double novas_gmst(double jd_ut1, double ut1_to_tt) {
  * @sa novas_gmst()
  */
 double novas_gast(double jd_ut1, double ut1_to_tt, enum novas_accuracy accuracy) {
-  double ee = 0.0, gst;
+  static THREAD_LOCAL double last_ut1 = NAN, last_gast;
+  static THREAD_LOCAL enum novas_accuracy last_acc = (enum novas_accuracy) -1;
 
-  if(e_tilt(jd_ut1 + ut1_to_tt / DAY, accuracy, NULL, NULL, &ee, NULL, NULL) != 0)
-    return novas_trace_nan("novas_gast");
+  if(accuracy != last_acc || !novas_time_equals(jd_ut1, last_ut1)) {
+    double ee = 0.0;
 
-  gst = remainder(novas_gmst(jd_ut1, ut1_to_tt) + ee / 3600.0, DAY_HOURS);
-  return (gst < 0.0) ? gst + DAY_HOURS : gst;
+    if(e_tilt(jd_ut1 + ut1_to_tt / DAY, accuracy, NULL, NULL, &ee, NULL, NULL) != 0)
+      return novas_trace_nan("novas_gast");
+
+    last_gast = remainder(novas_gmst(jd_ut1, ut1_to_tt) + ee / 3600.0, DAY_HOURS);
+    if(last_gast < 0.0)
+      last_gast += DAY_HOURS;
+
+    last_ut1 = jd_ut1;
+    last_acc = accuracy;
+  }
+
+  return last_gast;
 }
 
 /**
@@ -189,20 +219,17 @@ double novas_gast(double jd_ut1, double ut1_to_tt, enum novas_accuracy accuracy)
  * part.
  *
  * NOTES:
- * <ol>
- * <li>Contains fix for known <a href="https://aa.usno.navy.mil/software/novas_faq">sidereal time
- * units bug.</a></li>
- * <li>As of version 1.5.0, the function uses Eq 42 of Capitaine et al. (2003) exclusively. In prior
- * versions, including NOVAS C the same method was provided twice, with the only difference being
- * an unnecessary change of coordinate basis to GCRS. This latter, mor roundabout way of getting
- * the same answer has been eliminated.<.li>
- * </ol>
+ *
+ *  1. Contains fix for known [sidereal time units bug](https://aa.usno.navy.mil/software/novas_faq)
+ *  2. As of version 1.5.0, the function uses Eq 42 of Capitaine et al. (2003) exclusively. In prior
+ *     versions, including NOVAS C the same method was provided twice, with the only difference being
+ *     an unnecessary change of coordinate basis to GCRS. This latter, mor roundabout way of getting
+ *     the same answer has been eliminated.
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).</li>
- * <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- * </ol>
+ *
+ *  1. Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).
+ *  2. Kaplan, G. (2005), US Naval Observatory Circular 179.
  *
  * @param jd_ut1_high [day] High-order part of UT1 Julian date.
  * @param jd_ut1_low  [day] Low-order part of UT1 Julian date. (You can leave it at zero if
@@ -240,7 +267,6 @@ short sidereal_time(double jd_ut1_high, double jd_ut1_low, double ut1_to_tt, enu
   return 0;
 }
 
-
 /**
  * Returns the value of the Earth Rotation Angle (&theta;) for a given UT1 Julian date.  The
  * expression used is taken from the note to IAU Resolution B1.8 of 2000. The input Julian date
@@ -254,11 +280,10 @@ short sidereal_time(double jd_ut1_high, double jd_ut1_low, double ut1_to_tt, enu
  * routine `iau_era00`).
  *
  * REFERENCES:
- * <ol>
- *  <li>IERS Conventions 2010, Chapter 5, Eq. 5.15</li>
- *  <li>IAU Resolution B1.8, adopted at the 2000 IAU General Assembly, Manchester, UK.</li>
- *  <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, Eq. 5.15
+ *  2. IAU Resolution B1.8, adopted at the 2000 IAU General Assembly, Manchester, UK.
+ *  3. Kaplan, G. (2005), US Naval Observatory Circular 179.
  *
  * @param jd_ut1_high   [day] High-order part of UT1 Julian date.
  * @param jd_ut1_low    [day] Low-order part of UT1 Julian date.
@@ -330,10 +355,9 @@ static void sum_eop_terms(const novas_eop_terms *terms, int n, double gmst, cons
  * `novas_diurnal_eop()` or `novas_diurnal_eop_at_time()` is more directly suited.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions 2010, Chapter 5, Tablea 5.1a and 5.1b, see
- * https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, Tablea 5.1a and 5.1b, see
+ *     https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
  *
  * @param gmst        [h] Greenwich Mean Sidereal Time of observation, e.g. as obtained by
  *                    `novas_gmst()`.
@@ -370,10 +394,9 @@ int novas_diurnal_libration(double gmst, const novas_delaunay_args *restrict del
  * `novas_diurnal_eop()` or `novas_diurnal_eop_at_time()` is more directly suited.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions 2010, Chapter 8, Tables 8.2a, 8.2b, 8.3a, and 8.3b, see
- * https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 8, Tables 8.2a, 8.2b, 8.3a, and 8.3b, see
+ *     https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf
  *
  * @param gmst        [h] Greenwich Mean Sidereal Time of observation, e.g. as obtained by
  *                    `novas_gmst()`.
@@ -387,7 +410,7 @@ int novas_diurnal_libration(double gmst, const novas_delaunay_args *restrict del
  * @since 1.5
  * @author Attila Kovacs
  *
- * @sa novas_diurnal_eop(), novas_diurnal_librations()
+ * @sa novas_diurnal_eop(), novas_diurnal_libration()
  */
 int novas_diurnal_ocean_tides(double gmst, const novas_delaunay_args *restrict delaunay, double *restrict dxp, double *restrict dyp,
         double *restrict dut1) {
@@ -408,10 +431,9 @@ int novas_diurnal_ocean_tides(double gmst, const novas_delaunay_args *restrict d
  * the highest precision astrometry only, when converting between ITRS and TIRS frames.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * <li>IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
+ *  2. IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf
  *
  * @param gmst           [h] Greenwich Mean Sidereal Time of observation, e.g. as obtained by
  *                       `novas_gmst()`.
@@ -465,11 +487,17 @@ static int add_diurnal_eop(double gmst, const novas_delaunay_args *restrict dela
  * and sub-millisecond level in UT1. Thus, these diurnal and semi-diurnal variations are important
  * for the highest precision astrometry only, when converting between ITRS and TIRS frames.
  *
+ * NOTES:
+ *
+ *  1. These diurnal corrections are automatically added to the mean Earth Orinetation parameters
+ *     used when defining astronomical times and observing frames. I.e., you should pass mean values
+ *     to the likes of `novas_set_time()` and `novas_make_frame()`, which will then add the diurnal
+ *     corrections as appropriate automatically.
+ *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * <li>IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
+ *  2. IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf
  *
  * @param gmst         [h] Greenwich Mean Sidereal Time of observation, e.g. as obtained by
  *                     `novas_gmst()`.
@@ -486,7 +514,7 @@ static int add_diurnal_eop(double gmst, const novas_delaunay_args *restrict dela
  * @author Attila Kovacs
  *
  * @sa novas_diurnal_eop_at_time()
- * @sa novas_diurnal_librations(), novas_diurnal_ocean_tides()
+ * @sa novas_diurnal_libration(), novas_diurnal_ocean_tides()
  */
 int novas_diurnal_eop(double gmst, const novas_delaunay_args *restrict delaunay, double *restrict dxp, double *restrict dyp,
         double *restrict dut1) {
@@ -506,11 +534,18 @@ int novas_diurnal_eop(double gmst, const novas_delaunay_args *restrict delaunay,
  * semidiurnal) libration and the ocean tides at a given astromtric time. See Chapters 5 and 8 of
  * the IERS Conventions.
  *
+ * NOTES:
+ *
+ *  1. These diurnal corrections are automatically added to the mean Earth Orinetation parameters
+ *     used when defining astronomical times and observing frames. I.e., you should pass mean values
+ *     to the likes of `novas_set_time()` and `novas_make_frame()`, which will then add the diurnal
+ *     corrections as appropriate automatically.
+ *  2. This function caches the result of the last calculation.
+ *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * <li>IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
+ *  2. IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf
  *
  * @param time    Astrometric time specification
  * @param dxp     [arcsec] x-pole correction for libration and ocean tides, or NULL if not
@@ -527,14 +562,28 @@ int novas_diurnal_eop(double gmst, const novas_delaunay_args *restrict delaunay,
  * @sa novas_diurnal_eop()
  */
 int novas_diurnal_eop_at_time(const novas_timespec *restrict time, double *restrict dxp, double *restrict dyp, double *restrict dut1) {
-  novas_delaunay_args a = {0, 0, 0, 0, 0};
+  static THREAD_LOCAL double last_tt = NAN;
+  static THREAD_LOCAL double last_x, last_y, last_t;
 
   if(!time)
     return novas_error(-1, EINVAL, "novas_diurnal_eop_at_time", "time argument is NULL");
 
-  fund_args((time->ijd_tt - NOVAS_JD_J2000 + time->fjd_tt) / JULIAN_CENTURY_DAYS, &a);
+  if(!novas_time_equals(time->ijd_tt + time->fjd_tt, last_tt)) {
+    novas_delaunay_args a = {0};
+    double gmst = novas_gmst(novas_get_time(time, NOVAS_UT1), time->ut1_to_tt);
+    fund_args((time->ijd_tt - NOVAS_JD_J2000 + time->fjd_tt) / JULIAN_CENTURY_DAYS, &a);
+    novas_diurnal_eop(gmst, &a, &last_x, &last_y, &last_t);
+    last_tt = time->ijd_tt + time->fjd_tt;
+  }
 
-  return novas_diurnal_eop(novas_time_gst(time, NOVAS_REDUCED_ACCURACY), &a, dxp, dyp, dut1);
+  if(dxp)
+    *dxp = last_x;
+  if(dyp)
+    *dyp = last_y;
+  if(dut1)
+    *dut1 = last_t;
+
+  return 0;
 }
 
 /**
@@ -547,35 +596,29 @@ int novas_diurnal_eop_at_time(const novas_timespec *restrict time, double *restr
  * referred to _z_ and _x_ axes toward the CIP and TIO, respectively.
  *
  * NOTES:
- * <ol>
- * <li>
- *  You may obtain Earth orientation parameters from the IERS site and Bulletins. For sub-mas
- *  accuracy you should augment the (interpolated) published values for diurnal and semi-diurnal
- *  librations and the effect of ocean tides, e.g. by using `novas_diurnal_eop()` or
- *  `novas_diurnal_eop_at_time()`.
- * </li>
- * <li>
- *  Generally, this function should not be called if global pole offsets were set via
- *  `cel_pole()` and then used via `place()` or one of its variants to calculate Earth orientation
- *  corrected (TOD or CIRS) apparent coordinates. In such cases, calling `wobble()` would apply
- *  duplicate corrections. It is generally best to forgo using `cel_pole()` going forward, and
- *  instead apply Earth orinetation corrections with `wobble()` only when converting vectors
- *  between the Earth-fixed ITRS and TIRS frames.
- * </li>
- * <li>
- *  The Earth orientation parameters xp, yp should be provided in the same ITRF realization as
- *  the observer location for an Earth-based observer. You can use `novas_itrf_transform_eop()` to
- *  convert the EOP values as necessary.
- * </li>
- * </ol>
+ *
+ *  1. You may obtain Earth orientation parameters from the IERS site and Bulletins. For sub-mas
+ *     accuracy you should augment the (interpolated) published values for diurnal and semi-diurnal
+ *     librations and the effect of ocean tides, e.g. by using `novas_diurnal_eop()` or
+ *     `novas_diurnal_eop_at_time()`.
+ *
+ *  2. Generally, this function should not be called if global pole offsets were set via
+ *     `cel_pole()` and then used via `place()` or one of its variants to calculate Earth orientation
+ *     corrected (TOD or CIRS) apparent coordinates. In such cases, calling `wobble()` would apply
+ *     duplicate corrections. It is generally best to forgo using `cel_pole()` going forward, and
+ *     instead apply Earth orinetation corrections with `wobble()` only when converting vectors
+ *     between the Earth-fixed ITRS and TIRS frames.
+ *
+ *  3. The Earth orientation parameters xp, yp should be provided in the same ITRF realization as
+ *     the observer location for an Earth-based observer. You can use `novas_itrf_transform_eop()` to
+ *     convert the EOP values as necessary.
  *
  * REFERENCES:
- * <ol>
- * <li>Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.</li>
- * <li>Lambert &amp; Bizouard (2002), Astronomy and Astrophysics 394, 317-321.</li>
- * <li>IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * <li>IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf</li>
- * </ol>
+ *
+ *  1. Kaplan, G. H. et. al. (1989). Astron. Journ. 97, 1197-1210.
+ *  2. Lambert &amp; Bizouard (2002), Astronomy and Astrophysics 394, 317-321.
+ *  3. IERS Conventions 2010, Chapter 5, https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
+ *  4. IERS Conventions 2010, Chapter 8, https://iers-conventions.obspm.fr/content/chapter8/icc8.pdf
  *
  * @param jd_tt         [day] Terrestrial Time (TT) based Julian date.
  * @param direction     WOBBLE_ITRS_TO_TIRS (0) or WOBBLE_TIRS_TO_ITRS (1) to include corrections
@@ -601,17 +644,19 @@ int novas_diurnal_eop_at_time(const novas_timespec *restrict time, double *restr
  *
  * @return              0 if successful, or -1 if the direction is invalid output vector argument is NULL.
  *
- * @sa novas_diurnal_eop(), novas_diurnal_eop_at_time(), novas_itrf_transfor_eop()
+ * @sa novas_diurnal_eop(), novas_diurnal_eop_at_time(), novas_itrf_transform_eop()
  */
 int wobble(double jd_tt, enum novas_wobble_direction direction, double xp, double yp, const double *in, double *out) {
   static const char *fn = "wobble";
 
   double s1 = 0.0;
 
-  if((short) direction < 0)
-    direction = 1;
+#if !__cplusplus
+  if((int) direction < 0)
+    direction = WOBBLE_TIRS_TO_ITRS;
   else if(direction >= NOVAS_WOBBLE_DIRECTIONS)
     return novas_error(-1, EINVAL, fn, "invalid direction: %d", direction);
+#endif
 
   if(!in || !out)
     return novas_error(-1, EINVAL, fn, "NULL input or output 3-vector: in=%p, out=%p", in, out);
@@ -638,129 +683,6 @@ int wobble(double jd_tt, enum novas_wobble_direction direction, double xp, doubl
     novas_tiny_rotate(in, yp, xp, -s1, out);
     out[1] += xp * yp * x;
   }
-
-  return 0;
-}
-
-/**
- * Computes the geocentric GCRS position and velocity of an observer.
- *
- * @param jd_tt       [day] Terrestrial Time (TT) based Julian date.
- * @param ut1_to_tt   [s] TT - UT1 time difference in seconds
- * @param accuracy    NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
- * @param obs         Observer location
- * @param[out] pos    [AU] Position 3-vector of observer, with respect to origin at geocenter,
- *                    referred to GCRS axes, components in AU. (It may be NULL if not required.)
- * @param[out] vel    [AU/day] Velocity 3-vector of observer, with respect to origin at geocenter,
- *                    referred to GCRS axes, components in AU/day. (It must be distinct from the
- *                    pos output vector, and may be NULL if not required)
- * @return            0 if successful, -1 if the 'obs' is NULL or the two output vectors are
- *                    the same, or else 1 if 'accuracy' is invalid, or 2 if 'obserrver->where' is
- *                    invalid.
- *
- * @sa novas_make_frame(), make_observer(), get_ut1_to_tt()
- */
-short geo_posvel(double jd_tt, double ut1_to_tt, enum novas_accuracy accuracy, const observer *restrict obs,
-        double *restrict pos, double *restrict vel) {
-  static const char *fn = "geo_posvel";
-
-  double pos1[3], vel1[3];
-
-  if(!obs)
-    return novas_error(-1, EINVAL, fn, "NULL observer location pointer");
-
-  if(pos == vel)
-    return novas_error(-1, EINVAL, fn, "identical output pos and vel 3-vectors @ %p", pos);
-
-  // Invalid value of 'accuracy'.
-  if(accuracy != NOVAS_FULL_ACCURACY && accuracy != NOVAS_REDUCED_ACCURACY)
-    return novas_error(1, EINVAL, fn, "invalid accuracy: %d", accuracy);
-
-  switch(obs->where) {
-
-    case NOVAS_OBSERVER_AT_GEOCENTER:                   // Observer at geocenter.  Trivial case.
-      if(pos)
-        memset(pos, 0, XYZ_VECTOR_SIZE);
-      if(vel)
-        memset(vel, 0, XYZ_VECTOR_SIZE);
-      return 0;
-
-      // Other two cases: Get geocentric position and velocity vectors of
-      // observer wrt equator and equinox of date.
-
-    case NOVAS_OBSERVER_ON_EARTH: {                     // Observer on surface of Earth.
-      // Compute UT1 and sidereal time.
-      double jd_ut1 = jd_tt - (ut1_to_tt / DAY);
-
-      // Function 'terra' does the hard work, given sidereal time.
-      terra(&obs->on_surf, novas_gast(jd_ut1, ut1_to_tt, accuracy), pos1, vel1);
-      break;
-    }
-
-    case NOVAS_OBSERVER_IN_EARTH_ORBIT: {               // Observer on near-earth spacecraft.
-      const double kms = DAY / AU_KM;
-      int i;
-
-      // Convert units to AU and AU/day.
-      for(i = 3; --i >= 0;) {
-        pos1[i] = obs->near_earth.sc_pos[i] / AU_KM;
-        vel1[i] = obs->near_earth.sc_vel[i] * kms;
-      }
-
-      break;
-    }
-
-    case NOVAS_AIRBORNE_OBSERVER: {                     // Airborne observer
-      const double kms = DAY / AU_KM;
-      observer surf = *obs;
-      int i;
-
-      surf.where = NOVAS_OBSERVER_ON_EARTH;
-
-      // Get the stationary observer velocity at the location
-      prop_error(fn, geo_posvel(jd_tt, ut1_to_tt, accuracy, &surf, pos1, vel1), 0);
-
-      // Add in the aircraft motion
-      for(i = 3; --i >= 0;)
-        vel1[i] = novas_add_vel(vel1[i], obs->near_earth.sc_vel[i] * kms);
-
-      break;
-    }
-
-    case NOVAS_SOLAR_SYSTEM_OBSERVER: {               // Observer in Solar orbit
-      const object earth = NOVAS_EARTH_INIT;
-      const double tdb[2] = { jd_tt, tt2tdb(jd_tt) / DAY };
-      int i;
-
-
-      // Get the position and velocity of the geocenter rel. to SSB
-      prop_error(fn, ephemeris(tdb, &earth, NOVAS_BARYCENTER, accuracy, pos1, vel1), 0);
-
-      // Return velocities w.r.t. the geocenter.
-      for(i = 3; --i >= 0;) {
-        if(pos)
-          pos[i] = obs->near_earth.sc_pos[i] - pos1[i];
-        if(vel)
-          vel[i] = novas_add_vel(obs->near_earth.sc_vel[i], -vel1[i]);
-      }
-
-      // Already in GCRS...
-      return 0;
-    }
-
-    default:
-      return novas_error(2, EINVAL, fn, "invalid observer type (where): %d", obs->where);
-  }
-
-  // For these calculations we can assume TDB = TT (< 2 ms difference)...
-
-  // Transform geocentric position vector of observer to GCRS.
-  if(pos)
-    tod_to_gcrs(jd_tt, accuracy, pos1, pos); // Use TT for TDB
-
-  // Transform geocentric velocity vector of observer to GCRS.
-  if(vel)
-    tod_to_gcrs(jd_tt, accuracy, vel1, vel); // Use TT for TDB
 
   return 0;
 }

@@ -1,12 +1,18 @@
 /**
  * @file
  *
+ *  Calculate approximate positions and velocities for the major planets, Sun, Earth-Moon
+ *  Barycenter (EMB), and the Solar-system Barycenter (SSB), mainly by using Keplerian orbital
+ *  elements.
+ *
+ *  For more precise planet positions, you should use SuperNOVAS with a planetary ephemeris
+ *  provider, as as the CALCEPH or CSPICE plugin interface modules, or custom ephemeris provider
+ *  functions.
+ *
  * @date Created  on Apr 27, 2025
  * @author Attila Kovacs
  *
- *  Calculate approximate positions and velocities for the major planets, Sun, Moon, Earth-Moon
- *  Barycenter (EMB), and the Solar-system Barycenter (SSB), mainly by using Keplerian orbital
- *  elements.
+ * @sa orbital.c, solsys-calceph.c, solsys-cspice.c, ephemeris.c, moon.c
  */
 
 #include <math.h>
@@ -15,18 +21,17 @@
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
 
+#include "novas.h"
+
 /**
- * Returns the planetary longitude, for Mercury through Neptune, w.r.t. mean dynamical
- * ecliptic and equinox of J2000, with high order terms omitted (Simon et al. 1994,
- * 5.8.1-5.8.8).
+ * Returns the planetary longitude, for Mercury through Neptune, w.r.t. mean dynamical ecliptic
+ * and equinox of J2000, with high order terms omitted (Simon et al. 1994, 5.8.1-5.8.8).
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions Chapter 5, Eq. 5.44.</li>
- * </ol>
+ *
+ *  1. IERS Conventions Chapter 5, Eq. 5.44.
  *
  * @param t       [cy] Julian centuries since J2000
  * @param planet  Novas planet id, e.g. NOVAS_MARS.
@@ -72,17 +77,15 @@ double planet_lon(double t, enum novas_planet planet) {
  * accuracies, see either of the references below.
  *
  * NOTES:
- * <ol>
- *  <li>The Earth-Moon system is treated as a single orbital of the Earth-Moon Barycenter (EMB).
- *      That is, the EMB orbital is returned for both Earth and the Moon also.</li>
- *  <li>For Pluto, the Pluto system barycenter orbit is returned.</li>
- * </ol>
+ *
+ *  1. The Earth-Moon system is treated as a single orbital of the Earth-Moon Barycenter (EMB).
+ *     That is, the EMB orbital is returned for both Earth and the Moon also.
+ *  2. For Pluto, the Pluto system barycenter orbit is returned.
  *
  * REFERENCES:
- * <ol>
- *  <li>E.M. Standish and J.G. Williams 1992.</li>
- *  <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- * </ol>
+ *
+ *  1. E.M. Standish and J.G. Williams 1992.
+ *  2. https://ssd.jpl.nasa.gov/planets/approx_pos.html
  *
  * @param id          NOVAS major planet ID. All major planets, except Earth, are supported. The
  *                    Earth-Moon Barycenter (EMB), and Pluto system Barycenter are supported also.
@@ -251,8 +254,11 @@ int novas_make_planet_orbit(enum novas_planet id, double jd_tdb, novas_orbital *
     // Additional terms for the long-term orbitals only...
     const planet_terms *terms = &plts[id - NOVAS_JUPITER];
     double ft = terms->f * DEGREE * t;
-    orbit->M0 += terms->b * t * t + terms->c * cos(ft) + terms->s * sin(ft);
-    orbit->n += 2.0 * terms->b * t + terms->f * (terms->s * cos(ft) - terms->c * sin(ft));
+    double cft = cos(ft);
+    double sft = sin(ft);
+
+    orbit->M0 += terms->b * t * t + terms->c * cft + terms->s * sft;
+    orbit->n += 2.0 * terms->b * t + terms->f * (terms->s * cft - terms->c * sft);
   }
 
   orbit->n /= JULIAN_CENTURY_DAYS;
@@ -262,76 +268,6 @@ int novas_make_planet_orbit(enum novas_planet id, double jd_tdb, novas_orbital *
   return 0;
 }
 
-/**
- * Gets the current orbital elements for the Moon relative to the geocenter for the specified
- * epoch of observation.
- *
- * REFERENCES:
- * <ol>
- *  <li>Chapront, J. et al., 2002, A&A 387, 700–709</li>
- *  <li>Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
- *      vol. 124, no. 1, July 1983, p. 50-62.</li>
- * </ol>
- *
- * @param jd_tdb      [day] Barycentric Dynamical Time (TDB) based Julian Date.
- * @param[out] orbit  Orbital elements data structure to populate.
- * @return            0 if successful, or else -1 (`errno` set to `EINVAL`).
- *
- * @since 1.4
- * @author Attila Kovacs
- *
- * @sa novas_make_planet_orbit(), make_orbital_object()
- */
-int novas_make_moon_orbit(double jd_tdb, novas_orbital *restrict orbit) {
-  novas_orbital def = NOVAS_ORBIT_INIT;
-  double t, dot;
-
-  if(!orbit)
-    return novas_error(-1, EINVAL, "novas_make_moon_orbit", "output orbital is NULL");
-
-  // Default ecliptic orbital...
-  memcpy(orbit, &def, sizeof(novas_orbital));
-
-  orbit->system.center = NOVAS_EARTH;
-
-  // Values expressed for instant
-  orbit->jd_tdb = jd_tdb;
-
-  t = (jd_tdb - NOVAS_JD_J2000) / JULIAN_CENTURY_DAYS;
-
-  // From Chapront-Touze, M, and Chapront, J. 1983, A&A, 124, 1, p. 50-62.
-  // ELP2000 model.
-  orbit->i = 5.128121856; // 2 Gamma
-  orbit->e = 0.01670924 + t * (-0.42037954e-4 - t * 0.122196e-6);
-
-  // From Chapront, J. et al., 2002, A&A 387, 700–709
-  orbit->M0 = 218.316632833333 + t * (481266.484259111 + t * (-0.0019083 + t * (1.8344e-06 - t * 8.8028e-09)));    // W1
-  orbit->omega = 83.3532366111111 + t * (4067.61675844444 + t * (-0.010629 + t * (-1.25131e-5 + t * 5.91694e-8))); // W2
-  orbit->Omega = 125.044535138889 + t * (-1935.53330141667 + t * (0.00176647 + t * (2.1181e-6 - t * 9.9611e-9)));  // W3
-
-  // treat omega
-  orbit->M0 -= orbit->omega;
-  orbit->omega -= orbit->Omega;
-
-  // differentiate M0 above to get mean motion
-  orbit->n = 481266.484259111 + t * (-0.0038166 + t * (5.5032e-06 - t * 7.92252e-08));
-
-  // From Chapront-Touze, M, and Chapront, J. 1983, A&A, 124, 1, p. 50-62.
-  // (n^2 a^3 = constant).
-  orbit->a = 3.84747980645e8 / NOVAS_AU * pow(481266.484259111 / orbit->n, 2.0 / 3.0);
-
-  orbit->n /= JULIAN_CENTURY_DAYS;
-
-  // differentiate omega above to get apsis motion
-  dot = 4067.61675844444 + t * (-0.021258 + t * (-3.75393e-05 + t * 2.366776e-07));
-  orbit->apsis_period = JULIAN_CENTURY_DAYS * TWOPI / dot;
-
-  // differentiate Omega above to get node motion
-  dot = -1935.53330141667 + t * (0.00353294 + t * (6.3543e-06 - t * 3.98444e-08));
-  orbit->node_period = JULIAN_CENTURY_DAYS * TWOPI / dot;
-
-  return 0;
-}
 
 /**
  * Returns the approximate geometric heliocentric orbital positions and velocities for the major
@@ -353,33 +289,30 @@ int novas_make_moon_orbit(double jd_tdb, novas_orbital *restrict orbit) {
  * initialized with `novas_make_planet_orbit()` or `novas_make_moon_orbit()`, and then calling
  * `novas_geom_posvel()`, there are a few important differences:
  *
- * <ol>
- *  <li>This function returns geometric positions referenced to the Sun (i.e., heliocentric),
- *  whereas `novas_geom_posvel()` references the calculated positions to the Solar-system
- *  Barycenter (SSB).</li>
- *  <li>This function calculates Earth and Moon positions about the Keplerian orbital position
- *  of the Earth-Moon Barycenter (EMB). In constrast, `novas_make_planet_orbit()` does not provide
- *  orbitals for the Earth directly, and `make_moot_orbit()` references the Moon's orbital to
- *  the Earth position returned by the currently configured planet calculator function (see
- *  `set_planet_provider()`).</li>
- * </ol>
+ * - This function returns geometric positions referenced to the Sun (i.e., heliocentric),
+ *   whereas `novas_geom_posvel()` references the calculated positions to the Solar-system
+ *   Barycenter (SSB).
+ *
+ * - This function calculates Earth and Moon positions about the Keplerian orbital position
+ *   of the Earth-Moon Barycenter (EMB). In constrast, `novas_make_planet_orbit()` does not provide
+ *   orbitals for the Earth directly, and `make_moot_orbit()` references the Moon's orbital to
+ *   the Earth position returned by the currently configured planet calculator function (see
+ *   `set_planet_provider()`).
  *
  *
  * NOTES:
- * <ol>
- *  <li>The Sun's position w.r.t. the Solar-system Barycenter is calculated using
- *  `earth_sun_calc()`. All other orbitals are also referenced to the Sun's position calculated
- *  that way.</li>
- * </ol>
+ *
+ *  1. The Sun's position w.r.t. the Solar-system Barycenter is calculated using
+ *     `earth_sun_calc()`. All other orbitals are also referenced to the Sun's position calculated
+ *     that way.
  *
  * REFERENCES:
- * <ol>
- *  <li>E.M. Standish and J.G. Williams 1992.</li>
- *  <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- *  <li>Chapront, J. et al., 2002, A&A 387, 700–709</li>
- *  <li>Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
- *      vol. 124, no. 1, July 1983, p. 50-62.</li>
- * </ol>
+ *
+ *  1. E.M. Standish and J.G. Williams 1992.
+ *  2. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+ *  3. Chapront, J. et al., 2002, A&amp;A 387, 700–709
+ *  4. Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
+ *     vol. 124, no. 1, July 1983, p. 50-62.
  *
  * @param id        NOVAS major planet ID. All major planets, plus the Sun, Moon, Earth-Moon
  *                  Barycenter (EMB), and Pluto system Barycenter are supported. (For Pluto, the
@@ -467,25 +400,23 @@ int novas_approx_heliocentric(enum novas_planet id, double jd_tdb, double *restr
  * initialized with `novas_make_planet_orbit()` or `novas_make_moon_orbit()`, and then calling
  * `novas_sky_pos()`, there are a few important differences to note:
  *
- * <ol>
- *  <li>This function calculates Earth and Moon positions about the Keplerian orbital position
- *  of the Earth-Moon Barycenter (EMB). In constrast, `novas_make_planet_orbit()` does not provide
- *  orbitals for the Earth directly, and `make_moot_orbit()` references the Moon's orbital to
- *  the Earth position returned by the currently configured planet calculator function (see
- *  `set_planet_provider()`).</li>
- *  <li>This function ignores gravitational deflection. It makes little sense to bother about
- *  corrections that are orders of magnitude below the accuracy of the orbital positions
- *  obtained.</li>
- * </ol>
+ * - This function calculates Earth and Moon positions about the Keplerian orbital position
+ *   of the Earth-Moon Barycenter (EMB). In constrast, `novas_make_planet_orbit()` does not provide
+ *   orbitals for the Earth directly, and `make_moot_orbit()` references the Moon's orbital to
+ *   the Earth position returned by the currently configured planet calculator function (see
+ *   `set_planet_provider()`).
+ *
+ * - This function ignores gravitational deflection. It makes little sense to bother about
+ *   corrections that are orders of magnitude below the accuracy of the orbital positions
+ *   obtained.
  *
  * REFERENCES:
- * <ol>
- *  <li>E.M. Standish and J.G. Williams 1992.</li>
- *  <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- *  <li>Chapront, J. et al., 2002, A&A 387, 700–709</li>
- *  <li>Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
- *      vol. 124, no. 1, July 1983, p. 50-62.</li>
- * </ol>
+ *
+ *  1. E.M. Standish and J.G. Williams 1992.
+ *  2. https://ssd.jpl.nasa.gov/planets/approx_pos.html
+ *  3. Chapront, J. et al., 2002, A&amp;A 387, 700–709
+ *  4. Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
+ *     vol. 124, no. 1, July 1983, p. 50-62.
  *
  * @param id            NOVAS major planet ID. All major planets, plus the Sun, Moon, Earth-Moon
  *                      Barycenter (EMB), and Pluto system Barycenter are supported. (For Pluto,
@@ -538,134 +469,4 @@ int novas_approx_sky_pos(enum novas_planet id, const novas_frame *restrict frame
           novas_vdist(frame->obs_pos, frame->sun_pos), d_sun);
 
   return 0;
-}
-
-/**
- * Calculates the Moon's phase at a given time. It uses orbital models for Earth (E.M. Standish
- * and J.G. Williams 1992), and for the Moon (Chapront, J. et al., 2002), and takes into account
- * the slightly eccentric nature of both orbits.
- *
- * NOTES:
- * <ol>
- * <li>The Moon's phase here follows the definition by the Astronomical Almanac, as the excess
- * ecliptic longitude of the Moon over that of the Sun seen from the geocenter.</li>
- * <li>There are other definitions of the phase too, depending on which you might find slightly
- * different answers, but regardless of the details most phase calculations should match to within
- * a few degrees.</li>
- * </ol>
- *
- * REFERENCES:
- * <ol>
- *  <li>The Explanatory Supplement to the Astronomical Almanac, University Science Books, 3rd ed.,
- *      p. 507</li>
- *  <li>E.M. Standish and J.G. Williams 1992.</li>
- *  <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- *  <li>Chapront, J. et al., 2002, A&A 387, 700–709</li>
- *  <li>Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
- *      vol. 124, no. 1, July 1983, p. 50-62.</li>
- * </ol>
- *
- * @param jd_tdb      [day] Barycentric Dynamical Time (TDB) based Julian Date.
- * @return            [deg] The Moon's phase, or more precisely the ecliptic longitude difference
- *                    between the Sun and the Moon, as seen from the geocenter. 0: New Moon, 90:
- *                    1st quarter, +/- 180 Full Moon, -90: 3rd quarter or NAN if the solution
- *                    failed to converge (errno will be set to ECANCELED), or if the JD date is
- *                    outside the range of the orbital model (errno set to EINVAL).
- *
- * @since 1.4
- * @author Attila Kovacs
- *
- * @sa novas_next_moon_phase(), novas_make_moon_orbit(), novas_solar_illum()
- */
-double novas_moon_phase(double jd_tdb) {
-  static const char *fn = "novas_moon_phase";
-
-  novas_orbital orbit = NOVAS_ORBIT_INIT;
-  double pos[3] = {0.0};
-  double he, hm;
-
-  // EMB pos around Sun
-  prop_nan(fn, novas_make_planet_orbit(NOVAS_EMB, jd_tdb, &orbit));
-  prop_nan(fn, novas_orbit_native_posvel(jd_tdb, &orbit, pos, NULL));
-  vector2radec(pos, &he, NULL);
-
-  // Moon pos around Earth
-  novas_make_moon_orbit(jd_tdb, &orbit);
-  prop_nan(fn, novas_orbit_native_posvel(jd_tdb, &orbit, pos, NULL));
-  vector2radec(pos, &hm, NULL);
-
-  return remainder(12.0 + hm - he, 24.0) * 15.0;
-}
-
-/**
- * Calculates the date / time at which the Moon will reach the specified phase next, _after_ the
- * specified time. It uses orbital models for Earth (E.M. Standish and J.G. Williams 1992), and
- * for the Moon (Chapront, J. et al., 2002), and takes into account the slightly eccentric nature
- * of both orbits.
- *
- * NOTES:
- * <ol>
- * <li>The Moon's phase here follows the definition by the Astronomical Almanac, as the excess
- * ecliptic longitude of the Moon over that of the Sun seen from the geocenter.</li>
- * <li>There are other definitions of the phase too, depending on which you might find slightly
- * different answers, but regardless of the details most phase calculations should match give or
- * take a few hours.</li>
- * </ol>
- *
- * REFERENCES:
- * <ol>
- *  <li>The Explanatory Supplement to the Astronomical Almanac, University Science Books, 3rd ed.,
- *      p. 507</li>
- *  <li>E.M. Standish and J.G. Williams 1992.</li>
- *  <li>https://ssd.jpl.nasa.gov/planets/approx_pos.html</li>
- *  <li>Chapront, J. et al., 2002, A&A 387, 700–709</li>
- *  <li>Chapront-Touze, M, and Chapront, J. 1983, Astronomy and Astrophysics (ISSN 0004-6361),
- *      vol. 124, no. 1, July 1983, p. 50-62.</li>
- * </ol>
- *
- * @param phase   [deg] The Moon's phase, or more precisely the ecliptic longitude difference
- *                between the Sun and the Moon, as seen from the geocenter. 0: New Moon, 90: 1st
- *                quarter, +/- 180 Full Moon, -90: 3rd quarter.
- * @param jd_tdb  [day] The lower bound date for the phase, as a Barycentric Dynamical Time (TDB)
- *                based Julian Date.
- * @return        [day] The Barycentric Dynamical Time (TDB) based Julian Date when the Moon will
- *                be in the desired phase next after the input date; or NAN if the solution failed
- *                to converge (errno will be set to ECANCELED).
- *
- * @since 1.4
- * @author Attila Kovacs
- *
- * @sa novas_moon_phase(), novas_make_moon_orbit()
- */
-double novas_next_moon_phase(double phase, double jd_tdb) {
-  static const char *fn = "novas_next_moon_phase";
-  int i;
-
-  for(i = 0; i < novas_inv_max_iter; i++) {
-    double phi = novas_moon_phase(jd_tdb);
-    double t = (jd_tdb - NOVAS_JD_J2000) / JULIAN_CENTURY_DAYS;
-
-    // Differential motion of the Moon w.r.t. Earth.
-    // Moon motion from Chapront-Touze, M, and Chapront, J. 1983, A&A, 124, 1, p. 50-62.
-    // Earth motion from E.M. Standish and J.G. Williams 1992. Table 8.10.3. Valid for 3000 BC to 3000 AD.
-    double rate = 445266.793243221 + t * (0.021258 + t * (3.75393e-05 - t * 2.366776e-07));
-    rate /= JULIAN_CENTURY_DAYS;
-
-    if(isnan(phi))
-      return novas_trace_nan(fn);
-
-    phi = remainder(phase - phi, DEG360);
-
-    if(fabs(phi) < 1e-6)
-      return jd_tdb;
-
-    if(i == 0 && phi < 0.0)
-      phi += DEG360;  // initial phase shift evolution must be positive to ensure it is after input date.
-
-    // Date when mean elongation changes by phi...
-    jd_tdb += phi / rate;
-  }
-
-  novas_error(-1, ECANCELED, fn, "Failed to converge");
-  return NAN;
 }

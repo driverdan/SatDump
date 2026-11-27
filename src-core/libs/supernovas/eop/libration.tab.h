@@ -11,13 +11,12 @@
  * Polar migration due to librations. From IERS Conventions Chapter 5, Table 5.1a.
  *
  * REFERENCES:
- * <ol>
- * <li>https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * </ol>
+ *
+ *  1. https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
  *
  * @since 1.5
  */
-static const novas_eop_terms polar_libration_terms[10] = { //
+static const novas_eop_terms polar_libration_terms[10] = { // @suppress("Unused variable declaration in file scope")
         //                                         xp               yp
         //                                    sin     cos      sin      cos
         { {   1,  -1,   0,  -2,   0,  -1 },  -0.40,   0.30,  -0.30,  -0.40 }, //
@@ -36,13 +35,12 @@ static const novas_eop_terms polar_libration_terms[10] = { //
  * UT1 variations due to librations. From IERS Conventions Chapter 5, Table 5.1b.
  *
  * REFERENCES:
- * <ol>
- * <li>https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf</li>
- * </ol>
+ *
+ *  1. https://iers-conventions.obspm.fr/content/chapter5/icc5.pdf
  *
  * @since 1.5
  */
-static const novas_eop_terms dut1_libration_terms[11] = {
+static const novas_eop_terms dut1_libration_terms[11] = { // @suppress("Unused variable declaration in file scope")
         //                                         UT1             LOD
         //                                    sin     cos      sin     cos
         { {   2,  -2,   0,  -2,   0,  -2 },   0.05,  -0.03,  -0.30,  -0.60 }, //

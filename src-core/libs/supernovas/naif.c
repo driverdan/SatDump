@@ -1,31 +1,32 @@
 /**
  * @file
  *
- * @date Created  on Nov 6, 2024
- * @author Attila Kovacs
- *
  *  Solar system ID mappings between NOVAS and NASA's Navigation and Ancillary Information
  *  Facility (NAIF), which is used by the JPL ephemeris systems. The two differ for the numbering
  *  convention for major planets, the Sun, Moon, Solar-System Barycenter (SSB) and the Earth-Moon
  *  Barycenter (EMB). NOVAS does not have predefined IDs beyond this set (and no defined ID for
  *  EMB), thus for all other objects we'll assume and use NOVAS IDs that match NAIF.
  *
+ * @date Created  on Nov 6, 2024
+ * @author Attila Kovacs
  * @since 1.2
  *
- * @sa solsys-calceph.c
- * @sa solsys-cspice.c
+ * @sa solsys-calceph.c, solsys-cspice.c, ephemeris.c
  */
 
 #include <errno.h>
 
+/// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__      ///< Use definitions meant for internal use by SuperNOVAS only
+/// \endcond
+
 #include "novas.h"
 
 /**
  * Converts a NAIF ID to a NOVAS major planet ID. It account for the different IDs used for Sun,
  * Moon, SSB, EMB and the Pluto system. Otherwise NAIF planet barycenters are mapped to the
- * corresponding bodies. NAIF body centers <i>n</i>99 (e.g. 399 for Earth) are mapped to the
- * corresponding NOVAS planet number <i>n</i>. All other NAIF IDs will return -1, indicating no
+ * corresponding bodies. NAIF body centers _n_99 (e.g. 399 for Earth) are mapped to the
+ * corresponding NOVAS planet number _n_. All other NAIF IDs will return -1, indicating no
  * match to a NOVAS planet ID.
  *
  *
@@ -54,11 +55,11 @@ enum novas_planet naif_to_novas_planet(long id) {
 
   // Major planets
   if(id >= NOVAS_MERCURY && id <= NOVAS_PLUTO)
-    return id;
+    return (enum novas_planet) id;
   if(id > 100 && id < 1000) if(id % 100 == 99)
-    return (id - 99)/100;
+    return (enum novas_planet) ((id - 99) / 100);
 
-  return novas_error(-1, EINVAL, "naif_to_novas_planet", "Invalid NOVAS major planet no: %ld", id);
+  return (enum novas_planet) novas_error(-1, EINVAL, "naif_to_novas_planet", "Invalid NOVAS major planet no: %ld", id);
 }
 
 /**
@@ -136,4 +137,3 @@ long novas_to_dexxx_planet(enum novas_planet id) {
               novas_error(-1, EINVAL, "novas_to_dexxx_planet", "Invalid NOVAS major planet no: %d", id);
   }
 }
-

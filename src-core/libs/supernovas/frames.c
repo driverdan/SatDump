@@ -1,14 +1,10 @@
 /**
  * @file
  *
- * @date Created  on Jun 23, 2024
- * @author Attila Kovacs
- * @since 1.1
- *
- * SuperNOVAS routines for higher-level and efficient astrometric calculations using observer
- * frames. Observer frames represent an observer location at a specific astronomical time
- * (instant), which can be re-used again and again to calculate or transform positions of
- * celestial sources in a a range of astronomical coordinate systems.
+ * High-level and efficient astrometric calculations using observing frames. An observing frame
+ * represents an observer location at a specific astronomical time (instant), which can be
+ * re-used again and again to calculate or transform positions of celestial sources in a range
+ * of astronomical coordinate systems.
  *
  * To use frames, you start with `novas_make_frame()` with an astrometric time and an observer
  * location, and optionally Earth-orientation parameters if precision below the arcsecond
@@ -22,8 +18,8 @@
  *   // Specify an observer, with GPS coordinates
  *   make_gps_observer(gps_lat, gps_lon, gps_alt, &obs);
  *
- *   // Specify time, e.g. current time with leap seconds and UT1-UTC time difference:
- *   novas_set_current_time(leap_seconds, dut1, &time);
+ *   // Specify time, e.g. current time with UT1-UTC time difference:
+ *   novas_set_current_time(0, dut1, &time);
  *
  *   // Set up a frame with the desired accuracy and Earth orientation parameters xp, yp.
  *   novas_make_frame(NOVAS_REDUCED_ACCURACY, &obs, &time, xp, yp, &frame);
@@ -94,19 +90,20 @@
  * These are just some of the common use-case scenarios. There is even more possibilities with
  * frames...
  *
- * @sa timescale.c, observer.c, target.c
+ * @date Created  on Jun 23, 2024
+ * @author Attila Kovacs
+ * @since 1.1
+ *
+ * @sa timescale.c, observer.c, target.c, ephemeris.c
  */
+
+#include <string.h>
+#include <errno.h>
+#include <math.h>
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__      ///< Use definitions meant for internal use by SuperNOVAS only
 /// \endcond
-
-#include <stdio.h>
-#include <stdlib.h>
-//#include <unistd.h>
-#include <string.h>
-#include <errno.h>
-#include <math.h>
 
 #include "novas.h"
 
@@ -131,10 +128,10 @@ static int cmp_sys(enum novas_reference_system a, enum novas_reference_system b)
   // TOD->-3, MOD->-2, J2000->-1, GCRS/ICRS->0, CIRS->1, TIRS->2, ITRS->3
   static const int index[] = { 0, -3, 1, 0, -1, -2, 2, 3 };
 
-  if(a < 0 || a >= NOVAS_REFERENCE_SYSTEMS)
+  if((unsigned) a >= NOVAS_REFERENCE_SYSTEMS)
     return novas_error(-2, EINVAL, "cmp_sys", "Invalid reference system (#1): %d", a);
 
-  if(b < 0 || b >= NOVAS_REFERENCE_SYSTEMS)
+  if((unsigned) b >= NOVAS_REFERENCE_SYSTEMS)
     return novas_error(-2, EINVAL, "cmp_sys", "Invalid reference system (#2): %d", b);
 
   if(index[a] == index[b])
@@ -144,10 +141,8 @@ static int cmp_sys(enum novas_reference_system a, enum novas_reference_system b)
 }
 
 static int matrix_transform(const double *in, const novas_matrix *matrix, double *out) {
-  double v[3];
+  const double v[3] = { in[0], in[1], in[2] };
   int i;
-
-  memcpy(v, in, sizeof(v));
 
   for(i = 3; --i >= 0;)
     out[i] = (matrix->M[i][0] * v[0]) + (matrix->M[i][1] * v[1]) + (matrix->M[i][2] * v[2]);
@@ -157,10 +152,8 @@ static int matrix_transform(const double *in, const novas_matrix *matrix, double
 
 static int matrix_inv_rotate(const double *in, const novas_matrix *matrix, double *out) {
   // IMPORTANT! use only with unitary matrices.
-  double v[3];
+  const double v[3] = { in[0], in[1], in[2] };
   int i;
-
-  memcpy(v, in, sizeof(v));
 
   for(i = 3; --i >= 0;)
     out[i] = (matrix->M[0][i] * v[0]) + (matrix->M[1][i] * v[1]) + (matrix->M[2][i] * v[2]);
@@ -240,7 +233,8 @@ static int set_frame_tie(novas_frame *frame) {
   static const double ax = ETA0;
   static const double ay = -XI0;
   static const double az = -DA0;
-  const double X = ax * ax, Y = ay * ay, Z = az * az;
+
+  static const double X = ETA0 * ETA0, Y = XI0 * XI0, Z = DA0 * DA0;
 
   novas_matrix *T = &frame->icrs_to_j2000;
 
@@ -260,8 +254,8 @@ static int set_frame_tie(novas_frame *frame) {
 }
 
 static int set_gcrs_to_cirs(novas_frame *frame) {
-  novas_transform T; memset(&T, 0, sizeof(novas_transform));
-  novas_matrix tod2cirs; memset(&tod2cirs, 0, sizeof(novas_matrix));
+  novas_transform T = {0};
+  novas_matrix tod2cirs = {0};
 
   set_spin_matrix(15.0 * frame->gst - frame->era, &tod2cirs);
 
@@ -394,8 +388,32 @@ static int set_wobble_matrix(const novas_frame *frame, novas_matrix *T) {
 }
 
 static int set_obs_posvel(novas_frame *frame) {
-  int res = obs_posvel(novas_get_time(&frame->time, NOVAS_TDB), frame->time.ut1_to_tt, frame->accuracy, &frame->observer,
-          frame->earth_pos, frame->earth_vel, frame->obs_pos, frame->obs_vel);
+  int k, res;
+
+  if(frame->observer.where == NOVAS_OBSERVER_ON_EARTH || frame->observer.where == NOVAS_AIRBORNE_OBSERVER) {
+    const double *v_itrs;
+
+    if(isnan(frame->dx) || isnan(frame->dy))
+      return novas_error(-1, EAGAIN, "set_obs_posvel", "polar offsets undefined for observer type %d", frame->observer.where);
+
+    v_itrs = (frame->observer.where == NOVAS_AIRBORNE_OBSERVER) ? frame->observer.near_earth.sc_vel : NULL;
+    novas_transform T = {0};
+
+    res = novas_site_itrs_posvel(&frame->time, &frame->observer.on_surf, v_itrs, frame->obs_pos, frame->obs_vel);
+
+    novas_make_transform(frame, NOVAS_ITRS, NOVAS_GCRS, &T);
+    novas_transform_vector(frame->obs_pos, &T, frame->obs_pos);
+    novas_transform_vector(frame->obs_vel, &T, frame->obs_vel);
+  }
+  else {
+    res = geo_posvel(novas_get_time(&frame->time, NOVAS_TT), frame->time.ut1_to_tt, frame->accuracy, &frame->observer,
+            frame->obs_pos, frame->obs_vel);
+  }
+
+  for(k = 0; k < 3; k++) {
+    frame->obs_pos[k] += frame->earth_pos[k];
+    frame->obs_vel[k] = novas_add_vel(frame->obs_vel[k], frame->earth_vel[k]);
+  }
 
   frame->v_obs = novas_vlen(frame->obs_vel);
   frame->beta = frame->v_obs / C_AUDAY;
@@ -477,28 +495,30 @@ int novas_frame_is_initialized(const novas_frame *frame) {
  * ephemeris() call.
  *
  * NOTES:
- * <ol>
- * <li>This function expects the Earth polar wobble parameters to be defined on a per-frame basis
- * and will not use the legacy global (undated) orientation parameters set via cel_pole().</li>
- * <li>The Earth orientation parameters xp, yp should be provided in the same ITRF realization as
- * the observer location for an Earth-based observer. You can use `novas_itrf_transform_eop()` to
- * convert the EOP values as necessary.</li>
- * </ol>
+ *
+ *  1. This function expects the Earth polar wobble parameters to be defined on a per-frame basis
+ *     and will not use the legacy global (undated) orientation parameters set via cel_pole().
+ *
+ *  2. The Earth orientation parameters xp, yp should be provided in the same ITRF realization as
+ *     the observer location for an Earth-based observer. You can use `novas_itrf_transform_eop()` to
+ *     convert the EOP values as necessary.
+ *
+ *  3. If __SuperNOVAS__ was built without cURL support (`WITHOUT_CURL` or `WITHOUT_LIBC` build
+ *    configuration options), then automatic fetching of the polar offsets is not possible. You must
+ *    set `xp` and `yp` appropriately explicitly.
  *
  * @param accuracy    Accuracy requirement, NOVAS_FULL_ACCURACY (0) for the utmost precision or
  *                    NOVAS_REDUCED_ACCURACY (1) if ~1 mas accuracy is sufficient.
  * @param obs         Observer location
  * @param time        Time of observation
- * @param xp          [mas] Earth orientation parameter, polar offset in _x_, e.g. from the IERS
- *                    Bulletins, and possibly corrected for diurnal and semi-diurnal variations,
- *                    e.g. via `novas_diurnal_eop()`. (The global, undated value set by cel_pole()
- *                    is not not used here.) You can use 0.0 if sub-arcsecond accuracy is not
- *                    required.
- * @param yp          [mas] Earth orientation parameter, polar offset in _y_, e.g. from the IERS
- *                    Bulletins, and possibly corrected for diurnal and semi-diurnal variations,
- *                    e.g. via `novas_diurnal_eop()`. (The global, undated value set by cel_pole()
- *                    is not not used here.) You can use 0.0 if sub-arcsecond accuracy is not
- *                    required.
+ * @param xp          [mas] Earth orientation parameter, mean polar offset in _x_, e.g. from the
+ *                    IERS Bulletins, without diurnal libration and ocean tides. (The global,
+ *                    undated, value set by cel_pole() is not not used here.) You can use 0.0 if
+ *                    sub-arcsecond accuracy is not required.
+ * @param yp          [mas] Earth orientation parameter, mean polar offset in _y_, e.g. from the
+ *                    IERS Bulletins, without diurnal libration and ocean tides. (The global,
+ *                    undated, value set by cel_pole() is not not used here.) You can use 0.0 if
+ *                    sub-arcsecond accuracy is not required.
  * @param[out] frame  Pointer to the observing frame to configure.
  * @return            0 if successful,
  *                    10--40: error is 10 + the error from ephemeris(),
@@ -510,7 +530,7 @@ int novas_frame_is_initialized(const novas_frame *frame) {
  *
  * @sa novas_change_observer(), novas_sky_pos(), novas_geom_posvel(), novas_make_transform()
  * @sa set_planet_provider(), set_planet_provider_hp(), set_nutation_lp_provider(),
- *     novas_diurnal_eop(), novas_itrf_transform_eop()
+ *     novas_itrf_transform_eop(), novas_set_auto_fetch_eop()
  */
 int novas_make_frame(enum novas_accuracy accuracy, const observer *obs, const novas_timespec *time, double xp, double yp,
         novas_frame *frame) {
@@ -523,23 +543,36 @@ int novas_make_frame(enum novas_accuracy accuracy, const observer *obs, const no
   long ijd_ut1;
   double fjd_ut1;
 
+  if(!frame)
+    return novas_error(-1, EINVAL, fn, "NULL output frame");
+
+  frame->state = 0;
+
   if(accuracy < 0 || accuracy > NOVAS_REDUCED_ACCURACY)
     return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", accuracy);
 
   if(!obs || !time)
     return novas_error(-1, EINVAL, fn, "NULL input parameter: obs=%p, time=%p", obs, time);
 
-  if(!frame)
-    return novas_error(-1, EINVAL, fn, "NULL output frame");
-
-  if(obs->where < 0 || obs->where >= NOVAS_OBSERVER_PLACES)
+  if((unsigned) obs->where >= NOVAS_OBSERVER_PLACES)
     return novas_error(-1, EINVAL, fn, "invalid observer location: %d", obs->where);
 
   frame->accuracy = accuracy;
   frame->time = *time;
 
+  if(novas_is_auto_fetch_eop() && (isnan(xp) || isnan(yp))) {
+    // Fetch EOP from IERS, as needed.
+    novas_eop eop = NOVAS_EOP_INVALID;
+
+    if(novas_fetch_eop(novas_get_time(time, NOVAS_UTC), 0.0, &eop) < 0)
+      novas_trace_invalid(fn);
+
+    xp = 1e3 * eop.xp;
+    yp = 1e3 * eop.yp;
+  }
+
   tdb2[0] = time->ijd_tt;
-  tdb2[1] = time->fjd_tt + tt2tdb(time->ijd_tt + time->fjd_tt) / DAY;
+  tdb2[1] = time->fjd_tt + time->tt2tdb / DAY;
 
   nutation_angles((tdb2[0] + tdb2[1] - NOVAS_JD_J2000) / JULIAN_CENTURY_DAYS, accuracy, &dpsi, &deps);
 
@@ -566,6 +599,13 @@ int novas_make_frame(enum novas_accuracy accuracy, const observer *obs, const no
   frame->gst = remainder(frame->gst, DAY_HOURS);
   if(frame->gst < 0) frame->gst += DAY_HOURS;
 
+  if(accuracy == NOVAS_FULL_ACCURACY) {
+    double dxp = 0.0, dyp = 0.0;
+    novas_diurnal_eop_at_time(&frame->time, &dxp, &dyp, NULL);
+    frame->dx += 0.001 * dxp;
+    frame->dy += 0.001 * dyp;
+  }
+
   set_frame_tie(frame);
   set_precession(frame);
   set_nutation(frame);
@@ -589,7 +629,7 @@ int novas_make_frame(enum novas_accuracy accuracy, const observer *obs, const no
  * @param obs         New observer location
  * @param[out] out    Observing frame to populate with a original frame data and new observer
  *                    location. It can be the same as the input.
- * @return            0 if successfule or else an an error code from geo_posvel()
+ * @return            0 if successful or else an error code from geo_posvel()
  *                    (errno will also indicate the type of error).
  *
  * @since 1.1
@@ -611,14 +651,14 @@ int novas_change_observer(const novas_frame *orig, const observer *obs, novas_fr
   if(out != orig)
     *out = *orig;
 
-  out->state = FRAME_DEFAULT;
+  //out->state = FRAME_DEFAULT; // TODO on error return...
   out->observer = *obs;
-
-  pl_mask = (out->accuracy == NOVAS_FULL_ACCURACY) ? grav_bodies_full_accuracy : grav_bodies_reduced_accuracy;
 
   prop_error(fn, set_obs_posvel(out), 0);
 
   jd_tdb = novas_get_time(&out->time, NOVAS_TDB);
+
+  pl_mask = (out->accuracy == NOVAS_FULL_ACCURACY) ? grav_bodies_full_accuracy : grav_bodies_reduced_accuracy;
   prop_error(fn, obs_planets(jd_tdb, out->accuracy, out->obs_pos, pl_mask, &out->planets), 0);
 
   out->state = FRAME_INITIALIZED;
@@ -646,7 +686,6 @@ static int icrs_to_sys(const novas_frame *restrict frame, double *restrict pos, 
     case NOVAS_J2000:
     case NOVAS_MOD:
     case NOVAS_TOD:
-      //gcrs_to_j2000(pos, pos);
       matrix_transform(pos, &frame->icrs_to_j2000, pos);
       if(sys == NOVAS_J2000) return 0;
 
@@ -678,11 +717,10 @@ static int icrs_to_sys(const novas_frame *restrict frame, double *restrict pos, 
  * cost. See `place()` for references.
  *
  * NOTES:
- * <ol>
- * <li>As of SuperNOVAS v1.3, the returned velocity vector is a proper observer-based
- * velocity measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
- * pseudo LSR-based measures being returned for catalog sources.</li>
- * </ol>
+ *
+ *  1. As of SuperNOVAS v1.3, the returned velocity vector is a proper observer-based
+ *     velocity measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
+ *     pseudo LSR-based measures being returned for catalog sources.
  *
  * @param source        Pointer to a celestial source data structure that is observed. Catalog
  *                      sources should have coordinates and properties in ICRS. You can use
@@ -722,6 +760,7 @@ int novas_geom_posvel(const object *restrict source, const novas_frame *restrict
 
   if(frame->accuracy != NOVAS_FULL_ACCURACY && frame->accuracy != NOVAS_REDUCED_ACCURACY)
     return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", frame->accuracy);
+
   // Compute 'jd_tdb', the TDB Julian date corresponding to 'jd_tt'.
   jd_tdb = novas_get_time(&frame->time, NOVAS_TDB);
 
@@ -754,18 +793,23 @@ int novas_geom_posvel(const object *restrict source, const novas_frame *restrict
       }
 
     // Otherwise, get the position of body wrt observer, antedated for light-time.
-    if(!got) {
+    if(!got)
       prop_error(fn, light_time2(jd_tdb, source, frame->obs_pos, 0.0, frame->accuracy, pos1, vel1, &t_light), 50);
-    }
   }
 
   if(pos) {
     prop_error(fn, icrs_to_sys(frame, pos1, sys), 0);
     memcpy(pos, pos1, sizeof(pos1));
   }
+
   if(vel) {
-    prop_error(fn, icrs_to_sys(frame, vel1, sys), 0);
-    memcpy(vel, vel1, sizeof(vel1));
+    int k;
+
+    // Change velocity reference from SSB to observer
+    for(k = 3; --k >= 0; )
+      vel[k] = novas_add_vel(vel1[k], -frame->obs_vel[k]);
+
+    prop_error(fn, icrs_to_sys(frame, vel, sys), 0);
   }
 
   return 0;
@@ -795,11 +839,10 @@ int novas_geom_posvel(const object *restrict source, const novas_frame *restrict
  * aberration or deflection in any system).
  *
  * NOTES:
- * <ol>
- * <li>As of SuperNOVAS v1.3, the returned radial velocity component is a proper observer-based
- * spectroscopic measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
- * LSR-based measures being returned for catalog sources.</li>
- * </ol>
+ *
+ *  1. As of SuperNOVAS v1.3, the returned radial velocity component is a proper observer-based
+ *     spectroscopic measure. In prior releases, and in NOVAS C 3.1, this was inconsistent, with
+ *     LSR-based measures being returned for catalog sources.
  *
  * @param object        Pointer to a celestial object data structure that is observed. Catalog
  *                      sources should have coordinates and properties in ICRS. You can use
@@ -823,9 +866,16 @@ int novas_sky_pos(const object *restrict object, const novas_frame *restrict fra
   static const char *fn = "novas_sky_pos";
 
   double d_sb, pos[3], vel[3], vpos[3];
+  int k;
 
-  if(!object || !frame || !out)
-    return novas_error(-1, EINVAL, "NULL argument: object=%p, frame=%p, out=%p", (void *) object, frame, out);
+  if(!object)
+    return novas_error(-1, EINVAL, fn, "NULL input object");
+
+  if(!frame)
+    return novas_error(-1, EINVAL, fn, "NULL input frame");
+
+  if(!out)
+    return novas_error(-1, EINVAL, fn, "NULL output sky_pos");
 
   if(!novas_frame_is_initialized(frame))
     return novas_error(-1, EINVAL, fn, "frame at %p not initialized", frame);
@@ -834,6 +884,10 @@ int novas_sky_pos(const object *restrict object, const novas_frame *restrict fra
     return novas_error(-1, EINVAL, fn, "invalid accuracy: %d", frame->accuracy);
 
   prop_error(fn, novas_geom_posvel(object, frame, NOVAS_ICRS, pos, vel), 0);
+
+  // Change velocity reference from observer to SSB
+  for(k = 3; --k >= 0; )
+    vel[k] = novas_add_vel(vel[k], frame->obs_vel[k]);
 
   out->dis = novas_vlen(pos);
 
@@ -844,8 +898,6 @@ int novas_sky_pos(const object *restrict object, const novas_frame *restrict fra
     d_sb = out->dis;
   }
   else {
-    int k;
-
     // Calculate distance to Sun.
     d_sb = 0.0;
     for(k = 3; --k >= 0;) {
@@ -864,21 +916,20 @@ int novas_sky_pos(const object *restrict object, const novas_frame *restrict fra
   }
   else {
     double psrc[3]; // Barycentric position of Solar-system source (antedated)
-    int i;
 
     // A.K.: For this we calculate gravitational deflection of the observer seen from the source
     // i.e., reverse tracing the light to find the direction in which it was emitted.
-    for(i = 3; --i >= 0;) {
-      vpos[i] = -pos[i];
-      psrc[i] = pos[i] + frame->obs_pos[i];
+    for(k = 3; --k >= 0;) {
+      vpos[k] = -pos[k];
+      psrc[k] = pos[k] + frame->obs_pos[k];
     }
 
     // vpos -> deflected direction in which observer is seen from source.
     prop_error(fn, grav_planets(vpos, psrc, &frame->planets, vpos), 70);
 
     // vpos -> direction in which light was emitted from observer's perspective...
-    for(i = 3; --i >= 0;)
-      vpos[i] = -vpos[i];
+    for(k = 3; --k >= 0;)
+      vpos[k] = -vpos[k];
   }
 
   prop_error(fn, novas_geom_to_app(frame, pos, sys, out), 70);
@@ -916,8 +967,14 @@ int novas_geom_to_app(const novas_frame *restrict frame, const double *restrict 
   double pos1[3];
   int i;
 
-  if(!pos || !frame || !out)
-    return novas_error(-1, EINVAL, "NULL argument: pos=%p, frame=%p, out=%p", (void *) pos, frame, out);
+  if(!frame)
+    return novas_error(-1, EINVAL, fn, "NULL input frame");
+
+  if(!pos)
+    return novas_error(-1, EINVAL, fn, "NULL input pos");
+
+  if(!out)
+    return novas_error(-1, EINVAL, fn, "NULL output sky_pos");
 
   if(!novas_frame_is_initialized(frame))
     return novas_error(-1, EINVAL, fn, "frame at %p not initialized", frame);
@@ -1155,8 +1212,7 @@ int novas_hor_to_app(const novas_frame *restrict frame, double az, double el, Re
  * @since 1.1
  * @author Attila Kovacs
  *
- * @sa novas_geom_to_app()
- * @sa novas_hor_to_app(), novas_geom_to_hor(), novas_transform_vector()
+ * @sa novas_geom_to_app(), novas_app_to_hor(), novas_transform_vector()
  */
 int novas_app_to_geom(const novas_frame *restrict frame, enum novas_reference_system sys, double ra, double dec,
         double dist, double *restrict geom_icrs) {
@@ -1169,7 +1225,7 @@ int novas_app_to_geom(const novas_frame *restrict frame, enum novas_reference_sy
   if(!novas_frame_is_initialized(frame))
     return novas_error(-1, EINVAL, fn, "frame at %p not initialized", frame);
 
-  if(sys < 0 || sys >= NOVAS_REFERENCE_SYSTEMS)
+  if((unsigned) sys >= NOVAS_REFERENCE_SYSTEMS)
     return novas_error(-1, EINVAL, fn, "invalid reference system: %d", sys);
 
   if(dist <= 0.0) dist = 1e15;
@@ -1242,7 +1298,7 @@ int novas_make_transform(const novas_frame *frame, enum novas_reference_system f
   if(!novas_frame_is_initialized(frame))
     return novas_error(-1, EINVAL, fn, "frame at %p not initialized", frame);
 
-  if(to_system < 0 || to_system >= NOVAS_REFERENCE_SYSTEMS)
+  if((unsigned) to_system >= NOVAS_REFERENCE_SYSTEMS)
     return novas_error(-1, EINVAL, fn, "invalid reference system (to): %d\n", to_system);
 
   transform->frame = *frame;
@@ -1347,8 +1403,8 @@ int novas_make_transform(const novas_frame *frame, enum novas_reference_system f
         add_transform(transform, &R, 1);
         if(to_system == NOVAS_TIRS)
           return 0;
-        } // @suppress("No break at end of case")
-        /* fallthrough */
+      } // @suppress("No break at end of case")
+      /* fallthrough */
 
       case NOVAS_TIRS: {
         novas_matrix W;
@@ -1406,7 +1462,7 @@ int novas_invert_transform(const novas_transform *transform, novas_transform *in
  * @since 1.1
  * @author Attila Kovacs
  *
- * @sa novas_make_transform(), novas_transform_skypos()
+ * @sa novas_make_transform(), novas_transform_sky_pos()
  */
 int novas_transform_vector(const double *in, const novas_transform *restrict transform, double *out) {
   static const char *fn = "novas_matrix_transform";
@@ -1511,10 +1567,9 @@ static double calc_lha(double el, double dec, double lat) {
  * the source (for Solar-system objects), and optionally for atmospheric refraction also.
  *
  * NOTES:
- * <ol>
- * <li>The current implementation is not suitable for calculating nearest successive rise/set
- * times for near-Earth objects, at or within the geostationary orbit.</li>
- * </ol>
+ *
+ *  1. The current implementation is not suitable for calculating nearest successive rise/set
+ *     times for near-Earth objects, at or within the geostationary orbit.
  *
  * @param el          [deg] Elevation angle (not used for transit times).
  * @param sign        1 for rise time, or -1 for setting time, or 0 for transit.
@@ -1572,7 +1627,7 @@ static double novas_cross_el_date(double el, int sign, const object *source, con
     }
 
     // Adjusted frame time for last crossing time estimate
-    dhr = remainder((pos.ra + sign * lha - novas_frame_lst(&frame1)), DAY_HOURS);
+    dhr = remainder((pos.ra - sign * lha - novas_frame_lst(&frame1)), DAY_HOURS);
     t.fjd_tt += dhr / DAY_HOURS / SIDEREAL_RATE;
 
     // Make sure that calculated time is after input frame time.
@@ -1600,10 +1655,9 @@ static double novas_cross_el_date(double el, int sign, const object *source, con
  * account for the (slow) motion of Solar-system bodies.
  *
  * NOTES:
- * <ol>
- * <li>The current implementation is not suitable for calculating the nearest successive transit
- * times for near-Earth objects, at or within the geostationary orbit.</li>
- * </ol>
+ *
+ *  1. The current implementation is not suitable for calculating the nearest successive transit
+ * times for near-Earth objects, at or within the geostationary orbit.
  *
  * @param source      Observed source
  * @param frame       Observing frame, defining the observer location and astronomical time of
@@ -1619,7 +1673,7 @@ static double novas_cross_el_date(double el, int sign, const object *source, con
 double novas_transit_time(const object *restrict source, const novas_frame *restrict frame) {
   double utc = novas_cross_el_date(NAN, 0, source, frame, NULL);
   if(isnan(utc))
-    return novas_trace_nan("novas_rises_above");
+    return novas_trace_nan("novas_transit_time");
   return utc;
 }
 
@@ -1629,13 +1683,12 @@ double novas_transit_time(const object *restrict source, const novas_frame *rest
  * optionally for atmospheric refraction also.
  *
  * NOTES:
- * <ol>
- * <li>The current implementation is not suitable for calculating the nearest successive rise
- * times for near-Earth objects, at or within the geostationary orbit.</li>
- * <li>This function calculates the time when the center (not the limb!) of the source rises
- * above the specified elevation threshold. Something to keep in mind for calculating Sun/Moon
- * rise times.</li>
- * </ol>
+ *
+ *  1. The current implementation is not suitable for calculating the nearest successive rise
+ *     times for near-Earth objects, at or within the geostationary orbit.
+ *  2. This function calculates the time when the center (not the limb!) of the source rises
+ *     above the specified elevation threshold. Something to keep in mind for calculating Sun/Moon
+ *     rise times.
  *
  * @param el          [deg] Elevation angle.
  * @param source      Observed source
@@ -1656,7 +1709,7 @@ double novas_rises_above(double el, const object *restrict source, const novas_f
 
   errno = 0;
 
-  utc = novas_cross_el_date(el, -1, source, frame, ref_model);
+  utc = novas_cross_el_date(el, 1, source, frame, ref_model);
   if(isnan(utc) && errno)
     return novas_trace_nan("novas_rises_above");
 
@@ -1669,13 +1722,12 @@ double novas_rises_above(double el, const object *restrict source, const novas_f
  * optionally for atmopsheric refraction also.
  *
  * NOTES:
- * <ol>
- * <li>The current implementation is not suitable for calculating the nearest successive set
- * times for near-Earth objects, at or within the geostationary orbit.</li>
- * <li>This function calculates the time when the center (not the limb!) of the source sets below
- * the specified elevation threshold. Something to keep in mind for calculating Sun/Moon rise
- * times.</li>
- * </ol>
+ *
+ *  1. The current implementation is not suitable for calculating the nearest successive set
+ *     times for near-Earth objects, at or within the geostationary orbit.
+ *  2. This function calculates the time when the center (not the limb!) of the source sets below
+ *     the specified elevation threshold. Something to keep in mind for calculating Sun/Moon rise
+ *     times.
  *
  * @param el          [deg] Elevation angle.
  * @param source      Observed source
@@ -1696,7 +1748,7 @@ double novas_sets_below(double el, const object *restrict source, const novas_fr
 
   errno = 0;
 
-  utc = novas_cross_el_date(el, 1, source, frame, ref_model);
+  utc = novas_cross_el_date(el, -1, source, frame, ref_model);
   if(isnan(utc) && errno)
     return novas_trace_nan("novas_sets_below");
 
@@ -1717,6 +1769,8 @@ double novas_sets_below(double el, const object *restrict source, const novas_fr
  *
  * @since 1.3
  * @author Attila Kovacs
+ *
+ * @sa novas_solar_power()
  */
 double novas_solar_illum(const object *restrict source, const novas_frame *restrict frame) {
   static const char *fn = "novas_solar_illum";
@@ -1810,7 +1864,7 @@ double novas_object_sep(const object *source1, const object *source2, const nova
  * @param source    An observed source
  * @param frame     Observing frame, defining the observer location and astronomical time of
  *                  observation.
- * @return          [deg] the apparent angular distance between the source an the Sun, from the
+ * @return          [deg] the apparent angular distance between the source and the Sun, from the
  *                  observer's point of view.
  *
  * @since 1.3
@@ -1833,7 +1887,7 @@ double novas_sun_angle(const object *restrict source, const novas_frame *restric
  * @param source    An observed source
  * @param frame     Observing frame, defining the observer location and astronomical time of
  *                  observation.
- * @return          [deg] Apparent angular distance between the source an the Moon, from the
+ * @return          [deg] Apparent angular distance between the source and the Moon, from the
  *                  observer's point of view.
  *
  * @since 1.3
@@ -1865,9 +1919,9 @@ double novas_unwrap_angles(double *a, double *b, double *c) {
 /// \endcond
 
 /**
- * Calculates equatorial tracking position and motion (first and second time derivatives) for the
- * specified source in the given observing frame. The position and its derivatives are calculated
- * via the more precise IAU2006 method, and CIRS.
+ * Calculates true-of-date equatorial tracking position and motion (first and second time
+ * derivatives) for the specified source in the given observing frame. The position and its
+ * derivatives are calculated via the more precise IAU2006 method, and CIRS.
  *
  * @param source        Observed source
  * @param frame         Observing frame, defining the observer location and astronomical time of
@@ -1888,7 +1942,6 @@ int novas_equ_track(const object *restrict source, const novas_frame *restrict f
   novas_timespec time1;
   novas_frame frame1;
   sky_pos pos0 = SKY_POS_INIT, posm = SKY_POS_INIT, posp = SKY_POS_INIT;
-  double ra_cio;
   double idt2;
 
   if(dt <= 0.0) dt = NOVAS_TRACK_DELTA;
@@ -1908,9 +1961,7 @@ int novas_equ_track(const object *restrict source, const novas_frame *restrict f
 
   track->time = frame->time;
 
-  ra_cio = -ira_equinox(frame->time.ijd_tt + frame->time.fjd_tt, NOVAS_TRUE_EQUINOX, frame->accuracy);
-  prop_error(fn, novas_sky_pos(source, frame, NOVAS_CIRS, &pos0), 0);
-  pos0.ra += ra_cio;
+  prop_error(fn, novas_sky_pos(source, frame, NOVAS_TOD, &pos0), 0);
   pos0.rv = novas_v2z(pos0.rv);
 
   track->pos.lon = 15.0 * pos0.ra;
@@ -1921,14 +1972,12 @@ int novas_equ_track(const object *restrict source, const novas_frame *restrict f
   time1 = frame->time;
   time1.fjd_tt -= dt / DAY;
   prop_error(fn, novas_make_frame(frame->accuracy, &frame->observer, &time1, frame->dx, frame->dy, &frame1), 0);
-  prop_error(fn, novas_sky_pos(source, &frame1, NOVAS_CIRS, &posm), 0);
-  posm.ra += ra_cio;
+  prop_error(fn, novas_sky_pos(source, &frame1, NOVAS_TOD, &posm), 0);
   posm.rv = novas_v2z(posm.rv);
 
   time1.fjd_tt += 2.0 * dt / DAY;
   prop_error(fn, novas_make_frame(frame->accuracy, &frame->observer, &time1, frame->dx, frame->dy, &frame1), 0);
-  prop_error(fn, novas_sky_pos(source, &frame1, NOVAS_CIRS, &posp), 0);
-  posp.ra += ra_cio;
+  prop_error(fn, novas_sky_pos(source, &frame1, NOVAS_TOD, &posp), 0);
   posp.rv = novas_v2z(posp.rv);
 
   // hours -> degrees...
@@ -2039,21 +2088,38 @@ int novas_hor_track(const object *restrict source, const novas_frame *restrict f
 }
 
 /**
- * Calculates a projected position and redshift for a source, given the available tracking
- * position and derivatives. Using 'tracks' to project positions can be much faster than the
- * repeated full recalculation of the source position over some short period.
+ * Calculates a projected position, distance, and redshift for a source, given its near-term
+ * trajectory on sky, in the system for which the track was calculated. Thus if the input
+ * track was obtained with `novas_hor_track()` it will calculate momentary azimuth and elevation
+ * (Az/El) for the specified proximate time. And, if you used `novas_equ_track()` then it will
+ * give you theinstantaneous R.A. and declination for that time.
+ *
+ * Using the quadratic trajectories via a `novas_track` to project positions can be much faster
+ * than the repeated full recalculation of the source position, but still quite accurate over a
+ * suffciently brief period.
  *
  * In SuperNOVAS terminology a 'track' is a 2nd order Taylor series expansion of the observed
  * position and redshift in time. For most but the fastest moving sources, horizontal (Az/El)
- * tracks are sufficiently precise on minute timescales, whereas depending on the type of source
- * equatorial tracks can be precise for up to days.
+ * tracks are sufficiently precise for telescope positioning on minute timescales, whereas
+ * depending on the type of source, equatorial tracks can be precise for up to days, especially
+ * for sidereal (non-Solar-system) sources.
  *
- * @param track       Tracking position and motion (first and second derivatives)
- * @param time        Astrometric time of observation
- * @param[out] lon    [deg] projected observed Eastward longitude in tracking coordinate system
- * @param[out] lat    [deg] projected observed latitude in tracking coordinate system
- * @param[out] dist   [AU] projected apparent distance to source from observer
- * @param[out] z      projected observed redshift
+ * @param track       Tracking position and motion (first and second derivatives), obtained e.g.
+ *                    in horizontal (Az/El) coordinates with `novas_hor_track()` or in equatorial
+ *                    coordinates with `novas_equ_track()`.
+ * @param time        Astrometric time of observation for which to calculate projected positions,
+ *                    around the time for which the track was obtained.
+ * @param[out] lon    [deg] projected observed Eastward longitude in the tracking coordinate
+ *                    system. Thus, if the track was calculated with `novas_hor_track()` it will
+ *                    return the projected azimuth coordinate for the given time. And, if you
+ *                    used `novas_equ_track()`, then this will be R.A. (in degrees, nevertheless).
+ * @param[out] lat    [deg] projected observed latitude in the tracking coordinate system. Thus,
+ *                    if the track was calculated with `novas_hor_track()` it will return the
+ *                    projected elevation angle for the given time. And, if you used
+ *                    `novas_equ_track()`, then this will be declination.
+ * @param[out] dist   [AU] projected apparent distance to source from observer.
+ * @param[out] z      projected observed redshift (z = &Delta;&lambda; / &lambda;<sub>rest</sub>,
+ *                    e.g. for spectroscopy).
  * @return            0 if successful, or else -1 if either input pointer is NULL (errno is set to
  *                    EINVAL).
  *
@@ -2080,8 +2146,17 @@ int novas_track_pos(const novas_track *track, const novas_timespec *time, double
 
   if(lon)
     *lon = remainder(track->pos.lon + track->rate.lon * dt + track->accel.lon * dt2, DEG360);
-  if(lat)
-    *lat = track->pos.lat + track->rate.lat * dt + track->accel.lat * dt2;
+  if(lat) {
+    *lat = remainder(track->pos.lat + track->rate.lat * dt + track->accel.lat * dt2, DEG360);
+    if(*lat > 90.0) {
+      *lat = 180.0 - *lat;
+      if(lon) *lon = -(*lon);
+    }
+    else if(*lat < -90.0) {
+      *lat = -180.0 - *lat;
+      if(lon) *lon = -(*lon);
+    }
+  }
   if(dist)
     *dist = track->pos.dist + track->rate.dist * dt + track->accel.dist * dt2;
   if(z)
@@ -2089,3 +2164,4 @@ int novas_track_pos(const novas_track *track, const novas_timespec *time, double
 
   return 0;
 }
+

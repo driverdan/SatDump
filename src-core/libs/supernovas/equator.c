@@ -1,10 +1,12 @@
 /**
  * @file
  *
+ * Various functions for calculating the equator and equinox of date, and related quatities.
+ *
  * @date Created  on Mar 6, 2025
  * @author G. Kaplan and Attila Kovacs
  *
- *  Various functions for calculating the equator and equinox of date, and related quatities.
+ * @sa cio.c, earth.c, frames.c, nutation.c, transform.c
  */
 
 #include <string.h>
@@ -12,8 +14,9 @@
 
 /// \cond PRIVATE
 #define __NOVAS_INTERNAL_API__    ///< Use definitions meant for internal use by SuperNOVAS only
-#include "novas.h"
 /// \endcond
+
+#include "novas.h"
 
 /// \cond PRIVATE
 
@@ -49,15 +52,16 @@ double EPS_COR = 0.0;
 
 /**
  * @deprecated This old way of incorporating Earth orientation parameters into the true equator
- *             and equinox is now disfavored. Instead, wobble() should be used to convert between
- *             the Terrestrial Intermediate Reference System (TIRS) / Pseudo Earth Fixed (PEF) and
- *             the International Terrestrial Reference System (ITRS) going forward.
+ *             and equinox is now disfavored. Instead, the pole offsets should be used only to
+ *             convert between the Terrestrial Intermediate Reference System (TIRS) / Pseudo Earth
+ *             Fixed (PEF) and the International Terrestrial Reference System (ITRS) going
+ *             forward, e.g. via `novas_app_to_hor()` / `novas_hor_to_app()` or else `wobble()`.
  *
  * Specifies the unmodeled celestial pole offsets for high-precision applications to be applied to
- * the True of Date (TOD) equator, in the old, pre IAU 2006 methodology. These offsets must not
- * include tidal terms, and should be specified relative to the IAU2006 precession/nutation model
- * to provide a correction to the modeled (precessed and nutated) position of Earth's pole, such
- * those derived from observations and published by IERS.
+ * the True of Date (TOD) equator, in the old, pre IAU 2006 methodology. Nonetheless, these offsets
+ * should be specified relative to the IAU2006 precession / nutation model to provide a correction
+ * to the modeled (precessed and nutated) position of Earth's pole, such those derived from
+ * observations and published by IERS.
  *
  * The call sets the global variables `PSI_COR` and `EPS_COR`, for subsequent calls to `e_tilt()`.
  * As such, it should be called to specify pole offsets prior to legacy NOVAS C equinox-specific
@@ -65,46 +69,39 @@ double EPS_COR = 0.0;
  * effective until explicitly changed again.
  *
  * NOTES:
- * <ol>
- * <li>
- *  The pole offsets et this way will affect all future TOD-based calculations, until the pole
- *  is changed or reset again. Hence, you should be extremely careful using it (if at all), as it
- *  may become an unpredictable source of inaccuracy if implicitly applied without intent to do so.
- * </li>
- * <li>
- *  The current UT1 - UTC time difference, and polar offsets, historical data and near-term
- *  projections are published in the
- *  <a href="https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html>IERS Bulletins</a>
- * </li>
- * <li>
- *  If &Delta;&delta;&psi;, &Delta;&delta;d&epsilon; offsets are specified, these must be the
- *  residual corrections relative to the IAU 2006 precession/nutation model (not the Lieske et al.
- *  1977 model!). As such, they are just a rotated version of the newer dx, dy offsets published
- *  by IERS.
- * </li>
- * <li>
- *  The equivalent IAU 2006 standard is to apply dx, dy pole offsets only for converting
- *  between TIRS and ITRS, e.g. via `wobble()`).
- * </li>
- * <li>
- *  There is no need to define pole offsets this way when using the newer frame-based approach
- *  introduced in SuperNOVAS. If the pole offsets are specified on a per-frame basis during the
- *  initialization of each observing frame (see `novas_make_frame()`, the offsets will be applied
- *  for the TIRS / ITRS conversion only, and not to the TOD equator per se.
- * </li>
- * </ol>
+ *
+ * 1. The pole offsets et this way will affect all future TOD-based calculations, until the pole
+ *    is changed or reset again. Hence, you should be extremely careful using it (if at all), as it
+ *    may become an unpredictable source of inaccuracy if implicitly applied without intent to do so.
+ *
+ * 2. The current UT1 - UTC time difference, and polar offsets, historical data and near-term
+ *    projections are published in the
+ *    [IERS Bulletins](https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html)
+ *
+ * 3. If &Delta;&delta;&psi;, &Delta;&delta;d&epsilon; offsets are specified, these must be the
+ *    residual corrections relative to the IAU 2006 precession/nutation model (not the Lieske et al.
+ *    1977 model!). As such, they are just a rotated version of the newer _x_<sub>p</sub>,
+ *     _y_<sub>p</sub> offsets published by IERS.
+ *
+ * 4. The equivalent IAU 2006 standard method, which is preferred, is to apply _x_<sub>p</sub>,
+ *    _y_<sub>p</sub> pole offsets only for converting between TIRS and ITRS, e.g. via
+ *    `novas_app_to_hor(), `novas_hor_to_app(), or `wobble()`).
+ *
+ * 5. There is no need to define pole offsets this way when using the newer frame-based approach
+ *    introduced in SuperNOVAS. If the pole offsets are specified on a per-frame basis during the
+ *    initialization of each observing frame (see `novas_make_frame()`, the offsets will be applied
+ *    for the TIRS / ITRS conversion only, and not to the TOD equator per se.
  *
  * REFERENCES:
- * <ol>
- *  <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- *  <li>Kaplan, G. (2003), USNO/AA Technical Note 2003-03.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. (2005), US Naval Observatory Circular 179.
+ *  2. Kaplan, G. (2003), USNO/AA Technical Note 2003-03.
  *
  * @param jd_tt     [day] Terrestrial Time (TT) based Julian date. Used only if 'type' is
  *                  POLE_OFFSETS_X_Y (2), to transform dx and dy to the equivalent
  *                  &Delta;&delta;&psi; and &Delta;&delta;&epsilon; values.
  * @param type      POLE_OFFSETS_DPSI_DEPS (1) if the offsets are &Delta;&delta;&psi;,
- *                  &Delta;&delta;&epsilon; relative to the IAU 20006 precession/nutation model;
+ *                  &Delta;&delta;&epsilon; relative to the IAU 2006 precession/nutation model;
  *                  or POLE_OFFSETS_X_Y (2) if they are dx, dy offsets relative to the IAU 2000 /
  *                  2006 precession-nutation model.
  * @param dpole1    [mas] Value of celestial pole offset in first coordinate, (&Delta;&delta;&psi;
@@ -139,25 +136,22 @@ short cel_pole(double jd_tt, enum novas_pole_offset_type type, double dpole1, do
   return 0;
 }
 
-/// \cond PRIVATE
+/// \cond PROTECTED
 
 /**
- * Converts <i>dx,dy</i> pole offsets to corrections for d&psi; d&epsilon;. The former is in GCRS,
+ * Converts _dx_, _dy_ pole offsets to corrections for d&psi; d&epsilon;. The former is in GCRS,
  * the latter in True of Date (TOD) -- and note the different units!
  *
  * NOTES:
- * <ol>
- * <li>The current UT1 - UTC time difference, and polar offsets, historical data and near-term
- * projections are published in the
- * <a href="https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html>IERS Bulletins</a>
- * </li>
- * </ol>
+ *
+ *  1. The current UT1 - UTC time difference, and polar offsets, historical data and near-term
+ *     projections are published in the
+ *     [IERS Bulletins](https://www.iers.org/IERS/EN/Publications/Bulletins/bulletins.html)
  *
  * REFERENCES:
- * <ol>
- *  <li>Kaplan, G. (2005), US Naval Observatory Circular 179.</li>
- *  <li>Kaplan, G. (2003), USNO/AA Technical Note 2003-03.</li>
- * </ol>
+ *
+ *  1. Kaplan, G. (2005), US Naval Observatory Circular 179.
+ *  2. Kaplan, G. (2003), USNO/AA Technical Note 2003-03.
  *
  * @param jd_tt       [day] Terrestrial Time (TT) based Julian Date.
  * @param dx          [mas] Earth orientation: GCRS pole offset dx, e.g. as published by IERS
@@ -205,7 +199,7 @@ int polar_dxdy_to_dpsideps(double jd_tt, double dx, double dy, double *restrict 
 /// \endcond
 
 /**
- * (<i>primarily for internal use</i>) Computes quantities related to the orientation of the
+ * (_primarily for internal use_) Computes quantities related to the orientation of the
  * Earth's rotation axis at the specified Julian date.
  *
  * In the pre-IAU2000 method, unmodelled corrections to earth orientation can be defined via
@@ -213,10 +207,9 @@ int polar_dxdy_to_dpsideps(double jd_tt, double dx, double dy, double *restrict 
  * suggest you apply Earth orientation corrections only in `novas_make_frame()` or `wobble()`.
  *
  * NOTES:
- * <ol>
- * <li>This function caches the results of the last calculation in case it may be re-used at
- * no extra computational cost for the next call.</li>
- * </ol>
+ *
+ *  1. This function caches the results of the last calculation in case it may be re-used at
+ *     no extra computational cost for the next call.
  *
  * @param jd_tdb        [day] Barycentric Dynamical Time (TDB) based Julian date.
  * @param accuracy      NOVAS_FULL_ACCURACY (0) or NOVAS_REDUCED_ACCURACY (1)
@@ -286,15 +279,17 @@ double accum_prec(double t) {
   // General precession in longitude (Simon et al. 1994), equivalent
   // to 5028.8200 arcsec/cy at J2000.
   return remainder((0.024380407358 + 0.000005391235 * t) * t, TWOPI);
+
+  // From Laskar 1986
+  //return remainder(t * (5029.0966 + t * (1.1120 + t * (0.000077 - t * 0.00002353))) * ARCSEC, TWOPI);
 }
 
 /**
  * Computes the mean obliquity of the ecliptic.
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine et al. (2003), Astronomy and Astrophysics 412, 567-586.</li>
- * </ol>
+ *
+ *  1. Capitaine et al. (2003), Astronomy and Astrophysics 412, 567-586.
  *
  * @param jd_tdb      [day] Barycentric Dynamic Time (TDB) based Julian date
  * @return            [arcsec] Mean obliquity of the ecliptic in arcseconds.
@@ -315,14 +310,14 @@ double mean_obliq(double jd_tdb) {
 /// \cond PROTECTED
 
 /**
- * (<i>for internal use</i>) Returns the polynomial precession term of GMST, which together with the equation of equinoxes
- * translates Earth Rotation Angle (ERA) to Greenwhich Mean Sidereal Time (GMST).
+ * (_for internal use_) Returns the polynomial precession term of GMST, which together with
+ * the equation of equinoxes translates Earth Rotation Angle (ERA) to Greenwhich Mean Sidereal
+ * Time (GMST).
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).</li>
- * <li>https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt</li>
- * </ol>
+ *
+ *  1. Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).
+ *  2. https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt
  *
  * @param jd_tdb    [day] Barycentric Dynamic Time (TDB) based Julian date, but TT-based date may
  *                  also be used without loss of precision.
@@ -342,17 +337,15 @@ double novas_gmst_prec(double jd_tdb) {
  * equinox, the result is the equation of the origins.
  *
  * NOTES:
- * <ol>
- * <li>Fixes bug in NOVAS C 3.1, which returned the value for the wrong 'equinox' if
- * 'equinox = 1' was requested for the same 'jd_tbd' and 'accuracy' as a the preceding
- * call with 'equinox = 0'. As a result, the caller ended up with the mean instead
- * of the expected true equinox R.A. value.</li>
- * </ol>
+ *
+ *  1. Fixes bug in NOVAS C 3.1, which returned the value for the wrong 'equinox' if
+ *     'equinox = 1' was requested for the same 'jd_tbd' and 'accuracy' as a the preceding
+ *     call with 'equinox = 0'. As a result, the caller ended up with the mean instead
+ *     of the expected true equinox R.A. value.
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).</li>
- * </ol>
+ *
+ *  1. Capitaine, N. et al. (2003), Astronomy and Astrophysics 412, 567-586, eq. (42).
  *
  * @param jd_tdb      [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param equinox     NOVAS_MEAN_EQUINOX (0) or NOVAS_TRUE_EQUINOX (1, or non-zero)
@@ -386,10 +379,12 @@ double ira_equinox(double jd_tdb, enum novas_equinox_type equinox, enum novas_ac
   return -prec_ra / 3600.0;
 }
 
+/// \cond PROTECTED
+
 /**
- * @deprecated (<i>for internal use</i>) There is no good reason why this function should
+ * @deprecated (_for internal use_) There is no good reason why this function should
  *             be exposed to users of the library. It is intended only for use by `e_tilt()`
- *             internally.
+ *             as part of the calculation for the equation of origins internally.
  *
  * Computes the "complementary terms" of (i.e. the non-polynomial contribution to) the equation of
  * the equinoxes. The input Julian date can be split into high and low order parts for improved
@@ -404,22 +399,19 @@ double ira_equinox(double jd_tdb, enum novas_equinox_type equinox, enum novas_ac
  * reference, in which terms smaller than 2 microarcseconds have been omitted.
  *
  * NOTES:
- * <ol>
- * <li>This function caches the results of the last calculation in case it may be re-used at
- * no extra computational cost for the next call.</li>
- * </ol>
+ *
+ *  1. This function caches the results of the last calculation in case it may be re-used at
+ *     no extra computational cost for the next call.
  *
  * REFERENCES:
- * <ol>
- * <li>Capitaine, N., Wallace, P.T., and McCarthy, D.D. (2003). Astron. &amp; Astrophys. 406, p.
- * 1135-1149. Table 3.</li>
  *
- * <li>IERS Conventions (2010), Chapter 5, p. 60, Table 5.2e.<br>
- * (Table 5.2e presented in the printed publication is a truncated series. The full series,
- * which is used in NOVAS, is available on the IERS Conventions Center website:
- * https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt)
- * </li>
- * </ol>
+ *  1. Capitaine, N., Wallace, P.T., and McCarthy, D.D. (2003). Astron. &amp; Astrophys. 406, p.
+ * 1135-1149. Table 3.
+ *
+ *  2. IERS Conventions (2010), Chapter 5, p. 60, Table 5.2e.<br>
+ *     (Table 5.2e presented in the printed publication is a truncated series. The full series,
+ *     which is used in NOVAS, is available on the IERS Conventions Center website:
+ *     https://iers-conventions.obspm.fr/content/chapter5/additional_info/tab5.2e.txt)
  *
  * @param jd_tt_high  [day] High-order part of TT based Julian date.
  * @param jd_tt_low   [day] Low-order part of TT based Julian date.
@@ -430,54 +422,54 @@ double ira_equinox(double jd_tdb, enum novas_equinox_type equinox, enum novas_ac
  */
 double ee_ct(double jd_tt_high, double jd_tt_low, enum novas_accuracy accuracy) {
   static THREAD_LOCAL double last_tt = NAN, last_ee;
-  static THREAD_LOCAL enum novas_accuracy last_acc = -1;
+  static THREAD_LOCAL enum novas_accuracy last_acc = (enum novas_accuracy) -1;
 
   // @formatter:off
 
-  // Argument multiples and coefficients for time-independent terms.
+  /// Argument multiples and coefficients for time-independent terms.
   typedef struct {
-    float A;        // Sine coefficient
-    float B;        // Cosie coefficient
-    int8_t n[14];   // argument multiples
-    int8_t from;    // index of first non-zero multiple
-    int8_t to;      // index after last non-zero multiple
+    float A;        ///< Sine coefficient
+    float B;        ///< Cosine coefficient
+    int8_t n[9];   ///< argument multiples
+    int8_t from;    ///< index of first non-zero multiple
+    int8_t to;      ///< index after last non-zero multiple
   } ee_terms;
 
   static const ee_terms terms[33] =  { //
-          //          A         B     0   1   2   3   4   5   6   7  #8  #9 #10 #11 #12  13   frm  to
-          {  2640.96e-6, -0.39e-6, {  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  4,  5 }, //
-          {    63.52e-6, -0.02e-6, {  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  4,  5 }, //
-          {    11.75e-6,  0.01e-6, {  0,  0,  2, -2,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {    11.21e-6,  0.01e-6, {  0,  0,  2, -2,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {    -4.55e-6,  0.0    , {  0,  0,  2, -2,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {     2.02e-6,  0.0    , {  0,  0,  2,  0,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {     1.98e-6,  0.0    , {  0,  0,  2,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {    -1.72e-6,  0.0    , {  0,  0,  0,  0,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  4,  5 }, //
-          {    -1.41e-6, -0.01e-6, {  0,  1,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {    -1.26e-6, -0.01e-6, {  0,  1,  0,  0, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {    -0.63e-6,  0.0    , {  1,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {    -0.63e-6,  0.0    , {  1,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {     0.46e-6,  0.0    , {  0,  1,  2, -2,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {     0.45e-6,  0.0    , {  0,  1,  2, -2,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {     0.36e-6,  0.0    , {  0,  0,  4, -4,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {    -0.24e-6, -0.12e-6, {  0,  0,  1, -1,  1,  0, -8, 12,  0,  0,  0,  0,  0,  0 },  2,  8 }, //
-          {     0.32e-6,  0.0    , {  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  3 }, //
-          {     0.28e-6,  0.0    , {  0,  0,  2,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {     0.27e-6,  0.0    , {  1,  0,  2,  0,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {     0.26e-6,  0.0    , {  1,  0,  2,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {    -0.21e-6,  0.0    , {  0,  0,  2, -2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  4 }, //
-          {     0.19e-6,  0.0    , {  0,  1, -2,  2, -3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {     0.18e-6,  0.0    , {  0,  1, -2,  2, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {    -0.10e-6,  0.05e-6, {  0,  0,  0,  0,  0,  0,  8,-13,  0,  0,  0,  0,  0, -1 },  6, 14 }, //
-          {     0.15e-6,  0.0    , {  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  3,  4 }, //
-          {    -0.14e-6,  0.0    , {  2,  0, -2,  0, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {     0.14e-6,  0.0    , {  1,  0,  0, -2,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {    -0.14e-6,  0.0    , {  0,  1,  2, -2,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  1,  5 }, //
-          {     0.14e-6,  0.0    , {  1,  0,  0, -2, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {     0.13e-6,  0.0    , {  0,  0,  4, -2,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {    -0.11e-6,  0.0    , {  0,  0,  2, -2,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  2,  5 }, //
-          {     0.11e-6,  0.0    , {  1,  0, -2,  0, -3,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }, //
-          {     0.11e-6,  0.0    , {  1,  0, -2,  0, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0 },  0,  5 }  //
+          //          A         B     0   1   2   3   4   5   6   7   8   frm  to
+          {  2640.96e-6, -0.39e-6, {  0,  0,  0,  0,  1,  0,  0,  0,  0 },  4,  5 }, //
+          {    63.52e-6, -0.02e-6, {  0,  0,  0,  0,  2,  0,  0,  0,  0 },  4,  5 }, //
+          {    11.75e-6,  0.01e-6, {  0,  0,  2, -2,  3,  0,  0,  0,  0 },  2,  5 }, //
+          {    11.21e-6,  0.01e-6, {  0,  0,  2, -2,  1,  0,  0,  0,  0 },  2,  5 }, //
+          {    -4.55e-6,  0.0    , {  0,  0,  2, -2,  2,  0,  0,  0,  0 },  2,  5 }, //
+          {     2.02e-6,  0.0    , {  0,  0,  2,  0,  3,  0,  0,  0,  0 },  2,  5 }, //
+          {     1.98e-6,  0.0    , {  0,  0,  2,  0,  1,  0,  0,  0,  0 },  2,  5 }, //
+          {    -1.72e-6,  0.0    , {  0,  0,  0,  0,  3,  0,  0,  0,  0 },  4,  5 }, //
+          {    -1.41e-6, -0.01e-6, {  0,  1,  0,  0,  1,  0,  0,  0,  0 },  1,  5 }, //
+          {    -1.26e-6, -0.01e-6, {  0,  1,  0,  0, -1,  0,  0,  0,  0 },  1,  5 }, //
+          {    -0.63e-6,  0.0    , {  1,  0,  0,  0, -1,  0,  0,  0,  0 },  0,  5 }, //
+          {    -0.63e-6,  0.0    , {  1,  0,  0,  0,  1,  0,  0,  0,  0 },  0,  5 }, //
+          {     0.46e-6,  0.0    , {  0,  1,  2, -2,  3,  0,  0,  0,  0 },  1,  5 }, //
+          {     0.45e-6,  0.0    , {  0,  1,  2, -2,  1,  0,  0,  0,  0 },  1,  5 }, //
+          {     0.36e-6,  0.0    , {  0,  0,  4, -4,  4,  0,  0,  0,  0 },  2,  5 }, //
+          {    -0.24e-6, -0.12e-6, {  0,  0,  1, -1,  1,  0, -8, 12,  0 },  2,  8 }, //
+          {     0.32e-6,  0.0    , {  0,  0,  2,  0,  0,  0,  0,  0,  0 },  2,  3 }, //
+          {     0.28e-6,  0.0    , {  0,  0,  2,  0,  2,  0,  0,  0,  0 },  2,  5 }, //
+          {     0.27e-6,  0.0    , {  1,  0,  2,  0,  3,  0,  0,  0,  0 },  0,  5 }, //
+          {     0.26e-6,  0.0    , {  1,  0,  2,  0,  1,  0,  0,  0,  0 },  0,  5 }, //
+          {    -0.21e-6,  0.0    , {  0,  0,  2, -2,  0,  0,  0,  0,  0 },  2,  4 }, //
+          {     0.19e-6,  0.0    , {  0,  1, -2,  2, -3,  0,  0,  0,  0 },  1,  5 }, //
+          {     0.18e-6,  0.0    , {  0,  1, -2,  2, -1,  0,  0,  0,  0 },  1,  5 }, //
+          {    -0.10e-6,  0.05e-6, {  0,  0,  0,  0,  0,  0,  8,-13, -1 },  6,  9 }, //
+          {     0.15e-6,  0.0    , {  0,  0,  0,  2,  0,  0,  0,  0,  0 },  3,  4 }, //
+          {    -0.14e-6,  0.0    , {  2,  0, -2,  0, -1,  0,  0,  0,  0 },  0,  5 }, //
+          {     0.14e-6,  0.0    , {  1,  0,  0, -2,  1,  0,  0,  0,  0 },  0,  5 }, //
+          {    -0.14e-6,  0.0    , {  0,  1,  2, -2,  2,  0,  0,  0,  0 },  1,  5 }, //
+          {     0.14e-6,  0.0    , {  1,  0,  0, -2, -1,  0,  0,  0,  0 },  0,  5 }, //
+          {     0.13e-6,  0.0    , {  0,  0,  4, -2,  4,  0,  0,  0,  0 },  2,  5 }, //
+          {    -0.11e-6,  0.0    , {  0,  0,  2, -2,  4,  0,  0,  0,  0 },  2,  5 }, //
+          {     0.11e-6,  0.0    , {  1,  0, -2,  0, -3,  0,  0,  0,  0 },  0,  5 }, //
+          {     0.11e-6,  0.0    , {  1,  0, -2,  0, -1,  0,  0,  0,  0 },  0,  5 }  //
   };
 
   // @formatter:on
@@ -488,7 +480,7 @@ double ee_ct(double jd_tt_high, double jd_tt_low, enum novas_accuracy accuracy) 
   // Recalc values only if parameters changed.
   if(!novas_time_equals(jd_tt_high + jd_tt_low, last_tt) || accuracy != last_acc) {
     const double t = ((jd_tt_high - JD_J2000) + jd_tt_low) / JULIAN_CENTURY_DAYS;
-    double a[14] = {0.0};
+    double a[9] = {0.0};
     double sum = 0.0;
     int i, Nt = 33; // Number of terms to sum...
 
@@ -497,10 +489,10 @@ double ee_ct(double jd_tt_high, double jd_tt_low, enum novas_accuracy accuracy) 
 
     // Add planet longitudes
     for(i = NOVAS_MERCURY; i <= NOVAS_EARTH; i++)  // NOTE: Coeffs beyond Earth are zero.
-      a[4 + i] = planet_lon(t, i);
+      a[4 + i] = planet_lon(t, (enum novas_planet) i);
 
     // General accumulated precession longitude
-    a[13] = accum_prec(t);
+    a[8] = accum_prec(t);
 
     if(accuracy != NOVAS_FULL_ACCURACY) Nt = 8;
 
@@ -526,14 +518,15 @@ double ee_ct(double jd_tt_high, double jd_tt_low, enum novas_accuracy accuracy) 
   return last_ee;
 }
 
+/// \endcond
+
 /**
  * Compute the fundamental (a.k.a. Delaunay) arguments (mean elements) of the Sun and Moon.
  *
  * REFERENCES:
- * <ol>
- * <li>IERS Conventions Chapter 5, Eq. 5.43.</li>
- * <li>Simon et al. (1994) Astronomy and Astrophysics 282, 663-683, esp. Sections 3.4-3.5.</li>
- * </ol>
+ *
+ *  1. IERS Conventions 2010, Chapter 5, Eq. 5.43.
+ *  2. Simon et al. (1994) Astronomy and Astrophysics 282, 663-683, esp. Sections 3.4-3.5.
  *
  * @param t       [cy] TDB time in Julian centuries since J2000.0
  * @param[out] a  [rad] Fundamental arguments data to populate (5 doubles) [0:2&pi;]
@@ -574,26 +567,24 @@ int fund_args(double t, novas_delaunay_args *restrict a) {
  * Precesses equatorial rectangular coordinates from one epoch to another using the IAU2006 (P03)
  * precession model of Capitaine et al. 2003.
  *
- * NOTE:
- * <ol>
- * <li>Unlike the original NOVAS C 3.1 version, this one does not require that one
+ * NOTES:
+ *
+ *  1. Unlike the original NOVAS C 3.1 version, this one does not require that one
  *     of the time arguments must be J2000. You can precess from any date to
  *     any other date, and the intermediate epoch of J2000 will be handled internally
- *     as needed.</li>
+ *     as needed.
  *
- * <li>This function caches the results of the last calculation in case it may be re-used at
- *     no extra computational cost for the next call.</li>
- * </ol>
+ *  2. This function caches the results of the last calculation in case it may be re-used at
+ *     no extra computational cost for the next call.
  *
  * REFERENCES:
- * <ol>
- * <li>Explanatory Supplement To The Astronomical Almanac, pp. 103-104.</li>
- * <li>Capitaine, N. et al. (2003), Astronomy And Astrophysics 412, pp. 567-586.</li>
- * <li>Hilton, J. L. et al. (2006), IAU WG report, Celest. Mech., 94, pp. 351-367.</li>
- * <li>Capitaine, N., P.T. Wallace and J. Chapront (2005), “Improvement of the IAU 2000 precession
- *     model.” Astronomy &amp; Astrophysics, Vol. 432, pp. 355–67.</li>
- * <li>Liu, J.-C., &amp Capitaine, N. (2017), A&A 597, A83</li>
- * </ol>
+ *
+ *  1. Explanatory Supplement To The Astronomical Almanac, pp. 103-104.
+ *  2. Capitaine, N. et al. (2003), Astronomy And Astrophysics 412, pp. 567-586.
+ *  3. Hilton, J. L. et al. (2006), IAU WG report, Celest. Mech., 94, pp. 351-367.
+ *  4. Capitaine, N., P.T. Wallace and J. Chapront (2005), “Improvement of the IAU 2000 precession
+ *     model.” Astronomy &amp; Astrophysics, Vol. 432, pp. 355–67.
+ *  5.Liu, J.-C., &amp; Capitaine, N. (2017), A&amp;A 597, A83.
  *
  * @param jd_tdb_in   [day] Barycentric Dynamic Time (TDB) based Julian date of the input
  *                    epoch
@@ -735,10 +726,8 @@ short precession(double jd_tdb_in, const double *in, double jd_tdb_out, double *
  * IAU 2000 / 2006 methodology you will want to use nutation_angles() instead.
  *
  * REFERENCES:
- * <ol>
- * <li>Explanatory Supplement To The Astronomical Almanac, pp. 114-115.</li>
- * </ol>
  *
+ *  1. Explanatory Supplement To The Astronomical Almanac, pp. 114-115.
  *
  * @param jd_tdb      [day] Barycentric Dynamic Time (TDB) based Julian date
  * @param direction   NUTATE_MEAN_TO_TRUE (0) or NUTATE_TRUE_TO_MEAN (-1; or non-zero)
@@ -804,5 +793,4 @@ int nutation(double jd_tdb, enum novas_nutation_direction direction, enum novas_
 
   return 0;
 }
-
 

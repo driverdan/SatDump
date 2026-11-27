@@ -400,20 +400,20 @@
       "paths": [
         "src-core/libs/supernovas"
       ],
-      "upstream_url": "https://github.com/Smithsonian/SuperNOVAS",
-      "version": "1.5.0 (pre-release)",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "SUPERNOVAS_*_VERSION in novas.h say 1.5.0, but novas.h and frames.c are not the v1.5.0 release: they are closest to v1.5.0-rc4/rc5 (frames.c differs from rc5 by about 20 lines, novas.h from rc4 by about 40), so this is a development snapshot before the 1.5.0 release.",
+      "upstream_url": "https://github.com/Sigmyne/SuperNOVAS",
+      "version": "1.8.0",
+      "commit": "c7a2462a56c69b314a938360729a031622a1f312",
+      "commit_verified": true,
+      "version_source": "Tag v1.8.0. All files were compared with upstream at this commit and match apart from local_changes. Only the C99 library is vendored: the src/c99 core sources (the SUPERNOVAS_CORE_SOURCES list in src/CMakeLists.txt) plus solsys-calceph.c, and novas.h, novas-calceph.h and novas-mutex.h from include/, all in one directory. The CSPICE plugin and the C++ API are left out.",
       "license": "Unlicense",
       "local_changes": {
         "status": "yes",
-        "details": "Includes are rewritten to quoted local paths (\"nutation.h\") and parse.c, target.c and timescale.c include libs/strings_h_win.h. Other changes not yet identified."
+        "details": "The included data tables (include/eop, include/nutation and include/elp2000) are renamed from .tab.c to .tab.h, so that the libs/supernovas/*.c glob in src-core/CMakeLists.txt does not compile them on their own, and the #includes in earth.c, nutation.c and moon.c are changed to match. novas-calceph.h includes \"libs/calceph/calceph.h\" instead of <calceph.h>. For MSVC, empty initializers ({}) are replaced with {0} (for the realizations table in itrf.c, with explicit zeros), as in the previous copy. src-core/CMakeLists.txt builds these files with WITHOUT_CURL, so SuperNOVAS never downloads EOP or leap second data itself."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 289,
-      "notes": "#289 records the vendored version as 1.5.0; it is a pre-release snapshot."
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Updated in #289 from a 1.5.0 development snapshot (upstream 4bf8c1542df8e80edadb7fdea928a46e53370d17, v1.5.0-rc4-13). That copy also commented out the <unistd.h> includes and novas_set_current_time(), and used libs/strings_h_win.h on Windows; upstream now builds with MSVC without these. The upstream repository moved from Smithsonian/SuperNOVAS to Sigmyne/SuperNOVAS. To update: copy the files listed in version_source, then re-apply local_changes."
     },
     {
       "id": "mqtt-c",
@@ -855,7 +855,7 @@
       "consumption": "vendored-platform",
       "upstream_state": "current",
       "update_issue": null,
-      "notes": "Windows shim used by CALCEPH and SuperNOVAS. Already current."
+      "notes": "Windows shim used by CALCEPH. Already current."
     },
     {
       "id": "mmap-windows",
