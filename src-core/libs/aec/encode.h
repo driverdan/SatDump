@@ -2,19 +2,7 @@
  * @file encode.h
  *
  * @section LICENSE
- * Copyright 2012 - 2016
- *
- * Mathis Rosenhauer, Moritz Hanke, Joerg Behrens
- * Deutsches Klimarechenzentrum GmbH
- * Bundesstr. 45a
- * 20146 Hamburg Germany
- *
- * Luis Kornblueh
- * Max-Planck-Institut fuer Meteorologie
- * Bundesstr. 53
- * 20146 Hamburg
- * Germany
- *
+ * Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,26 +32,20 @@
  * @section DESCRIPTION
  *
  * Adaptive Entropy Encoder
- * Based on CCSDS documents 121.0-B-2 and 120.0-G-3
+ * Based on the CCSDS recommended standard 121.0-B-3
  *
  */
 
 #ifndef ENCODE_H
 #define ENCODE_H 1
 
+#include "vector.h"
 #include "config.h"
-
-#if HAVE_STDINT_H
-#  include <stdint.h>
-#endif
+#include <stdint.h>
 
 #define M_CONTINUE 1
 #define M_EXIT 0
 #define MIN(a, b) (((a) < (b))? (a): (b))
-
-/* Maximum CDS length in bytes: 5 bits ID, 64 * 32 bits samples, 7
- * bits carry from previous CDS */
-#define CDSLEN ((5 + 64 * 32 + 7 + 7) / 8)
 
 /* Marker for Remainder Of Segment condition in zero block encoding */
 #define ROS -1
@@ -109,8 +91,8 @@ struct internal_state {
     uint8_t *cds;
 
     /* buffer for one CDS (only used if strm->next_out cannot hold
-     * full CDS) */
-    uint8_t cds_buf[CDSLEN];
+     * a full CDS) */
+    uint8_t *cds_buf;
 
     /* cds points to strm->next_out (1) or cds_buf (0) */
     int direct_out;
@@ -153,8 +135,17 @@ struct internal_state {
     /* 1 if flushing was successful */
     int flushed;
 
-    /* length of uncompressed CDS */
+    /* length of an uncompressed block */
     uint32_t uncomp_len;
+
+    /* maximum length of a CDS */
+    uint32_t cds_len;
+
+    /* RSI offsets container */
+    struct vector_t *offsets;
+
+    /* indicator if an RSI should be captured */
+    int ready_to_capture_rsi;
 };
 
 #endif /* ENCODE_H */

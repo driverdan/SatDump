@@ -14,6 +14,7 @@
 //   in the order they were completed. cadu() frames one for a .cadu file.
 
 #include "common/ccsds/ccsds.h"
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <stdexcept>
@@ -246,20 +247,20 @@ namespace xrit_test
     }
 
     // The Rice settings SatDump uses for a GOES-R image without a Rice compression record
-    inline SZ_com_t riceSettings(int columns)
+    inline SZ_com_t riceSettings(int columns, int pixels_per_block = 16)
     {
         SZ_com_t p;
         p.options_mask = SZ_ALLOW_K13_OPTION_MASK | SZ_MSB_OPTION_MASK | SZ_NN_OPTION_MASK | SZ_RAW_OPTION_MASK;
         p.bits_per_pixel = 8;
-        p.pixels_per_block = 16;
+        p.pixels_per_block = pixels_per_block;
         p.pixels_per_scanline = columns;
         return p;
     }
 
     // One Rice compressed image line
-    inline Bytes riceLine(const Bytes &line)
+    inline Bytes riceLine(const Bytes &line, int pixels_per_block = 16)
     {
-        SZ_com_t p = riceSettings(line.size());
+        SZ_com_t p = riceSettings(line.size(), pixels_per_block);
         Bytes out(line.size() * 2 + 64);
         size_t size = out.size();
         if (SZ_BufftoBuffCompress(out.data(), &size, line.data(), line.size(), &p) != SZ_OK)
@@ -275,6 +276,8 @@ namespace xrit_test
         Bytes pixels;
         bool lost = false;    // The packet is not sent at all
         bool bad_crc = false; // The packet is sent with a wrong CRC
+        size_t cut = 0;       // Bytes cut from the end of the compressed line
+        int pixels_per_block = 16;
     };
 
     inline std::vector<Bytes> riceImagePackets(const Bytes &headers, const std::vector<RiceLine> &lines, uint16_t apid, uint16_t first_count = 0)
@@ -285,7 +288,11 @@ namespace xrit_test
         std::vector<Bytes> packets = {packet(apid, SEQ_FIRST, first_count, first)};
         for (size_t i = 0; i < lines.size(); i++)
             if (!lines[i].lost)
-                packets.push_back(packet(apid, i == lines.size() - 1 ? SEQ_LAST : SEQ_CONTINUATION, first_count + 1 + i, riceLine(lines[i].pixels), lines[i].bad_crc));
+            {
+                Bytes compressed = riceLine(lines[i].pixels, lines[i].pixels_per_block);
+                compressed.resize(compressed.size() - std::min(lines[i].cut, compressed.size()));
+                packets.push_back(packet(apid, i == lines.size() - 1 ? SEQ_LAST : SEQ_CONTINUATION, first_count + 1 + i, compressed, lines[i].bad_crc));
+            }
         return packets;
     }
 

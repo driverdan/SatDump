@@ -148,6 +148,10 @@ namespace goes
                     int r = SZ_BufftoBuffDecompress(decompression_buffer.data(), &output_size, pkt.payload.data(), pkt.payload.size() - 2, &rice_parameters);
                     if (r == AEC_OK)
                     {
+                        // A line whose input ran out is decoded as far as it goes. Keep the rest
+                        // of it black, so that the lines after it stay in place
+                        output_size = decompression_buffer.size();
+
                         // Check to see if there are missing lines
                         uint16_t diff;
                         if (file.last_tracked_counter < pkt.header.packet_sequence_count)

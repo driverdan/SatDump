@@ -1,20 +1,8 @@
 /**
- * @file decode.c
+ * @file decode.h
  *
  * @section LICENSE
- * Copyright 2012 - 2016
- *
- * Mathis Rosenhauer, Moritz Hanke, Joerg Behrens
- * Deutsches Klimarechenzentrum GmbH
- * Bundesstr. 45a
- * 20146 Hamburg Germany
- *
- * Luis Kornblueh
- * Max-Planck-Institut fuer Meteorologie
- * Bundesstr. 53
- * 20146 Hamburg
- * Germany
- *
+ * Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +32,7 @@
  * @section DESCRIPTION
  *
  * Adaptive Entropy Decoder
- * Based on CCSDS documents 121.0-B-2 and 120.0-G-3
+ * Based on the CCSDS recommended standard 121.0-B-3
  *
  */
 
@@ -52,18 +40,17 @@
 #define DECODE_H 1
 
 #include "config.h"
-
-#if HAVE_STDINT_H
-#  include <stdint.h>
-#endif
+#include <stdint.h>
+#include <stddef.h>
+#include "vector.h"
 
 #define M_CONTINUE 1
 #define M_EXIT 0
 #define M_ERROR (-1)
 
-#define SE_TABLE_SIZE 90
-
 #define MIN(a, b) (((a) < (b))? (a): (b))
+
+#define SE_TABLE_SIZE 90
 
 struct aec_stream;
 
@@ -97,8 +84,7 @@ struct internal_state {
     /* length of output block in bytes */
     uint32_t out_blklen;
 
-    /* counter for samples */
-    uint32_t n, i;
+    uint32_t sample_counter;
 
     /* accumulator for currently used bit sequence */
     uint64_t acc;
@@ -111,6 +97,9 @@ struct internal_state {
 
     /* 1 if current block has reference sample */
     int ref;
+
+    /* block_size minus reference sample if present */
+    uint32_t encoded_block_size;
 
     /* 1 if postprocessor has to be used */
     int pp;
@@ -132,6 +121,9 @@ struct internal_state {
 
     /* table for decoding second extension option */
     int se_table[2 * (SE_TABLE_SIZE + 1)];
-} decode_state;
+
+    /* RSI table */
+    struct vector_t *offsets;
+};
 
 #endif /* DECODE_H */

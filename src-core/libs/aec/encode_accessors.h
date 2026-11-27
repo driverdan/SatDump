@@ -2,19 +2,7 @@
  * @file encode_accessors.h
  *
  * @section LICENSE
- * Copyright 2012 - 2016
- *
- * Mathis Rosenhauer, Moritz Hanke, Joerg Behrens
- * Deutsches Klimarechenzentrum GmbH
- * Bundesstr. 45a
- * 20146 Hamburg Germany
- *
- * Luis Kornblueh
- * Max-Planck-Institut fuer Meteorologie
- * Bundesstr. 53
- * 20146 Hamburg
- * Germany
- *
+ * Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,9 +38,9 @@
 #ifndef ENCODE_ACCESSORS_H
 #define ENCODE_ACCESSORS_H 1
 
-#if HAVE_STDINT_H
-#  include <stdint.h>
-#endif
+#include "config.h"
+#include "libaec.h"
+#include <stdint.h>
 
 uint32_t aec_get_8(struct aec_stream *strm);
 uint32_t aec_get_lsb_16(struct aec_stream *strm);

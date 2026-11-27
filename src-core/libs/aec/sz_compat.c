@@ -1,10 +1,45 @@
+/**
+ * @file sz_compat.c
+ *
+ * @section LICENSE
+ * Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @section DESCRIPTION
+ *
+ * Adaptive Entropy Coding library
+ *
+ */
+
+#include "config.h"
+#include "szlib.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#if HAVE_CONFIG_H
-#  include <config.h>
-#endif
-#include "szlib.h"
 
 #define NOPTS 129
 #define MIN(a, b) (((a) < (b))? (a): (b))
@@ -12,14 +47,13 @@
 static int convert_options(int sz_opts)
 {
     int co[NOPTS];
-    int i;
     int opts = 0;
 
     memset(co, 0, sizeof(int) * NOPTS);
     co[SZ_MSB_OPTION_MASK] = AEC_DATA_MSB;
     co[SZ_NN_OPTION_MASK] = AEC_DATA_PREPROCESS;
 
-    for (i = 1; i < NOPTS; i <<= 1)
+    for (int i = 1; i < NOPTS; i <<= 1)
         if (sz_opts & i)
             opts |= co[i];
 
@@ -36,35 +70,46 @@ static int bits_to_bytes(int bit_length)
         return 1;
 }
 
-static void interleave_buffer(void *dest, const void *src,
-                              size_t n, int wordsize)
+static int check_params(const SZ_com_t *param)
 {
-    size_t i;
-    int j;
-    const unsigned char *src8;
-    unsigned char *dest8;
+    /* SZ_com_t fields are signed, so reject negative values here
+     * before they are converted to unsigned sizes. */
+    /* SatDump: up to 4096 * 64 pixels per scanline instead of 4096
+     * (that of szip), as GOES HRIT full disk lines have 5424 pixels.
+     * It is the longest scanline that fits in a RSI of 4096 blocks
+     * of 64 pixels, and keeps the sizes computed from it (and from
+     * pixels_per_block, limited to 256 as in aec_decode_init()) from
+     * overflowing an int. */
+    if (param->pixels_per_scanline <= 0
+        || param->pixels_per_scanline > 4096 * 64
+        || param->pixels_per_block <= 0
+        || param->pixels_per_block > 256
+        || param->pixels_per_block & 1
+        || param->bits_per_pixel <= 0
+        || (param->bits_per_pixel > 32 && param->bits_per_pixel != 64))
+        return SZ_PARAM_ERROR;
+    return SZ_OK;
+}
 
-    src8 = (unsigned char *)src;
-    dest8 = (unsigned char *)dest;
+static void interleave_buffer(void *dest, const void *src,
+                              size_t n, size_t wordsize)
+{
+    const unsigned char *src8 = (unsigned char *)src;
+    unsigned char *dest8 = (unsigned char *)dest;
 
-    for (i = 0; i < n / wordsize; i++)
-        for (j = 0; j < wordsize; j++)
+    for (size_t i = 0; i < n / wordsize; i++)
+        for (size_t j = 0; j < wordsize; j++)
             dest8[j * (n / wordsize) + i] = src8[i * wordsize + j];
 }
 
 static void deinterleave_buffer(void *dest, const void *src,
-                                size_t n, int wordsize)
+                                size_t n, size_t wordsize)
 {
-    size_t i;
-    int j;
-    const unsigned char *src8;
-    unsigned char *dest8;
+    const unsigned char *src8 = (unsigned char *)src;
+    unsigned char *dest8 = (unsigned char *)dest;
 
-    src8 = (unsigned char *)src;
-    dest8 = (unsigned char *)dest;
-
-    for (i = 0; i < n / wordsize; i++)
-        for (j = 0; j < wordsize; j++)
+    for (size_t i = 0; i < n / wordsize; i++)
+        for (size_t j = 0; j < wordsize; j++)
             dest8[i * wordsize + j] = src8[j * (n / wordsize) + i];
 }
 
@@ -72,22 +117,21 @@ static void add_padding(void *dest, const void *src, size_t src_length,
                         size_t line_size, size_t padding_size,
                         int pixel_size, int pp)
 {
-    size_t i, j, k, ls, ps;
-    const char *pixel;
     const char zero_pixel[] = {0, 0, 0, 0};
 
-    pixel = zero_pixel;
-    j = 0;
-    i = 0;
+    const char *pixel = zero_pixel;
+    size_t j = 0;
+    size_t i = 0;
     while (i < src_length) {
-        ls = MIN(src_length - i, line_size);
+        size_t ps;
+        size_t ls = MIN(src_length - i, line_size);
         memcpy((char *)dest + j, (char *)src + i, ls);
         j += ls;
         i += ls;
         if (pp)
             pixel = (char *)src + i - pixel_size;
         ps = line_size + padding_size - ls;
-        for (k = 0; k < ps; k += pixel_size)
+        for (size_t k = 0; k < ps; k += pixel_size)
             memcpy((char *)dest + j + k, pixel, pixel_size);
         j += ps;
     }
@@ -97,11 +141,10 @@ static void remove_padding(void *buf, size_t buf_length,
                            size_t line_size, size_t padding_size,
                            int pixel_size)
 {
-    size_t i, j;
     size_t padded_line_size = line_size + padding_size;
 
-    i = line_size;
-    for (j = padded_line_size; j < buf_length; j += padded_line_size) {
+    size_t i = line_size;
+    for (size_t j = padded_line_size; j < buf_length; j += padded_line_size) {
         memmove((char *)buf + i, (char *)buf + j, line_size);
         i += line_size;
     }
@@ -112,15 +155,18 @@ int SZ_BufftoBuffCompress(void *dest, size_t *destLen,
                           SZ_com_t *param)
 {
     struct aec_stream strm;
+    void *buf = 0;
+    void *padbuf = 0;
     int status;
+    int interleave;
+    int pixel_size;
     int aec_status;
-    void *padbuf;
-    void *buf;
-    size_t padding_size;
     size_t scanlines;
     size_t padbuf_size;
-    int pixel_size;
-    int interleave;
+    size_t padding_size;
+
+    if (check_params(param) != SZ_OK)
+        return SZ_PARAM_ERROR;
 
     strm.block_size = param->pixels_per_block;
     strm.rsi = (param->pixels_per_scanline + param->pixels_per_block - 1)
@@ -128,8 +174,6 @@ int SZ_BufftoBuffCompress(void *dest, size_t *destLen,
     strm.flags = AEC_NOT_ENFORCE | convert_options(param->options_mask);
     strm.avail_out = *destLen;
     strm.next_out = dest;
-    buf = 0;
-    padbuf = 0;
 
     interleave = param->bits_per_pixel == 32 || param->bits_per_pixel == 64;
     if (interleave) {
@@ -146,10 +190,19 @@ int SZ_BufftoBuffCompress(void *dest, size_t *destLen,
     }
 
     pixel_size = bits_to_bytes(strm.bits_per_sample);
+    if (sourceLen % pixel_size != 0) {
+        status = SZ_PARAM_ERROR;
+        goto CLEANUP;
+    }
 
     scanlines = (sourceLen / pixel_size + param->pixels_per_scanline - 1)
         / param->pixels_per_scanline;
     padbuf_size = strm.rsi * strm.block_size * pixel_size * scanlines;
+    if (scanlines != 0
+        && padbuf_size / scanlines != (size_t)strm.rsi * strm.block_size * pixel_size) {
+        status = SZ_PARAM_ERROR;
+        goto CLEANUP;
+    }
     padbuf = malloc(padbuf_size);
     if (padbuf == NULL) {
         status = SZ_MEM_ERROR;
@@ -187,15 +240,17 @@ int SZ_BufftoBuffDecompress(void *dest, size_t *destLen,
                             SZ_com_t *param)
 {
     struct aec_stream strm;
+    void *buf = 0;
     int status;
-    void *buf;
-    size_t padding_size;
-    size_t scanlines;
-    size_t buf_size, total_out;
-    int pixel_size;
     int pad_scanline;
     int deinterleave;
     int extra_buffer;
+    int pixel_size;
+    size_t total_out;
+    size_t scanlines;
+
+    if (check_params(param) != SZ_OK)
+        return SZ_PARAM_ERROR;
 
     strm.block_size = param->pixels_per_block;
     strm.rsi = (param->pixels_per_scanline + param->pixels_per_block - 1)
@@ -203,20 +258,21 @@ int SZ_BufftoBuffDecompress(void *dest, size_t *destLen,
     strm.flags = convert_options(param->options_mask);
     strm.avail_in = sourceLen;
     strm.next_in = source;
-    buf = 0;
 
     pad_scanline = param->pixels_per_scanline % param->pixels_per_block;
-    deinterleave = param->bits_per_pixel == 32 || param->bits_per_pixel == 64;
+    deinterleave = (param->bits_per_pixel == 32
+                        || param->bits_per_pixel == 64);
     extra_buffer = pad_scanline || deinterleave;
 
     if (deinterleave)
         strm.bits_per_sample = 8;
     else
         strm.bits_per_sample = param->bits_per_pixel;
-
     pixel_size = bits_to_bytes(strm.bits_per_sample);
 
+
     if (extra_buffer) {
+        size_t buf_size;
         if (pad_scanline) {
             scanlines = (*destLen / pixel_size + param->pixels_per_scanline - 1)
                 / param->pixels_per_scanline;
@@ -241,13 +297,14 @@ int SZ_BufftoBuffDecompress(void *dest, size_t *destLen,
         goto CLEANUP;
 
     if (pad_scanline) {
-        padding_size =
-            (strm.rsi * strm.block_size - param->pixels_per_scanline)
-            * pixel_size;
-        remove_padding(buf, strm.total_out,
-                       param->pixels_per_scanline * pixel_size,
-                       padding_size, pixel_size);
-        total_out = scanlines * param->pixels_per_scanline * pixel_size;
+        size_t line_size = param->pixels_per_scanline * pixel_size;
+        size_t padded_line_size = strm.rsi * strm.block_size * pixel_size;
+        remove_padding(buf, strm.total_out, line_size,
+                       padded_line_size - line_size, pixel_size);
+        /* Only count what was actually decoded. Truncated input
+         * leaves the rest of buf uninitialized. */
+        total_out = strm.total_out / padded_line_size * line_size
+            + MIN(strm.total_out % padded_line_size, line_size);
     } else {
         total_out = strm.total_out;
     }
