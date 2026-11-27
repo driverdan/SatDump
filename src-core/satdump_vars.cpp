@@ -74,8 +74,7 @@ namespace satdump
     std::string init_res_path() { return std::string(RESOURCES_PATH); }
     std::string init_lib_path() { return std::string(LIBRARIES_PATH); }
 #endif
-    std::string RESPATH = init_res_path();
-    std::string LIBPATH = init_lib_path();
+    // RESPATH and LIBPATH are defined in satdump_varst.cxx, after the constants they are initialised from
 
     std::string getSatDumpVersionName() { return "SatDump v" + (std::string)SATDUMP_VERSION + (satdump::SATDUMP_VERSION_TAG.size() ? " (" + satdump::SATDUMP_VERSION_TAG + ")" : ""); }
 } // namespace satdump
