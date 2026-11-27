@@ -1,4 +1,5 @@
 #include "image/image_test_helpers.h"
+#include "image/jpeg12_utils.h"
 #include "image/jpeg_test_helpers.h"
 #include "image/jpeg_utils.h"
 #include <catch2/catch_test_macros.hpp>
@@ -64,6 +65,20 @@ TEST_CASE("image::decompress_jpeg converts colour JPEGs to a single channel", "[
     // Luma of (200, 100, 50)
     for (int i = 0; i < w * h; i++)
         REQUIRE(std::abs(out.get(i) - 124) <= 3);
+}
+
+TEST_CASE("image::decompress_jpeg returns an empty image for lossless colour JPEGs", "[image][jpeg_utils]")
+{
+    // libjpeg does not convert the colours of lossless images to grayscale
+    const int w = 20, h = 12;
+    std::vector<int> samples(w * h * 3, 100);
+    auto data = encodeJpeg(samples, w, h, 8, true, 3);
+    REQUIRE(!data.empty());
+
+    Image out = satdump::image::decompress_jpeg(data.data(), data.size());
+    CHECK(out.size() == 0);
+    Image out12 = satdump::image::decompress_jpeg12(data.data(), data.size());
+    CHECK(out12.size() == 0);
 }
 
 TEST_CASE("image::decompress_jpeg decodes a truncated JPEG", "[image][jpeg_utils]")
