@@ -49,8 +49,8 @@ if(ANDROID)
     set(OPENCL_FOUND 1)
 endif()
 
-# Set default install prefix
-include(GNUInstallDirs) #Retruns good defaults on non-GNU systems as well
+# Set default install prefix. This must come before include(GNUInstallDirs), which computes
+# CMAKE_INSTALL_LIBDIR (multiarch on Debian when the prefix is /usr) and the FULL_ paths from it
 if(UNIX)
     if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
         if(APPLE)
@@ -60,6 +60,7 @@ if(UNIX)
         endif()
     endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
+include(GNUInstallDirs) #Retruns good defaults on non-GNU systems as well
 
 if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
