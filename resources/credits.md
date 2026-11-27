@@ -15,7 +15,7 @@ First time here? See the reference documents below to get started using SatDump.
 - [implot](https://github.com/epezent/implot), to display images in the explorer
 - [libaec](https://gitlab.dkrz.de/k202009/libaec), with OpenSatelliteProject's path
 - [libcorrect](https://github.com/quiet/libcorrect), for Reed-Solomon decoding
-- [libjpeg](https://ijg.org/), from the Independent JPEG Group
+- [libjpeg-turbo](https://github.com/libjpeg-turbo/libjpeg-turbo), based on libjpeg from the Independent JPEG Group, for 8-bit, 12-bit and lossless JPEG
 - [libOpenCL-loader](https://github.com/robertwgh/libOpenCL-loader), for OpenCL on Android
 - [libpredict](https://github.com/la1k/libpredict), used for orbit prediction
 - [miniz](https://github.com/richgel999/miniz), used to decompress ZIP files in some decoders

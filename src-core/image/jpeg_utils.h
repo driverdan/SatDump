@@ -24,6 +24,22 @@ namespace satdump
         Image decompress_jpeg(uint8_t *data, int length, bool ignore_errors = false);
 
         /**
+         * @brief Decompress JPEG Data of any precision from memory, without
+         * scaling the samples. Lossless JPEGs can have 2 to 16 bits of
+         * precision, lossy ones 8 or 12. Lossy colour images are converted
+         * to grayscale. Lossless colour images are not supported (libjpeg
+         * cannot convert their colours) and give an empty image. Used by
+         * decompress_jpeg and decompress_jpeg12.
+         * @param data input buffer
+         * @param length buffer size
+         * @param ignore_errors if true, ignore some errors (needed for a
+         * few satellites sending slightly malformed but still valid JPEGs)
+         * @param precision set to the data precision of the JPEG, 0 on error
+         * @return a 16-bit image holding the decoded samples, empty on error
+         */
+        Image decompress_jpeg_samples(uint8_t *data, int length, bool ignore_errors, int &precision);
+
+        /**
          * @brief Compress JPEG to memory
          * @param img the image to compress (8-bit)
          * @return vector containing the JPEG stream

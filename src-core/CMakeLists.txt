@@ -22,8 +22,7 @@ file(GLOB_RECURSE SatDump_core_CPPS *.cpp
     libs/predict/*.c
     libs/bzlib/*.c
     libs/miniz/*.c
-    libs/jpeg/*.c
-    libs/jpeg12/*.c
+    libs/jpeg/wrapper/*.c
     libs/dlfcn/dlfcn.c
     common/map/maidenhead.c
     libs/correct/*.c
@@ -37,6 +36,16 @@ file(GLOB_RECURSE SatDump_core_CPPS *.cpp
 
 list(REMOVE_ITEM SatDump_core_CPPS ${PROJECT_SOURCE_DIR}/src-core/satdump_varst.cpp)
 list(REMOVE_ITEM SatDump_core_CPPS ${PROJECT_BINARY_DIR}/src-core/satdump_varst.cpp)
+
+# libjpeg-turbo (JPEG_SOURCES in its CMakeLists.txt). The sources that depend
+# on the data precision are built once per precision through libs/jpeg/wrapper,
+# and some others are #included, so libs/jpeg/*.c must not be globbed.
+foreach(jpeg_src jaricom jcapimin jcarith jchuff jcicc jcinit jclhuff jcmarker
+        jcmaster jcomapi jcparam jcphuff jctrans jdapimin jdarith jdatadst
+        jdatasrc jdhuff jdicc jdinput jdlhuff jdmarker jdmaster jdphuff jdtrans
+        jerror jfdctflt jmemmgr jmemnobs jpeg_nbits)
+    list(APPEND SatDump_core_CPPS ${CMAKE_CURRENT_SOURCE_DIR}/libs/jpeg/${jpeg_src}.c)
+endforeach()
 
 ################################################################
 ####### AngelScript START

@@ -24,6 +24,34 @@ namespace satdump
 
         static void libjpeg_error_func_l(j_common_ptr cinfo) { longjmp(((jpeg_error_struct_l *)cinfo->err)->setjmp_buffer, 1); }
 
+        // Reads the next scanline into line, scaled down to 8 bits if the data
+        // precision is higher (lossless JPEGs can have up to 16 bits). libjpeg-turbo
+        // has one read function per sample size. wide_line must hold a scanline
+        static void read_scanline_8bit(j_decompress_ptr cinfo, unsigned char *line, unsigned short *wide_line)
+        {
+            if (cinfo->data_precision <= 8)
+            {
+                JSAMPROW rows[1] = {line};
+                jpeg_read_scanlines(cinfo, rows, 1);
+                return;
+            }
+
+            if (cinfo->data_precision <= 12)
+            {
+                J12SAMPROW rows[1] = {(J12SAMPLE *)wide_line};
+                jpeg12_read_scanlines(cinfo, rows, 1);
+            }
+            else
+            {
+                J16SAMPROW rows[1] = {wide_line};
+                jpeg16_read_scanlines(cinfo, rows, 1);
+            }
+
+            int shift = cinfo->data_precision - 8;
+            for (size_t i = 0; i < (size_t)cinfo->image_width * cinfo->num_components; i++)
+                line[i] = wide_line[i] >> shift;
+        }
+
         void load_jpeg(Image &img, std::string file)
         {
             if (!std::filesystem::exists(file))
@@ -35,6 +63,7 @@ namespace satdump
 
             // Huge thanks to https://gist.github.com/PhirePhly/3080633
             unsigned char *jpeg_decomp[1] = {nullptr};
+            std::vector<unsigned short> wide_line; // For data of more than 8 bits
             jpeg_error_struct_l jerr;
             jpeg_decompress_struct cinfo;
 
@@ -59,6 +88,7 @@ namespace satdump
 
             // Init output buffer
             jpeg_decomp[0] = new unsigned char[cinfo.image_width * cinfo.num_components];
+            wide_line.resize(cinfo.image_width * cinfo.num_components);
 
             // Init SatDump image
             img.init(8, cinfo.image_width, cinfo.image_height, cinfo.num_components);
@@ -66,7 +96,7 @@ namespace satdump
             // Decompress
             while (cinfo.output_scanline < cinfo.output_height)
             {
-                jpeg_read_scanlines(&cinfo, jpeg_decomp, 1);
+                read_scanline_8bit(&cinfo, jpeg_decomp[0], wide_line.data());
                 for (int i = 0; i < (int)cinfo.image_width; i++)
                     for (int c = 0; c < cinfo.num_components; c++)
                         img.set(c, ((cinfo.output_scanline - 1) * cinfo.image_width) + i, jpeg_decomp[0][i * cinfo.num_components + c]);
@@ -85,6 +115,7 @@ namespace satdump
         {
             // Huge thanks to https://gist.github.com/PhirePhly/3080633
             unsigned char *jpeg_decomp[1] = {nullptr};
+            std::vector<unsigned short> wide_line; // For data of more than 8 bits
             jpeg_error_struct_l jerr;
             jpeg_decompress_struct cinfo;
 
@@ -102,12 +133,13 @@ namespace satdump
             jpeg_create_decompress(&cinfo);
 
             // Parse and start decompressing
-            jpeg_mem__src(&cinfo, buffer, size);
+            jpeg_mem_src(&cinfo, buffer, size);
             jpeg_read_header(&cinfo, FALSE);
             jpeg_start_decompress(&cinfo);
 
             // Init output buffer
             jpeg_decomp[0] = new unsigned char[cinfo.image_width * cinfo.num_components];
+            wide_line.resize(cinfo.image_width * cinfo.num_components);
 
             // Init SatDump image
             img.init(8, cinfo.image_width, cinfo.image_height, cinfo.num_components);
@@ -115,7 +147,7 @@ namespace satdump
             // Decompress
             while (cinfo.output_scanline < cinfo.output_height)
             {
-                jpeg_read_scanlines(&cinfo, jpeg_decomp, 1);
+                read_scanline_8bit(&cinfo, jpeg_decomp[0], wide_line.data());
                 for (int i = 0; i < (int)cinfo.image_width; i++)
                     for (int c = 0; c < cinfo.num_components; c++)
                         img.set(c, ((cinfo.output_scanline - 1) * cinfo.image_width) + i, jpeg_decomp[0][i * cinfo.num_components + c]);
@@ -230,7 +262,7 @@ namespace satdump
                 cinfo->dest->free_in_buffer = j_buffer.size();
             }
 
-            jboolean jpeg_empty_output_buffer(j_compress_ptr cinfo)
+            boolean jpeg_empty_output_buffer(j_compress_ptr cinfo)
             {
                 size_t oldsize = j_buffer.size();
                 j_buffer.resize(oldsize + BLOCK_SIZE);
