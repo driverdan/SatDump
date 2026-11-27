@@ -422,19 +422,19 @@
         "src-core/libs/mqttc"
       ],
       "upstream_url": "https://github.com/LiamBindle/MQTT-C",
-      "version": "unknown",
-      "commit": "unknown",
-      "commit_verified": false,
-      "version_source": "Not recorded (only MQTT_PROTOCOL_LEVEL).",
+      "version": "1.1.7",
+      "commit": "102e59c14dd0e01770b357a462bd462c83de62e2",
+      "commit_verified": true,
+      "version_source": "The v1.1.7 tag (the sources have no version macro, only MQTT_PROTOCOL_LEVEL). mqtt.c and mqtt_pal.c are src/ of the tag, mqtt.h and mqtt_pal.h are include/ and posix_sockets.h is examples/templates/, apart from the local changes below. Before this update the files were upstream commit 7a986a68ebea63921d4aab20a9d1b26a8b5f8c9d (2022-10-27) with the same local changes.",
       "license": "MIT",
       "local_changes": {
-        "status": "unknown",
-        "details": "2 local commits (see #290), possibly in mqtt_pal.*."
+        "status": "yes",
+        "details": "mqtt.c and mqtt_pal.c include \"mqtt.h\" instead of <mqtt.h>, and mqtt.h includes \"mqtt_pal.h\" instead of <mqtt_pal.h>. posix_sockets.h includes <unistd.h> (in the non-Windows branch) and, on Windows, closes a failed socket with closesocket() and passes a u_long to ioctlsocket()."
       },
       "consumption": "vendored",
-      "upstream_state": "newer-available",
-      "update_issue": 290,
-      "notes": ""
+      "upstream_state": "current",
+      "update_issue": null,
+      "notes": "Only used through src-core/utils/mqtt_client.cpp (tested by tests/src-core/utils/test_mqtt_client.cpp). No MQTT_USE_* TLS option is defined, so mqtt_pal.c uses the plain socket implementation."
     },
     {
       "id": "ghc-filesystem",
